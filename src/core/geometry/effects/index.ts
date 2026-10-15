@@ -1,0 +1,51 @@
+import type { Effect } from '../../params/schema';
+import { windowMask } from './mask';
+import { noiseOffset } from './noise';
+import { ribsOffset } from './ribs';
+import type { CompiledEffect, EffectCtx } from './types';
+import { wavesOffset } from './waves';
+
+export type { CompiledEffect, EffectCtx, OffsetFn } from './types';
+
+export function compileEffect(e: Effect, ctx: EffectCtx): CompiledEffect {
+  const mask = windowMask(e.start, e.end, e.fade);
+  const common = { type: e.type, mask, repetitions: 0, periodic: true, samplesPerRep: 8, verticalCycles: 0, helixTurns: 0, depth: 0, inward: 0 };
+  switch (e.type) {
+    case 'ribs': {
+      const reps = e.crisscross && e.helixTurns !== 0 ? 2 * e.count : e.count;
+      return {
+        ...common,
+        offset: ribsOffset(e),
+        repetitions: reps,
+        helixTurns: e.helixTurns,
+        verticalCycles: Math.abs(e.helixTurns) * e.count * (e.crisscross ? 1 : 0),
+        depth: e.depth,
+        inward: e.style === 'grooved' ? e.depth : 0,
+      };
+    }
+    case 'waves':
+      return {
+        ...common,
+        offset: wavesOffset(e),
+        repetitions: e.freqTheta,
+        verticalCycles: e.freqZ,
+        depth: 2 * e.amplitude,
+        inward: e.amplitude,
+      };
+    case 'noise': {
+      const featureMm = e.scale / Math.pow(2, e.octaves - 1);
+      return {
+        ...common,
+        offset: noiseOffset(e, ctx),
+        repetitions: Math.ceil((2 * Math.PI * ctx.refRadius) / featureMm),
+        periodic: false,
+        samplesPerRep: 4,
+        verticalCycles: (ctx.height / featureMm) * 0.5,
+        depth: e.amplitude,
+        inward: e.amplitude,
+      };
+    }
+    default:
+      return { ...common, offset: () => 0, unsupported: true };
+  }
+}
