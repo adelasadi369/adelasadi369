@@ -81,7 +81,7 @@ export function buildRows(nZ: number, top: number, breakpoints: number[]): Float
   return rows;
 }
 
-export function rowBreakpoints(params: VaseParams, H: number, zFloor: number): number[] {
+export function rowBreakpoints(params: VaseParams, H: number, zFloor: number, field?: Field): number[] {
   const bp: number[] = [];
   if (zFloor > 0) bp.push(zFloor); // must win: the inner surface starts exactly on this row
   const { chamfer, footRing } = params.base;
@@ -92,6 +92,7 @@ export function rowBreakpoints(params: VaseParams, H: number, zFloor: number): n
     if (!e.enabled || e.fade > 0) continue;
     bp.push((H * e.start) / 100, (H * e.end) / 100);
   }
+  for (const e of field?.effects ?? []) for (const t of e.rowBreaks ?? []) bp.push(t * H);
   for (const p of params.profile.preset === 'custom' ? params.profile.controlPoints : []) {
     if (p.sharp) bp.push((H * p.t) / 100);
   }

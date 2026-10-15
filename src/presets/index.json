@@ -1,0 +1,58 @@
+[
+  {
+    "id": "japandi-ribbed",
+    "name": {
+      "fa": "جاپاندی شیاردار",
+      "en": "Japandi Ribbed"
+    }
+  },
+  {
+    "id": "twisted-hex",
+    "name": {
+      "fa": "شش‌ضلعی پیچان",
+      "en": "Twisted Hex"
+    }
+  },
+  {
+    "id": "fluted-column",
+    "name": {
+      "fa": "ستون شیاردار",
+      "en": "Fluted Column"
+    }
+  },
+  {
+    "id": "helix-ribs",
+    "name": {
+      "fa": "دنده‌های مارپیچ",
+      "en": "Helix Ribs"
+    }
+  },
+  {
+    "id": "ripple-wave",
+    "name": {
+      "fa": "موج آب",
+      "en": "Ripple Wave"
+    }
+  },
+  {
+    "id": "star-bloom",
+    "name": {
+      "fa": "شکوفهٔ ستاره",
+      "en": "Star Bloom"
+    }
+  },
+  {
+    "id": "silk-drape",
+    "name": {
+      "fa": "پردهٔ ابریشمی",
+      "en": "Silk Drape"
+    }
+  },
+  {
+    "id": "low-poly-facet",
+    "name": {
+      "fa": "چندوجهی",
+      "en": "Low-Poly Facet"
+    }
+  }
+]

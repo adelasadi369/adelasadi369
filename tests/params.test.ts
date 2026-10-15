@@ -73,3 +73,48 @@ describe('paths', () => {
     expect(diffParams(a, b)).toEqual([{ path: 'dimensions.height', from: 180, to: 150 }]);
   });
 });
+
+import { PARAMS, paramInfo } from '../src/core/params/meta';
+import { mutate, randomize } from '../src/core/params/random';
+import { decodeShare, encodeShare } from '../src/core/params/share';
+import { PRESETS } from '../src/presets';
+
+describe('meta', () => {
+  it('lists every parameter with fa/en labels', () => {
+    expect(PARAMS.length).toBeGreaterThan(60);
+    for (const p of PARAMS) {
+      expect(p.meta.label.fa.length).toBeGreaterThan(0);
+      expect(p.meta.label.en.length).toBeGreaterThan(0);
+    }
+    expect(paramInfo('effects.0.depth', 'ribs')?.meta.max).toBe(15);
+  });
+});
+
+describe('randomness', () => {
+  const base = PRESETS[0].params;
+  it('randomize is deterministic per seed and respects locks', () => {
+    const locked = { ...base, random: { ...base.random, seed: 99, locks: ['dimensions.height', 'section'] } };
+    const a = randomize(locked);
+    const b = randomize(locked);
+    expect(a).toEqual(b);
+    expect(a.dimensions.height).toBe(base.dimensions.height);
+    expect(a.section).toEqual(base.section);
+    expect(a.dimensions.baseDiameter).not.toBe(base.dimensions.baseDiameter);
+    expect(a.random.seed).toBe(100);
+  });
+  it('mutate stays within ±10 %', () => {
+    const m = mutate({ ...base, random: { ...base.random, seed: 5 } });
+    expect(Math.abs(m.dimensions.height - base.dimensions.height)).toBeLessThanOrEqual(base.dimensions.height * 0.1 + 1e-9);
+  });
+});
+
+describe('share links', () => {
+  it('roundtrips every preset', () => {
+    for (const p of PRESETS) {
+      const token = encodeShare(p.params);
+      expect(token.length).toBeLessThan(800);
+      expect(decodeShare(token)).toEqual(p.params);
+    }
+    expect(decodeShare('garbage')).toBeNull();
+  });
+});

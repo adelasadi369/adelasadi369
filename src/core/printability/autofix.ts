@@ -34,6 +34,10 @@ function knobsFor(p: VaseParams): Knob[] {
       if (e.helixTurns !== 0) k.push({ path: `effects.${i}.helixTurns`, neutral: () => 0 });
     } else if (e.type === 'waves' || e.type === 'noise') {
       k.push({ path: `effects.${i}.amplitude`, neutral: () => 0 });
+    } else if (e.type === 'organic') {
+      k.push({ path: `effects.${i}.amount`, neutral: () => 0 });
+    } else if (e.type === 'facets') {
+      k.push({ path: `effects.${i}.jitter`, neutral: () => 0 });
     }
   });
   return k.filter((kn) => Math.abs((getPath(p, kn.path) as number) - kn.neutral(p)) > 1e-6);
@@ -71,9 +75,10 @@ const done = (r: Report) => !hasErrors(r) && r.score >= 90;
  */
 export function autoFix(input: VaseParams, maxIter = 20): AutoFixResult {
   let p = input;
-  const evalP = (q: VaseParams) => analyze(buildMesh(q, 'low'), q, { manifold: false });
+  // Decisions use preview resolution (what the user sees); ablation probes use the low grid.
+  const evalP = (q: VaseParams) => analyze(buildMesh(q, 'medium'), q, { manifold: false });
   let report = evalP(p);
-  const before = analyze(buildMesh(input, 'medium'), input, { manifold: false }).score;
+  const before = report.score;
 
   // 1) direct patches (walls, bounds, mode, feature depth, stability)
   for (let pass = 0; pass < 3; pass++) {
@@ -111,7 +116,7 @@ export function autoFix(input: VaseParams, maxIter = 20): AutoFixResult {
       const next = step(p, best, 0.9);
       const val = redArea(next);
       iterations++;
-      if (val > cur + 1e-6) break;
+      if (val > cur + 1e-6 && cur > 0) break;
       p = next;
       cur = val;
       report = evalP(p);
@@ -120,6 +125,5 @@ export function autoFix(input: VaseParams, maxIter = 20): AutoFixResult {
     }
   }
 
-  const final = analyze(buildMesh(p, 'medium'), p, { manifold: false });
-  return { params: p, diff: diffParams(input, p), before, after: final.score, iterations, report: final };
+  return { params: p, diff: diffParams(input, p), before, after: report.score, iterations, report };
 }

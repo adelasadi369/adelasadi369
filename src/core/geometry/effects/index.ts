@@ -1,13 +1,15 @@
 import type { Effect } from '../../params/schema';
+import { facetsModifier } from './facets';
 import { windowMask } from './mask';
+import { organicOffset } from './organic';
 import { noiseOffset } from './noise';
 import { ribsOffset } from './ribs';
-import type { CompiledEffect, EffectCtx } from './types';
+import type { CompiledEffect, EffectCtx, PrevEval } from './types';
 import { wavesOffset } from './waves';
 
-export type { CompiledEffect, EffectCtx, OffsetFn } from './types';
+export type { CompiledEffect, EffectCtx, OffsetFn, PrevEval } from './types';
 
-export function compileEffect(e: Effect, ctx: EffectCtx): CompiledEffect {
+export function compileEffect(e: Effect, ctx: EffectCtx, prev: PrevEval): CompiledEffect {
   const mask = windowMask(e.start, e.end, e.fade);
   const common = { type: e.type, mask, repetitions: 0, periodic: true, samplesPerRep: 8, verticalCycles: 0, helixTurns: 0, depth: 0, inward: 0 };
   switch (e.type) {
@@ -43,6 +45,32 @@ export function compileEffect(e: Effect, ctx: EffectCtx): CompiledEffect {
         verticalCycles: (ctx.height / featureMm) * 0.5,
         depth: e.amplitude,
         inward: e.amplitude,
+      };
+    }
+    case 'organic': {
+      const featureMm = e.style === 'silkFolds' ? e.scale / 2 : e.scale;
+      return {
+        ...common,
+        offset: organicOffset(e, ctx),
+        repetitions: Math.ceil((2 * Math.PI * ctx.refRadius) / featureMm),
+        periodic: false,
+        samplesPerRep: 4,
+        verticalCycles: (ctx.height / (e.scale * (e.style === 'silkFolds' ? e.stretch : 1))) * 0.5,
+        depth: e.amount,
+        inward: e.amount,
+      };
+    }
+    case 'facets': {
+      const f = facetsModifier(e, ctx.height, prev);
+      return {
+        ...common,
+        offset: () => 0,
+        modify: f.modify,
+        rowBreaks: f.rowBreaks,
+        repetitions: e.angularSegments,
+        samplesPerRep: 24,
+        depth: 0,
+        inward: e.jitter + 1,
       };
     }
     default:

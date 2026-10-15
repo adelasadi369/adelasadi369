@@ -201,7 +201,7 @@ export function buildMesh(params: VaseParams, quality: Quality): BuildResult {
   const Hw = H - rho;
   const zFloor = shell ? Math.min(params.base.bottomThickness, Hw * 0.5) : 0;
 
-  const rows = buildRows(nZ, Hw, rowBreakpoints(params, H, zFloor));
+  const rows = buildRows(nZ, Hw, rowBreakpoints(params, H, zFloor, field));
   let jFloor = 0;
   if (zFloor > 0) {
     let best = 1;

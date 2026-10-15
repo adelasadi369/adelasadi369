@@ -48,8 +48,8 @@ export function compileField(params: VaseParams): Field {
   const lobes = buildLobes(params.twist.lobes);
   const twistFn = buildTwist(params.twist);
   const ctx = { height: H, refRadius: params.dimensions.maxDiameter / 2 };
-  const effects = params.effects.filter((e) => e.enabled).map((e) => compileEffect(e, ctx));
-  const active = effects.filter((e) => !e.unsupported);
+  const effects: CompiledEffect[] = [];
+  const active: CompiledEffect[] = [];
 
   const bend = params.twist.bend.offset;
   const bdx = Math.cos(params.twist.bend.direction * DEG);
@@ -97,16 +97,33 @@ export function compileField(params: VaseParams): Field {
     return r.R * s + r.flare;
   };
 
-  const outerRaw = (thetaW: number, c: number, s: number, r: Row) => {
-    let v = base(thetaW, r);
-    if (active.length) {
-      for (let k = 0; k < active.length; k++) {
-        const m = r.masks[k];
-        if (m !== 0) v += m * active[k].offset(thetaW, c, s, r.tb);
-      }
+  const applyEffects = (v: number, thetaW: number, c: number, s: number, tb: number, masks: ArrayLike<number>, n: number) => {
+    for (let k = 0; k < n; k++) {
+      const m = masks[k];
+      if (m === 0) continue;
+      const e = active[k];
+      if (e.modify) v += m * (e.modify(thetaW, c, s, tb, v) - v);
+      else v += m * e.offset(thetaW, c, s, tb);
     }
-    return v + r.radialOffset;
+    return v;
   };
+
+  // Compile effects in stack order; modifiers may sample the field built so far.
+  for (const e of params.effects) {
+    if (!e.enabled) continue;
+    const n = active.length;
+    const prev = (thetaW: number, t: number) => {
+      const r = row(t * H);
+      const masks = active.slice(0, n).map((x) => x.mask(r.tb));
+      return applyEffects(base(thetaW, r), thetaW, Math.cos(thetaW), Math.sin(thetaW), r.tb, masks, n);
+    };
+    const ce = compileEffect(e, ctx, prev);
+    effects.push(ce);
+    if (!ce.unsupported) active.push(ce);
+  }
+
+  const outerRaw = (thetaW: number, c: number, s: number, r: Row) =>
+    applyEffects(base(thetaW, r), thetaW, c, s, r.tb, r.masks, active.length) + r.radialOffset;
 
   return {
     params,

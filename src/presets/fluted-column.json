@@ -1,0 +1,227 @@
+{
+  "version": 1,
+  "name": "Fluted Column",
+  "dimensions": {
+    "height": 200,
+    "baseDiameter": 92,
+    "topDiameter": 92,
+    "maxDiameter": 110,
+    "neckDiameter": 50,
+    "bellyPosition": 40,
+    "neckPosition": 80
+  },
+  "profile": {
+    "preset": "straight",
+    "strength": 60,
+    "controlPoints": [
+      {
+        "t": 0,
+        "r": 0.72,
+        "sharp": false
+      },
+      {
+        "t": 40,
+        "r": 1,
+        "sharp": false
+      },
+      {
+        "t": 80,
+        "r": 0.55,
+        "sharp": false
+      },
+      {
+        "t": 100,
+        "r": 0.64,
+        "sharp": false
+      }
+    ],
+    "waveCycles": 0,
+    "waveAmplitude": 0
+  },
+  "section": {
+    "bottom": {
+      "shape": "circle",
+      "sides": 6,
+      "cornerRadius": 2,
+      "starPoints": 8,
+      "starInnerRatio": 0.8,
+      "petals": 6,
+      "petalDepth": 20,
+      "superellipseExponent": 4,
+      "aspectXY": 1,
+      "supershape": {
+        "m": 5,
+        "n1": 2,
+        "n2": 7,
+        "n3": 7,
+        "a": 1,
+        "b": 1
+      },
+      "custom": {
+        "symmetry": 6,
+        "mirror": false,
+        "points": [
+          {
+            "a": 0,
+            "r": 1
+          },
+          {
+            "a": 0.5,
+            "r": 0.8
+          },
+          {
+            "a": 0.8,
+            "r": 0.9
+          }
+        ]
+      },
+      "svg": {
+        "name": "",
+        "samples": []
+      }
+    },
+    "top": {
+      "shape": "circle",
+      "sides": 6,
+      "cornerRadius": 2,
+      "starPoints": 8,
+      "starInnerRatio": 0.8,
+      "petals": 6,
+      "petalDepth": 20,
+      "superellipseExponent": 4,
+      "aspectXY": 1,
+      "supershape": {
+        "m": 5,
+        "n1": 2,
+        "n2": 7,
+        "n3": 7,
+        "a": 1,
+        "b": 1
+      },
+      "custom": {
+        "symmetry": 6,
+        "mirror": false,
+        "points": [
+          {
+            "a": 0,
+            "r": 1
+          },
+          {
+            "a": 0.5,
+            "r": 0.8
+          },
+          {
+            "a": 0.8,
+            "r": 0.9
+          }
+        ]
+      },
+      "svg": {
+        "name": "",
+        "samples": []
+      }
+    },
+    "morphEnabled": false,
+    "morphEasing": "easeInOut",
+    "rotationTop": 0
+  },
+  "twist": {
+    "total": 0,
+    "curve": "linear",
+    "oscillations": 1,
+    "customCurve": [
+      {
+        "t": 0,
+        "v": 0
+      },
+      {
+        "t": 100,
+        "v": 1
+      }
+    ],
+    "lobes": {
+      "count": 0,
+      "depth": 10,
+      "swirl": 0
+    },
+    "bend": {
+      "offset": 0,
+      "direction": 0
+    }
+  },
+  "effects": [
+    {
+      "type": "ribs",
+      "id": "fluted-column-0",
+      "enabled": true,
+      "start": 4,
+      "end": 96,
+      "fade": 3,
+      "count": 24,
+      "depth": 4,
+      "profile": "V",
+      "style": "grooved",
+      "widthRatio": 0.8,
+      "helixTurns": 0,
+      "crisscross": false
+    }
+  ],
+  "rim": {
+    "flare": 0,
+    "flareZone": 10,
+    "lipThickness": 0,
+    "round": true,
+    "ruffle": {
+      "count": 0,
+      "depth": 4
+    },
+    "slant": {
+      "height": 0,
+      "angle": 0
+    }
+  },
+  "base": {
+    "bottomThickness": 2,
+    "chamfer": 0.6,
+    "footRing": {
+      "height": 0,
+      "inset": 3
+    },
+    "concave": 0,
+    "drainageHole": 0,
+    "saucer": {
+      "enabled": false,
+      "gap": 3,
+      "height": 15,
+      "rim": 2
+    }
+  },
+  "print": {
+    "outputMode": "solidVase",
+    "wallThickness": 2.1,
+    "innerSurface": "smoothLiner",
+    "useCase": "dryDecor",
+    "printer": {
+      "preset": "bambuA1",
+      "bedX": 220,
+      "bedY": 220,
+      "bedZ": 250
+    },
+    "nozzle": 0.4,
+    "lineWidth": 0.7,
+    "layerHeight": 0.24,
+    "material": "PLA",
+    "maxOverhang": 45,
+    "flow": 100
+  },
+  "random": {
+    "seed": 1,
+    "locks": []
+  },
+  "render": {
+    "previewQuality": "medium",
+    "exportQuality": "high",
+    "viewMaterial": "matte",
+    "color": "#efece6"
+  }
+}

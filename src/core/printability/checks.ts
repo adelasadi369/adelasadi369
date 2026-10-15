@@ -149,6 +149,7 @@ export function featureIssues(b: BuildResult, p: VaseParams): Issue[] {
     if (e.type === 'ribs') check(`fx${i}`, name, ce.repetitions, () => e.depth, active, `effects.${i}.depth`, e.depth);
     else if (e.type === 'waves') check(`fx${i}`, name, e.freqTheta, () => 2 * e.amplitude, active, `effects.${i}.amplitude`, e.amplitude);
     else if (e.type === 'noise') check(`fx${i}`, name, ce.repetitions, () => e.amplitude, active, `effects.${i}.amplitude`, e.amplitude);
+    else if (e.type === 'organic') check(`fx${i}`, name, ce.repetitions, () => e.amount, active, `effects.${i}.amount`, e.amount);
   });
   return issues;
 }
@@ -272,7 +273,7 @@ export function modeIssues(p: VaseParams): Issue[] {
       penalty: 0,
     });
   }
-  const unsupported = p.effects.filter((e) => e.enabled && !['ribs', 'waves', 'noise'].includes(e.type));
+  const unsupported = p.effects.filter((e) => e.enabled && !['ribs', 'waves', 'noise', 'organic', 'facets'].includes(e.type));
   if (unsupported.length) {
     issues.push({
       id: 'mode-effects',

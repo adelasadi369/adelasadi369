@@ -617,7 +617,7 @@ export const PrintSchema = z
         doubleWallVase: t('دوجداره (حالت گلدان)', 'Double wall (vase mode)'),
       },
     }),
-    wallThickness: num(1.2, 4, 2, { fa: 'ضخامت دیواره', en: 'Wall thickness', unit: 'mm', step: 0.05, tip: ['ضخامت دیواره در حالت پوسته؛ مضربی از پهنای خط.', 'Shell wall; snapped to multiples of line width.'] }),
+    wallThickness: num(1.2, 4, 2.1, { fa: 'ضخامت دیواره', en: 'Wall thickness', unit: 'mm', step: 0.05, tip: ['ضخامت دیواره در حالت پوسته؛ مضربی از پهنای خط.', 'Shell wall; snapped to multiples of line width.'] }),
     innerSurface: enm(['smoothLiner', 'follow'] as const, 'smoothLiner', {
       fa: 'سطح داخلی', en: 'Inner surface',
       tip: ['داخل صاف (بدون بافت) یا هم‌شکل با بیرون.', 'Smooth liner (no textures) or follow the outside.'],
