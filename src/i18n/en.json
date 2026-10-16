@@ -102,5 +102,10 @@
   "svg.hint": "One closed, star-shaped outline (every ray from its centre crosses the edge once).",
   "section.bottom": "Bottom",
   "section.top": "Top",
-  "group.morph": "Morph"
+  "group.morph": "Morph",
+  "group.saucer": "Saucer",
+  "effect.texture": "Texture",
+  "effect.steps": "Steps / terraces",
+  "effect.glitch": "Glitch",
+  "effect.displacement": "Image displacement"
 }

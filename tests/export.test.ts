@@ -85,3 +85,20 @@ describe('3MF', () => {
     expect(JSON.parse(new TextDecoder().decode(files['Metadata/vaseforge_params.json'])).name).toBe('Japandi Ribbed');
   });
 });
+
+describe('multi-body export', () => {
+  const withSaucer = { ...params, base: { ...params.base, saucer: { enabled: true, gap: 3, height: 14, rim: 2 } }, render: { ...params.render, exportQuality: 'low' as const } };
+  it('STL with a saucer becomes a ZIP of two bodies + params', async () => {
+    const f = await exportDesign(withSaucer, 'stl');
+    expect(f.name).toBe('japandi-ribbed.zip');
+    const files = await readZip(f.data);
+    expect(Object.keys(files).sort()).toEqual(['japandi-ribbed-saucer.stl', 'japandi-ribbed.json', 'japandi-ribbed.stl']);
+    expect(readSTL(files['japandi-ribbed-saucer.stl'].slice().buffer).count).toBeGreaterThan(100);
+  });
+  it('3MF holds two objects, saucer placed beside the vase', async () => {
+    const f = await exportDesign(withSaucer, '3mf');
+    const xml = new TextDecoder().decode((await readZip(f.data))['3D/3dmodel.model']);
+    expect(xml.match(/<object /g)).toHaveLength(2);
+    expect(xml.match(/<item /g)).toHaveLength(2);
+  });
+});

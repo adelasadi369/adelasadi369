@@ -13,7 +13,7 @@ import type { GeometryApi, MeshPayload } from './protocol';
 /** Manifold-ness only depends on the grid topology, so it is checked once per topology. */
 const manifoldCache = new Map<string, boolean>();
 const topoKey = (m: VaseMesh) =>
-  `${m.mode}|${m.nTheta}|${m.nZ}|${m.surfaces.map((s) => `${s.kind}:${s.rows}`).join(',')}`;
+  `${m.mode}|${m.nTheta}|${m.nZ}|${m.surfaces.map((s) => `${s.kind}:${s.rows}x${s.cols}:${s.triCount}`).join(',')}`;
 
 function payload(m: VaseMesh, overhang: Float32Array, quality: Quality, ms: number): MeshPayload {
   return {
@@ -49,7 +49,18 @@ const api: GeometryApi = {
     }
     const { vertexOverhang, ...rest } = report;
     const mesh = payload(build.mesh, vertexOverhang, quality, performance.now() - t0);
-    return Promise.resolve(Comlink.transfer({ mesh, report: rest }, transferables(mesh)));
+    let saucer: MeshPayload | undefined;
+    if (build.saucer) {
+      const s = build.saucer;
+      let vx = -Infinity;
+      for (let i = 0; i < mesh.positions.length; i += 3) vx = Math.max(vx, mesh.positions[i]);
+      let sx = Infinity;
+      for (let i = 0; i < s.positions.length; i += 3) sx = Math.min(sx, s.positions[i]);
+      for (let i = 0; i < s.positions.length; i += 3) s.positions[i] += vx - sx + 10;
+      saucer = payload(s, new Float32Array(s.vertexCount).fill(-1), quality, 0);
+    }
+    const transfer = [...transferables(mesh), ...(saucer ? transferables(saucer) : [])];
+    return Promise.resolve(Comlink.transfer({ mesh, report: rest, saucer }, transfer));
   },
 
   autoFix(params) {

@@ -67,7 +67,7 @@ export function analyzeOverhang(mesh: VaseMesh, maxDeg: number): { summary: Over
   const N = mesh.normals;
   for (const s of mesh.surfaces) {
     if (!kinds.includes(s.kind)) continue;
-    const end = s.firstVertex + s.rows * mesh.nTheta;
+    const end = s.firstVertex + s.rows * s.cols;
     for (let v = s.firstVertex; v < end; v++) {
       const nz = N[v * 3 + 2];
       vertex[v] = !vase && nz >= 0 ? 0 : Math.asin(Math.min(1, Math.abs(nz))) * RAD2DEG;

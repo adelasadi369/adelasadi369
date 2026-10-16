@@ -259,6 +259,7 @@ export function Viewer() {
         />
         <directionalLight position={[-220, 120, -160]} intensity={0.6} />
         <Vase mesh={mesh} />
+        {result?.saucer && <Vase mesh={result.saucer} />}
         <Bed />
         {dims && <Dimensions mesh={mesh} />}
         <CameraRig height={height} />

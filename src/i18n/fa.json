@@ -102,5 +102,10 @@
   "svg.hint": "یک خط بستهٔ «ستاره‌ای» (هر پرتو از مرکز فقط یک بار لبه را قطع کند).",
   "section.bottom": "پایین",
   "section.top": "بالا",
-  "group.morph": "تبدیل تدریجی"
+  "group.morph": "تبدیل تدریجی",
+  "group.saucer": "زیرگلدانی",
+  "effect.texture": "بافت",
+  "effect.steps": "پلکانی",
+  "effect.glitch": "گلیچ",
+  "effect.displacement": "برجستگی تصویری"
 }

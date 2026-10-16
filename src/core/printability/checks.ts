@@ -303,9 +303,42 @@ export function modeIssues(p: VaseParams): Issue[] {
       check: 'mode',
       severity: 'info',
       message: t(
-        'حالت دوجداره در فاز ۲؛ فعلاً به شکل پوسته ساخته می‌شود.',
-        'Double-wall mode lands in Phase 2; built as a shell for now.',
+        'دوجداره: در اسلایسر «حالت گلدان/اسپیرال» را روشن کنید؛ شکاف ۰٫۰۰۰۱ میلی‌متری دو دیواره را در یک مسیر چاپ می‌کند.',
+        'Double wall: enable spiral/vase mode in the slicer; the 0.0001 mm slit prints both walls in one path.',
       ),
+      penalty: 0,
+    });
+    if (p.print.wallThickness < 2 * p.print.lineWidth + 0.4) {
+      issues.push({
+        id: 'mode-doublewall-gap',
+        check: 'walls',
+        severity: 'warn',
+        message: t('فاصلهٔ دو دیواره کم است؛ دیواره‌ها به هم می‌چسبند.', 'The two walls are too close and will fuse.'),
+        fix: {
+          kind: 'patch',
+          label: t('فاصلهٔ بیشتر', 'Wider gap'),
+          changes: [
+            { path: 'print.wallThickness', value: Math.min(4, Math.ceil((2 * p.print.lineWidth + 0.8) * 10) / 10) },
+          ],
+        },
+        penalty: 5,
+      });
+    }
+  }
+  if (p.print.outputMode !== 'shell' && p.print.innerSurface === 'follow') {
+    issues.push({
+      id: 'mode-follow',
+      check: 'mode',
+      severity: 'info',
+      message: t(
+        'سطح داخلی هم‌شکل فقط در حالت پوسته اعمال می‌شود.',
+        'The "follow" inner surface only applies in shell mode.',
+      ),
+      fix: {
+        kind: 'patch',
+        label: t('تغییر به پوسته', 'Switch to shell'),
+        changes: [{ path: 'print.outputMode', value: 'shell' }],
+      },
       penalty: 0,
     });
   }
@@ -418,6 +451,18 @@ export function stabilityIssues(b: BuildResult, p: VaseParams): Issue[] {
 export function sanityIssues(b: BuildResult): { issues: Issue[]; manifold: boolean } {
   const { mesh } = b;
   const issues: Issue[] = [];
+  if (mesh.holeClamped) {
+    issues.push({
+      id: 'sanity-hole',
+      check: 'sanity',
+      severity: 'warn',
+      message: t(
+        'سوراخ زهکشی برای کف بزرگ بود و کوچک شد.',
+        'The drainage hole was too large for the floor and was reduced.',
+      ),
+      penalty: 3,
+    });
+  }
   if (mesh.clamped > 0) {
     issues.push({
       id: 'sanity-rmin',

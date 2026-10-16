@@ -8,9 +8,7 @@ import { useNum, useT, useTxt } from '../hooks';
 import { isShown } from './visibility';
 
 /** Enum options hidden until their phase ships. */
-const LATER_OPTIONS: Record<string, string[]> = {
-  outputMode: ['doubleWallVase'],
-};
+const LATER_OPTIONS: Record<string, string[]> = {};
 
 export function InfoTip({ text }: { text: string }) {
   return (

@@ -7,7 +7,7 @@ export function surfaceOf(mesh: VaseMesh, kind: Surface['kind']): Surface | unde
 /** Shoelace area and perimeter of ring r of a grid surface. */
 export function ringMetrics(mesh: VaseMesh, s: Surface, r: number) {
   const P = mesh.positions;
-  const n = mesh.nTheta;
+  const n = s.cols;
   const o = s.firstVertex + r * n;
   let area = 0;
   let per = 0;
@@ -123,7 +123,7 @@ export function bbox(mesh: VaseMesh) {
 /** Distance from (cx,cy) to the ring boundary along direction (dx,dy) (ring star-shaped about c). */
 export function rayToRing(mesh: VaseMesh, s: Surface, r: number, cx: number, cy: number, dx: number, dy: number) {
   const P = mesh.positions;
-  const n = mesh.nTheta;
+  const n = s.cols;
   const o = s.firstVertex + r * n;
   let best = Infinity;
   for (let i = 0; i < n; i++) {

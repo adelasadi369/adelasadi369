@@ -24,6 +24,8 @@ export type ReportPayload = Omit<Report, 'vertexOverhang'>;
 export interface RegenResult {
   mesh: MeshPayload;
   report: ReportPayload;
+  /** Saucer body, already placed beside the vase (+X). */
+  saucer?: MeshPayload;
 }
 
 export interface GeometryApi {

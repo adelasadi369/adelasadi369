@@ -13,6 +13,7 @@ type Rule = (p: VaseParams) => boolean;
 const NO_BELLY = ['straight', 'taper', 'concave', 'hourglass', 'flaredTrumpet'];
 const NO_NECK = ['straight', 'taper', 'convex', 'teardrop', 'sphere', 'custom'];
 const shell: Rule = (p) => p.print.outputMode !== 'solidVase';
+const fullShell: Rule = (p) => p.print.outputMode === 'shell';
 
 const VISIBLE: Record<string, Rule> = {
   'dimensions.topDiameter': (p) => !['straight', 'custom'].includes(p.profile.preset),
@@ -35,6 +36,16 @@ const VISIBLE: Record<string, Rule> = {
   'base.bottomThickness': () => true,
   'base.footRing.inset': (p) => p.base.footRing.height > 0,
   'print.wallThickness': shell,
+  'print.innerSurface': (p) => p.print.outputMode === 'shell',
+  'rim.ruffle.count': fullShell,
+  'rim.ruffle.depth': (p) => fullShell(p) && p.rim.ruffle.count > 0,
+  'rim.slant.height': fullShell,
+  'rim.slant.angle': (p) => fullShell(p) && p.rim.slant.height > 0,
+  'base.concave': fullShell,
+  'base.drainageHole': fullShell,
+  'base.saucer.gap': (p) => p.base.saucer.enabled,
+  'base.saucer.height': (p) => p.base.saucer.enabled,
+  'base.saucer.rim': (p) => p.base.saucer.enabled,
   'print.printer.bedX': (p) => p.print.printer.preset === 'custom',
   'print.printer.bedY': (p) => p.print.printer.preset === 'custom',
   'print.printer.bedZ': (p) => p.print.printer.preset === 'custom',
@@ -175,7 +186,16 @@ function RimBasePanel() {
     <>
       <ParamGroup
         title={t('group.rim')}
-        paths={['rim.flare', 'rim.flareZone', 'rim.lipThickness', 'rim.round', 'rim.ruffle.count', 'rim.slant.height']}
+        paths={[
+          'rim.flare',
+          'rim.flareZone',
+          'rim.lipThickness',
+          'rim.round',
+          'rim.ruffle.count',
+          'rim.ruffle.depth',
+          'rim.slant.height',
+          'rim.slant.angle',
+        ]}
       />
       <ParamGroup
         title={t('group.base')}
@@ -184,8 +204,13 @@ function RimBasePanel() {
           'base.chamfer',
           'base.footRing.height',
           'base.footRing.inset',
+          'base.concave',
           'base.drainageHole',
         ]}
+      />
+      <ParamGroup
+        title={t('group.saucer')}
+        paths={['base.saucer.enabled', 'base.saucer.gap', 'base.saucer.height', 'base.saucer.rim']}
       />
     </>
   );
@@ -197,7 +222,7 @@ function PrintPanel() {
     <>
       <ParamGroup
         title={t('group.output')}
-        paths={['print.outputMode', 'print.wallThickness', 'print.useCase', 'print.material']}
+        paths={['print.outputMode', 'print.wallThickness', 'print.innerSurface', 'print.useCase', 'print.material']}
       />
       <ParamGroup
         title={t('group.printer')}
