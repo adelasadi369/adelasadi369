@@ -28,10 +28,18 @@ export function analyzeOverhang(mesh: VaseMesh, maxDeg: number): { summary: Over
   for (const s of mesh.surfaces) {
     if (!kinds.includes(s.kind)) continue;
     for (let t = s.firstTri; t < s.firstTri + s.triCount; t++) {
-      const a = I[t * 3] * 3, b = I[t * 3 + 1] * 3, c = I[t * 3 + 2] * 3;
-      const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2];
-      const vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
-      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      const a = I[t * 3] * 3,
+        b = I[t * 3 + 1] * 3,
+        c = I[t * 3 + 2] * 3;
+      const ux = P[b] - P[a],
+        uy = P[b + 1] - P[a + 1],
+        uz = P[b + 2] - P[a + 2];
+      const vx = P[c] - P[a],
+        vy = P[c + 1] - P[a + 1],
+        vz = P[c + 2] - P[a + 2];
+      const nx = uy * vz - uz * vy,
+        ny = uz * vx - ux * vz,
+        nz = ux * vy - uy * vx;
       const l = Math.sqrt(nx * nx + ny * ny + nz * nz);
       if (l === 0) continue;
       const ar = l / 2;

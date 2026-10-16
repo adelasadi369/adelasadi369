@@ -6,7 +6,15 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
     id: 'japandi-ribbed',
     name: { fa: 'جاپاندی شیاردار', en: 'Japandi Ribbed' },
     params: {
-      dimensions: { height: 180, baseDiameter: 100, maxDiameter: 128, neckDiameter: 100, topDiameter: 104, bellyPosition: 42, neckPosition: 84 },
+      dimensions: {
+        height: 180,
+        baseDiameter: 100,
+        maxDiameter: 128,
+        neckDiameter: 100,
+        topDiameter: 104,
+        bellyPosition: 42,
+        neckPosition: 84,
+      },
       profile: { preset: 'jar', strength: 55 },
       effects: [{ type: 'ribs', count: 60, depth: 2.5, profile: 'round', widthRatio: 0.55, fade: 3 }],
       render: { color: '#d9cbb5', viewMaterial: 'matte' },
@@ -29,7 +37,19 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
     params: {
       dimensions: { height: 200, baseDiameter: 92, topDiameter: 92 },
       profile: { preset: 'straight' },
-      effects: [{ type: 'ribs', count: 24, depth: 4, profile: 'V', style: 'grooved', widthRatio: 0.8, start: 4, end: 96, fade: 3 }],
+      effects: [
+        {
+          type: 'ribs',
+          count: 24,
+          depth: 4,
+          profile: 'V',
+          style: 'grooved',
+          widthRatio: 0.8,
+          start: 4,
+          end: 96,
+          fade: 3,
+        },
+      ],
       render: { color: '#efece6', viewMaterial: 'matte' },
     },
   },
@@ -57,7 +77,15 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
     id: 'star-bloom',
     name: { fa: 'شکوفهٔ ستاره', en: 'Star Bloom' },
     params: {
-      dimensions: { height: 180, baseDiameter: 78, maxDiameter: 104, neckDiameter: 86, topDiameter: 100, bellyPosition: 40, neckPosition: 78 },
+      dimensions: {
+        height: 180,
+        baseDiameter: 78,
+        maxDiameter: 104,
+        neckDiameter: 86,
+        topDiameter: 100,
+        bellyPosition: 40,
+        neckPosition: 78,
+      },
       profile: { preset: 'tulip', strength: 50 },
       section: { bottom: { shape: 'star', starPoints: 8, starInnerRatio: 0.78 } },
       twist: { total: 90, curve: 'linear' },
@@ -70,7 +98,9 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
     params: {
       dimensions: { height: 190, baseDiameter: 84, maxDiameter: 110, topDiameter: 64, bellyPosition: 32 },
       profile: { preset: 'teardrop', strength: 45 },
-      effects: [{ type: 'organic', style: 'silkFolds', amount: 3, scale: 30, stretch: 6, seed: 7, start: 4, end: 100, fade: 8 }],
+      effects: [
+        { type: 'organic', style: 'silkFolds', amount: 3, scale: 30, stretch: 6, seed: 7, start: 4, end: 100, fade: 8 },
+      ],
       print: { material: 'silkPLA' },
       render: { color: '#c9b37a', viewMaterial: 'silk' },
     },

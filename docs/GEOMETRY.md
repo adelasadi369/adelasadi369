@@ -20,7 +20,7 @@ P(θ,t)    = C(t) + r · (cos θ, sin θ),   z = t·H  (ruffle/slant remap z nea
 C(t)      = bend · t² · (cos β, sin β)                     axis bend; every slice is star-shaped about C(t)
 ```
 
-The **diameter convention** is that `R(t)` is the *circumscribed* radius of
+The **diameter convention** is that `R(t)` is the _circumscribed_ radius of
 the base shape: `max_θ Ŝ·Lobes = 1`. That makes `baseDiameter`,
 `maxDiameter` and the rest true outer dimensions before surface effects.
 For the same reason, **lobes are normalised inward** (a small change from
@@ -58,26 +58,26 @@ between knots, so it never invents bulges, overhangs or `r < r_min`
 excursions. A knot flagged `sharp` uses one-sided secant tangents, which
 gives a crease.
 
-| preset        | primary knots (t : r)                                         | σ per segment   |
-|---------------|---------------------------------------------------------------|-----------------|
-| straight      | 0:rb · 1:rb                                                   | 0               |
-| taper         | 0:rb · 1:rt                                                   | 0               |
-| convex        | 0:rb · tb:rm · 1:rt                                           | + +             |
-| concave       | 0:rb · tb:rn · 1:rt                                           | − −             |
-| teardrop      | 0:rb · min(tb,.4):rm · 1:rt                                   | + −             |
-| sphere        | 0:rb · .5:rm · 1:rt  (φ forced to 1)                          | + +             |
-| jar           | 0:rb · tb:rm · tn:rn · 1:rt                                   | + + 0           |
-| tulip         | 0:rb · tb:rm · tn:lerp(rm,rn,.5) · 1:rt                        | + − +           |
-| hourglass     | 0:rb · .5:rn · 1:rt                                           | + +             |
-| sCurve        | 0:rb · tb:rm · tn:rn · 1:rt                                   | + − −           |
-| amphora       | 0:rb · tb:rm · tn:rn · .93:rn · 1:rt                          | + + 0 +         |
-| urn           | 0:rb · .12:lerp(rn,rb,.4) · tb:rm · tn:rn · 1:rt              | − + + +         |
-| bottle        | 0:rb · .06:rm · tb:rm · tn:rn · 1:rt                          | + 0 + 0         |
-| doubleBulge   | 0:rb · .6tb:rm · (tb+tn)/2:rn · tn:.85rm · 1:rt               | + − − +         |
-| flaredTrumpet | 0:rb · tb:rn · 1:rt                                           | − −             |
-| goblet        | 0:rb · .1:rn·.5 · .3:rn·.5 · tb:rm · 1:rt                     | − 0 + +         |
-| onionDome     | 0:rb · tb:rm · tn:rn · 1:rt                                   | + + −           |
-| custom        | user points `(t, r·rm, sharp)`                                | —               |
+| preset        | primary knots (t : r)                            | σ per segment |
+| ------------- | ------------------------------------------------ | ------------- |
+| straight      | 0:rb · 1:rb                                      | 0             |
+| taper         | 0:rb · 1:rt                                      | 0             |
+| convex        | 0:rb · tb:rm · 1:rt                              | + +           |
+| concave       | 0:rb · tb:rn · 1:rt                              | − −           |
+| teardrop      | 0:rb · min(tb,.4):rm · 1:rt                      | + −           |
+| sphere        | 0:rb · .5:rm · 1:rt (φ forced to 1)              | + +           |
+| jar           | 0:rb · tb:rm · tn:rn · 1:rt                      | + + 0         |
+| tulip         | 0:rb · tb:rm · tn:lerp(rm,rn,.5) · 1:rt          | + − +         |
+| hourglass     | 0:rb · .5:rn · 1:rt                              | + +           |
+| sCurve        | 0:rb · tb:rm · tn:rn · 1:rt                      | + − −         |
+| amphora       | 0:rb · tb:rm · tn:rn · .93:rn · 1:rt             | + + 0 +       |
+| urn           | 0:rb · .12:lerp(rn,rb,.4) · tb:rm · tn:rn · 1:rt | − + + +       |
+| bottle        | 0:rb · .06:rm · tb:rm · tn:rn · 1:rt             | + 0 + 0       |
+| doubleBulge   | 0:rb · .6tb:rm · (tb+tn)/2:rn · tn:.85rm · 1:rt  | + − − +       |
+| flaredTrumpet | 0:rb · tb:rn · 1:rt                              | − −           |
+| goblet        | 0:rb · .1:rn·.5 · .3:rn·.5 · tb:rm · 1:rt        | − 0 + +       |
+| onionDome     | 0:rb · tb:rm · tn:rn · 1:rt                      | + + −         |
+| custom        | user points `(t, r·rm, sharp)`                   | —             |
 
 Switching from a preset to `custom` seeds the editor with that preset's
 knots, so editing continues from what the user sees. The table is a first
@@ -99,16 +99,16 @@ facets): `P1 = (r1, θ1)`, `P2 = (r2, θ2)`, `θ ∈ [θ1, θ2]`:
 ρ(θ) = r1·r2·sin(θ2 − θ1) / ( r1·sin(θ − θ1) + r2·sin(θ2 − θ) )
 ```
 
-| shape | formula |
-|---|---|
-| circle | `ρ = 1` |
-| polygon (n, corner c) | Sector half-angle `α = π/n`. Local angle from the nearest vertex is `ψ = ((θ + α) mod 2α) − α`. With `c_n = min(c/R, 1)`, `d = 1 − c_n` (corner-arc centre distance) and apothem `a = d·cos α + c_n`, the tangent angle is `ψ_t = atan2(c_n sin α, d + c_n cos α)`. Then `ρ = |ψ| ≤ ψ_t ? d·cos ψ + √(c_n² − d² sin² ψ) : a / cos(α − |ψ|)`. Max = `d + c_n = 1` at the vertices. `c_n = 1` gives a circle. Vertex at θ = 0. |
-| star (p, k) | Vertices alternate: `(1, 2πi/p)` and `(k, (2i+1)π/p)`. Joined by the polar line. |
-| flower (p, depth δ) | `ρ = 1 − δ·(1 − |cos(pθ/2)|)`. Round petals, cusps between them, valley radius `1 − δ`. |
-| superellipse (n) | `ρ = (|cos θ|ⁿ + |sin θ|ⁿ)^(−1/n) / 2^(½ − 1/n)` (divided by its max on the diagonal). |
-| supershape (m,n1,n2,n3,a,b) | `ρ = ( |cos(mθ/4)/a|^n2 + |sin(mθ/4)/b|^n3 )^(−1/n1)`, evaluated in log-space to avoid overflow and then divided by the max over 2048 samples (cached by hash). **Closure:** the curve is periodic in 2π only if `m` is even, or if `n2 = n3` and `a = b`. Otherwise `m` snaps to the nearest even integer and an info issue is shown. |
-| custom (k, mirror, pts) | Periodic monotone-cubic interpolation of `pts (a_j, r_j)` over `u = frac(kθ/2π)`. With `mirror`, `u ← 1 − |2u − 1|` (kaleidoscope). Otherwise the sector simply repeats (windmill). Normalised by the max. |
-| svg | The path is flattened to a polyline and centred on its area centroid. 720 rays are cast from the centroid. **Reject** if any ray has more than one crossing ("shape is not star-shaped around its centre; try a simpler outline"). Store `ρ_j / max ρ`; evaluate by periodic linear interpolation. |
+| shape                       | formula                                                                                                                                                                                                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| circle                      | `ρ = 1`                                                                                                                                                                                                                                                                                            |
+| polygon (n, corner c)       | Sector half-angle `α = π/n`. Local angle from the nearest vertex is `ψ = ((θ + α) mod 2α) − α`. With `c_n = min(c/R, 1)`, `d = 1 − c_n` (corner-arc centre distance) and apothem `a = d·cos α + c_n`, the tangent angle is `ψ_t = atan2(c_n sin α, d + c_n cos α)`. Then `ρ =                      | ψ           | ≤ ψ_t ? d·cos ψ + √(c_n² − d² sin² ψ) : a / cos(α −                                      | ψ           | )`. Max = `d + c_n = 1`at the vertices.`c_n = 1` gives a circle. Vertex at θ = 0.                                                                                                                                                                                                           |
+| star (p, k)                 | Vertices alternate: `(1, 2πi/p)` and `(k, (2i+1)π/p)`. Joined by the polar line.                                                                                                                                                                                                                   |
+| flower (p, depth δ)         | `ρ = 1 − δ·(1 −                                                                                                                                                                                                                                                                                    | cos(pθ/2)   | )`. Round petals, cusps between them, valley radius `1 − δ`.                             |
+| superellipse (n)            | `ρ = (                                                                                                                                                                                                                                                                                             | cos θ       | ⁿ +                                                                                      | sin θ       | ⁿ)^(−1/n) / 2^(½ − 1/n)` (divided by its max on the diagonal).                                                                                                                                                                                                                              |
+| supershape (m,n1,n2,n3,a,b) | `ρ = (                                                                                                                                                                                                                                                                                             | cos(mθ/4)/a | ^n2 +                                                                                    | sin(mθ/4)/b | ^n3 )^(−1/n1)`, evaluated in log-space to avoid overflow and then divided by the max over 2048 samples (cached by hash). **Closure:** the curve is periodic in 2π only if `m`is even, or if`n2 = n3`and`a = b`. Otherwise `m` snaps to the nearest even integer and an info issue is shown. |
+| custom (k, mirror, pts)     | Periodic monotone-cubic interpolation of `pts (a_j, r_j)` over `u = frac(kθ/2π)`. With `mirror`, `u ← 1 −                                                                                                                                                                                          | 2u − 1      | ` (kaleidoscope). Otherwise the sector simply repeats (windmill). Normalised by the max. |
+| svg                         | The path is flattened to a polyline and centred on its area centroid. 720 rays are cast from the centroid. **Reject** if any ray has more than one crossing ("shape is not star-shaped around its centre; try a simpler outline"). Store `ρ_j / max ρ`; evaluate by periodic linear interpolation. |
 
 **Aspect** (applied after the shape, for every shape): scale by `(A, 1)`.
 The direction `θ` comes from the source angle `φ = atan2(sin θ, A⁻¹ cos θ)`:
@@ -164,6 +164,7 @@ E  = A · Σ_{o<O} 0.5^o · simplex3(2^o q)  /  Σ 0.5^o
 ```
 
 **Organic** uses the same cylindrical sampling:
+
 - `softBulges`: 2-octave fBm at scale `s`.
   `E = amount · fbm`.
 - `silkFolds`: anisotropic `q_z = z / (s·stretch)`, ridged.
@@ -175,18 +176,18 @@ E  = A · Σ_{o<O} 0.5^o · simplex3(2^o q)  /  Σ 0.5^o
 `T ∈ [0,1]`, then `E = ±depth · T`. The sign is per pattern and flips with
 `invert`.
 
-| pattern | T(U,V) |
-|---|---|
-| honeycomb | Hex lattice `(1,0), (½, √3/2)`. Distance to the nearest cell edge is `e`. `T = 1 − smoothstep(0, 0.12, e)` (grooves, −) |
-| knurl | `T = min(tri(U+V), tri(U−V))` (pyramids, +) |
-| diamond | `T = clamp(1 − 2(|frac U − ½| + |frac V − ½|)·1.15, 0, 1)` (raised rhombi with gaps, +) |
-| basketweave | Cell `(i, j) = floor`, local `(a, b) = frac`. `(i+j)` even: `T = tri(3b)·(0.8 + 0.2 sin πa)`, odd: same with a↔b (+) |
-| chevron | `T = tri(V + 2·|frac U − ½|)` (+) |
-| scales | Rows staggered by ½ in U. Dome `h = √(1 − (dist/0.6)²)` centred on the bottom edge of each cell. Upper row drawn over lower (+) |
-| hammered | Voronoi F1 over jittered points (cell hash uses `i mod repeats`, so it's seamless). `T = max(0, 1 − (F1/0.55)²)` (dents, −) |
-| bark | Cylindrical ridged fBm with V-stretch 4. `T = 1 − (1 − |n|)²` (cracks, −) |
-| rope | `T = √(1 − (2·frac(U + 1.5V) − 1)²) · (0.85 + 0.15 cos 2πV)` (+) |
-| dots | Staggered grid, distance to the nearest centre `d`. `T = √(max(0, 1 − (d/0.3)²))` (+) |
+| pattern     | T(U,V)                                                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| honeycomb   | Hex lattice `(1,0), (½, √3/2)`. Distance to the nearest cell edge is `e`. `T = 1 − smoothstep(0, 0.12, e)` (grooves, −)         |
+| knurl       | `T = min(tri(U+V), tri(U−V))` (pyramids, +)                                                                                     |
+| diamond     | `T = clamp(1 − 2(                                                                                                               | frac U − ½ | +               | frac V − ½ | )·1.15, 0, 1)` (raised rhombi with gaps, +) |
+| basketweave | Cell `(i, j) = floor`, local `(a, b) = frac`. `(i+j)` even: `T = tri(3b)·(0.8 + 0.2 sin πa)`, odd: same with a↔b (+)            |
+| chevron     | `T = tri(V + 2·                                                                                                                 | frac U − ½ | )` (+)          |
+| scales      | Rows staggered by ½ in U. Dome `h = √(1 − (dist/0.6)²)` centred on the bottom edge of each cell. Upper row drawn over lower (+) |
+| hammered    | Voronoi F1 over jittered points (cell hash uses `i mod repeats`, so it's seamless). `T = max(0, 1 − (F1/0.55)²)` (dents, −)     |
+| bark        | Cylindrical ridged fBm with V-stretch 4. `T = 1 − (1 −                                                                          | n          | )²` (cracks, −) |
+| rope        | `T = √(1 − (2·frac(U + 1.5V) − 1)²) · (0.85 + 0.15 cos 2πV)` (+)                                                                |
+| dots        | Staggered grid, distance to the nearest centre `d`. `T = √(max(0, 1 − (d/0.3)²))` (+)                                           |
 
 **Modifier effects** need the field below them, `r_prev`, evaluated at
 other points. They go through cached coarse samples, so cost stays O(1)
@@ -256,11 +257,11 @@ inner floor at z = bottomThickness (+ foot height);  r_in ≥ 2 mm, otherwise er
 
 ## 8. Mesh assembly
 
-| mode | surfaces | closed |
-|---|---|---|
-| solidVase | outer grid (periodic θ) + bottom fan at C(0) + top fan at C(1) | yes, genus 0 |
-| shell | outer + inner grids + rim ring (flat or round) + outer bottom fan/annulus + inner floor fan/annulus (+ hole cylinder) | yes |
-| doubleWallVase | shell body whose wall is cut by a slit at θ_s of width 0.0001 mm (columns at θ_s ± 0.00005/r) from the floor to the rim. Two slit faces connect outer and inner. Below the floor the seam is closed by a 0.0001 mm strip. Each layer is then a single C-shaped contour, which the slicer prints as two walls in spiral mode. | yes |
+| mode           | surfaces                                                                                                                                                                                                                                                                                                                     | closed       |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| solidVase      | outer grid (periodic θ) + bottom fan at C(0) + top fan at C(1)                                                                                                                                                                                                                                                               | yes, genus 0 |
+| shell          | outer + inner grids + rim ring (flat or round) + outer bottom fan/annulus + inner floor fan/annulus (+ hole cylinder)                                                                                                                                                                                                        | yes          |
+| doubleWallVase | shell body whose wall is cut by a slit at θ_s of width 0.0001 mm (columns at θ_s ± 0.00005/r) from the floor to the rim. Two slit faces connect outer and inner. Below the floor the seam is closed by a 0.0001 mm strip. Each layer is then a single C-shaped contour, which the slicer prints as two walls in spiral mode. | yes          |
 
 Winding is CCW seen from outside, and signed volume > 0 is asserted. Quads
 are split along the shorter diagonal. No triangle is degenerate: `r ≥ r_min`
@@ -311,3 +312,34 @@ and `Δθ > 0`, and cap fans use distinct ring vertices.
    modes). Refit ≤ 12 knots with Douglas–Peucker and switch to `custom`.
 4. Return `{ before, after, diff: [{ path, from, to }] }`. It is applied as
    one undoable history entry.
+
+## 11. Implementation notes (Phase 1)
+
+Decisions made while implementing Phase 1, where the code differs from or
+refines the formulas above:
+
+- **Chamfer is lean-aware.** Rows below `z = c` are clamped to the 45° line
+  from the row at `c`:
+  `r(z) = min(r(z), r(c) − (c − z))`.
+  A wall that already flares outward faster than 45° is left alone, so the
+  chamfer can never make an overhang worse.
+- **Shell overhang includes the inner wall.** The spec says "outer only".
+  The inner surface counts too wherever it faces down (`n_z < 0`), because
+  an inward-leaning shell overhangs on the inside as well.
+- **Organic and facets ship in Phase 1.** Presets 7 and 8 need them. The
+  other modifier effects (steps, glitch) and textures stay in Phase 2.
+- **Grid density.**
+  - Periodic features (ribs, sides, lobes, `freqTheta`, facets) force Nθ to a
+    multiple of their count with ≥ 8 samples each. Facets get 24 per facet.
+  - Noise and organic need ≥ 4 samples per feature but don't affect the
+    multiple.
+- **Smooth liner.** Each row is pulled in by that row's maximum inward
+  effect depth, then clamped by `r_out − δ_out`. The inside stays smooth and
+  is never thinner than the wall.
+- **Low-quality drag preview.** While a slider is being dragged, the worker
+  builds at `low` quality. On release it rebuilds at the preview quality.
+- **Manifold check per topology.** The check runs once per grid topology and
+  is cached, since the topology is fixed by construction. Tests and exports
+  always run it.
+- **Auto-fix decides at preview resolution.** Its ablation probes use the
+  low grid.

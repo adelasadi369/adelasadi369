@@ -11,7 +11,9 @@ export interface ManifoldResult {
 }
 
 /** Every (welded) edge must be used exactly twice, in opposite directions. O(E log E). */
-export function checkManifold(mesh: Pick<VaseMesh, 'indices' | 'canonical' | 'positions' | 'triangleCount'>): ManifoldResult {
+export function checkManifold(
+  mesh: Pick<VaseMesh, 'indices' | 'canonical' | 'positions' | 'triangleCount'>,
+): ManifoldResult {
   const { indices, canonical, positions, triangleCount } = mesh;
   const nE = triangleCount * 3;
   const keys = new Float64Array(nE);
@@ -23,10 +25,18 @@ export function checkManifold(mesh: Pick<VaseMesh, 'indices' | 'canonical' | 'po
     const c = canonical[indices[t * 3 + 2]];
     if (a === b || b === c || c === a) degenerate++;
     else {
-      const ax = positions[a * 3], ay = positions[a * 3 + 1], az = positions[a * 3 + 2];
-      const ux = positions[b * 3] - ax, uy = positions[b * 3 + 1] - ay, uz = positions[b * 3 + 2] - az;
-      const vx = positions[c * 3] - ax, vy = positions[c * 3 + 1] - ay, vz = positions[c * 3 + 2] - az;
-      const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
+      const ax = positions[a * 3],
+        ay = positions[a * 3 + 1],
+        az = positions[a * 3 + 2];
+      const ux = positions[b * 3] - ax,
+        uy = positions[b * 3 + 1] - ay,
+        uz = positions[b * 3 + 2] - az;
+      const vx = positions[c * 3] - ax,
+        vy = positions[c * 3 + 1] - ay,
+        vz = positions[c * 3 + 2] - az;
+      const cx = uy * vz - uz * vy,
+        cy = uz * vx - ux * vz,
+        cz = ux * vy - uy * vx;
       if (cx * cx + cy * cy + cz * cz < 1e-18) degenerate++;
     }
     const tri = [a, b, c];
@@ -58,7 +68,13 @@ export function checkManifold(mesh: Pick<VaseMesh, 'indices' | 'canonical' | 'po
     else if (dirs !== 1) flipped++;
     i = j;
   }
-  return { edges, badEdges: bad, flippedEdges: flipped, degenerate, manifold: bad === 0 && flipped === 0 && degenerate === 0 };
+  return {
+    edges,
+    badEdges: bad,
+    flippedEdges: flipped,
+    degenerate,
+    manifold: bad === 0 && flipped === 0 && degenerate === 0,
+  };
 }
 
 /** Signed volume (mm³); positive for outward-facing winding. */
@@ -66,7 +82,9 @@ export function signedVolume(mesh: Pick<VaseMesh, 'indices' | 'positions' | 'tri
   const { indices: I, positions: P, triangleCount } = mesh;
   let v = 0;
   for (let t = 0; t < triangleCount; t++) {
-    const a = I[t * 3] * 3, b = I[t * 3 + 1] * 3, c = I[t * 3 + 2] * 3;
+    const a = I[t * 3] * 3,
+      b = I[t * 3 + 1] * 3,
+      c = I[t * 3 + 2] * 3;
     v +=
       P[a] * (P[b + 1] * P[c + 2] - P[b + 2] * P[c + 1]) -
       P[a + 1] * (P[b] * P[c + 2] - P[b + 2] * P[c]) +

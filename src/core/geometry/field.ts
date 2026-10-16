@@ -97,7 +97,15 @@ export function compileField(params: VaseParams): Field {
     return r.R * s + r.flare;
   };
 
-  const applyEffects = (v: number, thetaW: number, c: number, s: number, tb: number, masks: ArrayLike<number>, n: number) => {
+  const applyEffects = (
+    v: number,
+    thetaW: number,
+    c: number,
+    s: number,
+    tb: number,
+    masks: ArrayLike<number>,
+    n: number,
+  ) => {
     for (let k = 0; k < n; k++) {
       const m = masks[k];
       if (m === 0) continue;

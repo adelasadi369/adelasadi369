@@ -11,8 +11,10 @@ export function slice(mesh: Pick<VaseMesh, 'positions' | 'indices' | 'canonical'
     const z = v.map((x) => P[x * 3 + 2] - h);
     const cross: string[] = [];
     for (let e = 0; e < 3; e++) {
-      const a = v[e], b = v[(e + 1) % 3];
-      const za = z[e], zb = z[(e + 1) % 3];
+      const a = v[e],
+        b = v[(e + 1) % 3];
+      const za = z[e],
+        zb = z[(e + 1) % 3];
       if ((za < 0 && zb >= 0) || (za >= 0 && zb < 0)) {
         const k = key(a, b);
         const u = za / (za - zb);
@@ -49,7 +51,8 @@ export function slice(mesh: Pick<VaseMesh, 'positions' | 'indices' | 'canonical'
     const cy = loop.reduce((s, p) => s + p[1], 0) / loop.length;
     let sign = 0;
     for (let i = 0; i < loop.length; i++) {
-      const a = loop[i], b = loop[(i + 1) % loop.length];
+      const a = loop[i],
+        b = loop[(i + 1) % loop.length];
       const c = (a[0] - cx) * (b[1] - cy) - (a[1] - cy) * (b[0] - cx);
       if (Math.abs(c) < 1e-9) continue;
       const s = Math.sign(c);

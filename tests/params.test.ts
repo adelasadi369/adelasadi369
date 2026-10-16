@@ -104,7 +104,9 @@ describe('randomness', () => {
   });
   it('mutate stays within ±10 %', () => {
     const m = mutate({ ...base, random: { ...base.random, seed: 5 } });
-    expect(Math.abs(m.dimensions.height - base.dimensions.height)).toBeLessThanOrEqual(base.dimensions.height * 0.1 + 1e-9);
+    expect(Math.abs(m.dimensions.height - base.dimensions.height)).toBeLessThanOrEqual(
+      base.dimensions.height * 0.1 + 1e-9,
+    );
   });
 });
 

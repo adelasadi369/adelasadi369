@@ -15,10 +15,19 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 export function modelXml(bodies: Body[], params: VaseParams): Uint8Array {
   const meta = recommendedSettings(params);
-  const w = new ByteWriter(Math.max(1 << 16, bodies.reduce((n, b) => n + b.vertexCount * 48 + b.triangleCount * 44, 0)));
+  const w = new ByteWriter(
+    Math.max(
+      1 << 16,
+      bodies.reduce((n, b) => n + b.vertexCount * 48 + b.triangleCount * 44, 0),
+    ),
+  );
   w.str('<?xml version="1.0" encoding="UTF-8"?>\n');
-  w.str('<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:vf="https://vaseforge.app/3mf/2025">\n');
-  w.str(`<metadata name="Title">${esc(params.name || 'VaseForge vase')}</metadata>\n<metadata name="Application">VaseForge</metadata>\n`);
+  w.str(
+    '<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:vf="https://vaseforge.app/3mf/2025">\n',
+  );
+  w.str(
+    `<metadata name="Title">${esc(params.name || 'VaseForge vase')}</metadata>\n<metadata name="Application">VaseForge</metadata>\n`,
+  );
   for (const [k, v] of Object.entries(meta)) w.str(`<metadata name="vf:${k}">${esc(String(v))}</metadata>\n`);
   w.str('<resources>\n');
   bodies.forEach((b, k) => {

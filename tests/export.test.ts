@@ -12,12 +12,32 @@ const params = PRESETS[0].params;
 
 describe('determinism', () => {
   it('same params + seed ⇒ identical mesh hash', () => {
-    const p = { ...params, effects: [...params.effects, { type: 'noise' as const, id: 'n', enabled: true, start: 0, end: 100, fade: 5, amplitude: 1, scale: 20, octaves: 3, seed: 42 }] };
+    const p = {
+      ...params,
+      effects: [
+        ...params.effects,
+        {
+          type: 'noise' as const,
+          id: 'n',
+          enabled: true,
+          start: 0,
+          end: 100,
+          fade: 5,
+          amplitude: 1,
+          scale: 20,
+          octaves: 3,
+          seed: 42,
+        },
+      ],
+    };
     const a = buildMesh(p, 'low').mesh;
     const b = buildMesh(structuredClone(p), 'low').mesh;
     expect(hashBuffer(a.positions)).toBe(hashBuffer(b.positions));
     expect(hashBuffer(a.indices)).toBe(hashBuffer(b.indices));
-    const c = buildMesh({ ...p, effects: p.effects.map((e) => (e.type === 'noise' ? { ...e, seed: 43 } : e)) }, 'low').mesh;
+    const c = buildMesh(
+      { ...p, effects: p.effects.map((e) => (e.type === 'noise' ? { ...e, seed: 43 } : e)) },
+      'low',
+    ).mesh;
     expect(hashBuffer(c.positions)).not.toBe(hashBuffer(a.positions));
   });
 });
@@ -51,7 +71,12 @@ describe('3MF', () => {
     const f = await exportDesign({ ...params, render: { ...params.render, exportQuality: 'low' } }, '3mf');
     expect(f.name).toBe('japandi-ribbed.3mf');
     const files = await readZip(f.data);
-    expect(Object.keys(files).sort()).toEqual(['3D/3dmodel.model', 'Metadata/vaseforge_params.json', '[Content_Types].xml', '_rels/.rels']);
+    expect(Object.keys(files).sort()).toEqual([
+      '3D/3dmodel.model',
+      'Metadata/vaseforge_params.json',
+      '[Content_Types].xml',
+      '_rels/.rels',
+    ]);
     const xml = new TextDecoder().decode(files['3D/3dmodel.model']);
     expect(xml).toContain('unit="millimeter"');
     expect(xml).toContain('<metadata name="vf:spiral_mode">1</metadata>');

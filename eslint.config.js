@@ -19,6 +19,11 @@ export default tseslint.config(
     },
   },
   {
+    // three.js objects are imperative by design; mutating them in effects is the r3f idiom.
+    files: ['src/ui/viewer/**/*.tsx'],
+    rules: { 'react-hooks/immutability': 'off' },
+  },
+  {
     // The core must stay UI-free and pure.
     files: ['src/core/**/*.ts'],
     rules: {

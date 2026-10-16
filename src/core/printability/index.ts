@@ -8,7 +8,7 @@ import {
   overhangIssues,
   sanityIssues,
   stabilityIssues,
-  useCaseIssues,
+  adviceForUseCase,
   wallIssues,
 } from './checks';
 import { analyzeOverhang } from './overhang';
@@ -39,7 +39,7 @@ export function analyze(b: BuildResult, p: VaseParams, opts: { manifold?: boolea
     ...modeIssues(p),
     ...stabilityIssues(b, p),
     ...sanity.issues,
-    ...useCaseIssues(p),
+    ...adviceForUseCase(p),
   ].sort((a, c) => ORDER[a.severity] - ORDER[c.severity]);
   return {
     score: scoreOf(issues),

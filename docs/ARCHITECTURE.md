@@ -2,14 +2,14 @@
 
 ## 1. Guiding invariant
 
-> **The AI and the UI only ever produce *parameters*. Geometry is always
+> **The AI and the UI only ever produce _parameters_. Geometry is always
 > produced by one deterministic function `buildMesh(params, quality)`.**
 
 Every horizontal slice is a polar function `r(θ)` around its own slice
 centre. That gives exactly one simple, closed, star-shaped contour per layer,
 so self-intersection can't happen by construction. Spiral-vase-mode
 compatibility is guaranteed for `solidVase`, and the printability engine only
-has to check *physical* limits (overhang, feature size, bed size, stability).
+has to check _physical_ limits (overhang, feature size, bed size, stability).
 It never has to check topology.
 
 ## 2. Layering
@@ -107,7 +107,7 @@ in the export worker in ≤ 2 s.
   breakpoints: sharp profile knots, step edges, effect-window edges, flare
   start, foot-ring and chamfer heights.
 - **Caps.** The bottom and top are fans from the slice centre. A fan from
-  the star centre is valid exactly *because* every slice is star-shaped
+  the star centre is valid exactly _because_ every slice is star-shaped
   about that centre.
 
 ## 5. State, history, persistence

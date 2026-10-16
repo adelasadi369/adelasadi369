@@ -33,10 +33,18 @@ export function surfaceArea(mesh: VaseMesh, s: Surface): number {
   const I = mesh.indices;
   let A = 0;
   for (let t = s.firstTri; t < s.firstTri + s.triCount; t++) {
-    const a = I[t * 3] * 3, b = I[t * 3 + 1] * 3, c = I[t * 3 + 2] * 3;
-    const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2];
-    const vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
-    const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
+    const a = I[t * 3] * 3,
+      b = I[t * 3 + 1] * 3,
+      c = I[t * 3 + 2] * 3;
+    const ux = P[b] - P[a],
+      uy = P[b + 1] - P[a + 1],
+      uz = P[b + 2] - P[a + 2];
+    const vx = P[c] - P[a],
+      vy = P[c + 1] - P[a + 1],
+      vz = P[c + 2] - P[a + 2];
+    const cx = uy * vz - uz * vy,
+      cy = uz * vx - ux * vz,
+      cz = ux * vy - uy * vx;
     A += Math.sqrt(cx * cx + cy * cy + cz * cz) / 2;
   }
   return A;
@@ -46,12 +54,23 @@ export function surfaceArea(mesh: VaseMesh, s: Surface): number {
 export function surfaceCentroid(mesh: VaseMesh, s: Surface): { area: number; x: number; y: number; z: number } {
   const P = mesh.positions;
   const I = mesh.indices;
-  let A = 0, x = 0, y = 0, z = 0;
+  let A = 0,
+    x = 0,
+    y = 0,
+    z = 0;
   for (let t = s.firstTri; t < s.firstTri + s.triCount; t++) {
-    const a = I[t * 3] * 3, b = I[t * 3 + 1] * 3, c = I[t * 3 + 2] * 3;
-    const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2];
-    const vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
-    const qx = uy * vz - uz * vy, qy = uz * vx - ux * vz, qz = ux * vy - uy * vx;
+    const a = I[t * 3] * 3,
+      b = I[t * 3 + 1] * 3,
+      c = I[t * 3 + 2] * 3;
+    const ux = P[b] - P[a],
+      uy = P[b + 1] - P[a + 1],
+      uz = P[b + 2] - P[a + 2];
+    const vx = P[c] - P[a],
+      vy = P[c + 1] - P[a + 1],
+      vz = P[c + 2] - P[a + 2];
+    const qx = uy * vz - uz * vy,
+      qy = uz * vx - ux * vz,
+      qz = ux * vy - uy * vx;
     const ar = Math.sqrt(qx * qx + qy * qy + qz * qz) / 2;
     A += ar;
     x += (ar * (P[a] + P[b] + P[c])) / 3;
@@ -65,9 +84,14 @@ export function surfaceCentroid(mesh: VaseMesh, s: Surface): { area: number; x: 
 export function volumeCentroid(mesh: VaseMesh): { volume: number; x: number; y: number; z: number } {
   const P = mesh.positions;
   const I = mesh.indices;
-  let V = 0, x = 0, y = 0, z = 0;
+  let V = 0,
+    x = 0,
+    y = 0,
+    z = 0;
   for (let t = 0; t < mesh.triangleCount; t++) {
-    const a = I[t * 3] * 3, b = I[t * 3 + 1] * 3, c = I[t * 3 + 2] * 3;
+    const a = I[t * 3] * 3,
+      b = I[t * 3 + 1] * 3,
+      c = I[t * 3 + 2] * 3;
     const v =
       (P[a] * (P[b + 1] * P[c + 2] - P[b + 2] * P[c + 1]) -
         P[a + 1] * (P[b] * P[c + 2] - P[b + 2] * P[c]) +
@@ -83,7 +107,10 @@ export function volumeCentroid(mesh: VaseMesh): { volume: number; x: number; y: 
 
 export function bbox(mesh: VaseMesh) {
   const P = mesh.positions;
-  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  let x0 = Infinity,
+    x1 = -Infinity,
+    y0 = Infinity,
+    y1 = -Infinity;
   for (let i = 0; i < P.length; i += 3) {
     if (P[i] < x0) x0 = P[i];
     if (P[i] > x1) x1 = P[i];
@@ -102,8 +129,10 @@ export function rayToRing(mesh: VaseMesh, s: Surface, r: number, cx: number, cy:
   for (let i = 0; i < n; i++) {
     const a = (o + i) * 3;
     const b = (o + ((i + 1) % n)) * 3;
-    const ex = P[b] - P[a], ey = P[b + 1] - P[a + 1];
-    const wx = P[a] - cx, wy = P[a + 1] - cy;
+    const ex = P[b] - P[a],
+      ey = P[b + 1] - P[a + 1];
+    const wx = P[a] - cx,
+      wy = P[a + 1] - cy;
     const den = dx * ey - dy * ex;
     if (Math.abs(den) < 1e-12) continue;
     const tRay = (wx * ey - wy * ex) / den;

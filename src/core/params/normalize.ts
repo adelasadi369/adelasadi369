@@ -51,7 +51,10 @@ function fixPoints(pts: VaseParams['profile']['controlPoints']) {
 /** Fallback when cross-field checks fail: parse each section independently. */
 function fixLoose(raw: Record<string, unknown>): VaseParams {
   const out = structuredClone(DEFAULT_PARAMS) as unknown as Record<string, unknown>;
-  const shape = VaseParamsSchema.shape as unknown as Record<string, { safeParse(v: unknown): { success: boolean; data?: unknown } }>;
+  const shape = VaseParamsSchema.shape as unknown as Record<
+    string,
+    { safeParse(v: unknown): { success: boolean; data?: unknown } }
+  >;
   for (const [k, sub] of Object.entries(shape)) {
     if (raw[k] === undefined) continue;
     const r = sub.safeParse(raw[k]);

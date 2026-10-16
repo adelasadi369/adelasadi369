@@ -134,10 +134,22 @@ export function featureIssues(b: BuildResult, p: VaseParams): Issue[] {
 
   const sec = p.section.bottom;
   if (sec.shape === 'star' || sec.shape === 'flower') {
-    check('section', t('مقطع', 'Section'), field.section.repetitions, (R) => field.section.grooveDepth * R, () => true);
+    check(
+      'section',
+      t('مقطع', 'Section'),
+      field.section.repetitions,
+      (R) => field.section.grooveDepth * R,
+      () => true,
+    );
   }
   if (field.lobesCount) {
-    check('lobes', t('لوب‌ها', 'Lobes'), field.lobesCount, (R) => (R * p.twist.lobes.depth) / 100, () => true);
+    check(
+      'lobes',
+      t('لوب‌ها', 'Lobes'),
+      field.lobesCount,
+      (R) => (R * p.twist.lobes.depth) / 100,
+      () => true,
+    );
   }
   let k = 0;
   p.effects.forEach((e, i) => {
@@ -147,9 +159,12 @@ export function featureIssues(b: BuildResult, p: VaseParams): Issue[] {
     const name = t(`افکت ${i + 1}`, `Effect ${i + 1} (${e.type})`);
     const active = (tt: number) => ce.mask(tt) > 0.01;
     if (e.type === 'ribs') check(`fx${i}`, name, ce.repetitions, () => e.depth, active, `effects.${i}.depth`, e.depth);
-    else if (e.type === 'waves') check(`fx${i}`, name, e.freqTheta, () => 2 * e.amplitude, active, `effects.${i}.amplitude`, e.amplitude);
-    else if (e.type === 'noise') check(`fx${i}`, name, ce.repetitions, () => e.amplitude, active, `effects.${i}.amplitude`, e.amplitude);
-    else if (e.type === 'organic') check(`fx${i}`, name, ce.repetitions, () => e.amount, active, `effects.${i}.amount`, e.amount);
+    else if (e.type === 'waves')
+      check(`fx${i}`, name, e.freqTheta, () => 2 * e.amplitude, active, `effects.${i}.amplitude`, e.amplitude);
+    else if (e.type === 'noise')
+      check(`fx${i}`, name, ce.repetitions, () => e.amplitude, active, `effects.${i}.amplitude`, e.amplitude);
+    else if (e.type === 'organic')
+      check(`fx${i}`, name, ce.repetitions, () => e.amount, active, `effects.${i}.amount`, e.amount);
   });
   return issues;
 }
@@ -168,7 +183,11 @@ export function wallIssues(p: VaseParams): Issue[] {
           `در حالت گلدان پهنای خط باید ۱.۵ تا ۲ برابر نازل باشد (${f1(1.5 * nozzle)}–${f1(2 * nozzle)}).`,
           `Vase mode line width should be 1.5–2× nozzle (${(1.5 * nozzle).toFixed(2)}–${(2 * nozzle).toFixed(2)} mm).`,
         ),
-        fix: { kind: 'patch', label: t(`پهنای خط ← ${v}`, `Line width → ${v} mm`), changes: [{ path: 'print.lineWidth', value: v }] },
+        fix: {
+          kind: 'patch',
+          label: t(`پهنای خط ← ${v}`, `Line width → ${v} mm`),
+          changes: [{ path: 'print.lineWidth', value: v }],
+        },
         penalty: 5,
       });
     }
@@ -179,7 +198,11 @@ export function wallIssues(p: VaseParams): Issue[] {
       check: 'walls',
       severity: 'error',
       message: t('ضخامت دیواره باید دست‌کم ۲ برابر پهنای خط باشد.', 'Shell wall must be at least 2× line width.'),
-      fix: { kind: 'patch', label: t('دیوارهٔ ضخیم‌تر', 'Thicker wall'), changes: [{ path: 'print.wallThickness', value: Math.max(1.2, v) }] },
+      fix: {
+        kind: 'patch',
+        label: t('دیوارهٔ ضخیم‌تر', 'Thicker wall'),
+        changes: [{ path: 'print.wallThickness', value: Math.max(1.2, v) }],
+      },
       penalty: 20,
     });
   }
@@ -190,7 +213,11 @@ export function wallIssues(p: VaseParams): Issue[] {
       check: 'walls',
       severity: layerHeight > 0.8 * lineWidth ? 'error' : 'warn',
       message: t('ارتفاع لایه بیش از ۰.۶۶ پهنای خط است.', 'Layer height exceeds 0.66 × line width.'),
-      fix: { kind: 'patch', label: t(`ارتفاع لایه ← ${v}`, `Layer → ${v} mm`), changes: [{ path: 'print.layerHeight', value: v }] },
+      fix: {
+        kind: 'patch',
+        label: t(`ارتفاع لایه ← ${v}`, `Layer → ${v} mm`),
+        changes: [{ path: 'print.layerHeight', value: v }],
+      },
       penalty: layerHeight > 0.8 * lineWidth ? 20 : 5,
     });
   }
@@ -259,7 +286,11 @@ export function modeIssues(p: VaseParams): Issue[] {
           `این ویژگی‌ها حالت پوسته لازم دارند: ${needs.join('، ')}.`,
           `These features require shell mode: ${needs.join(', ')}.`,
         ),
-        fix: { kind: 'patch', label: t('تغییر به پوسته', 'Switch to shell'), changes: [{ path: 'print.outputMode', value: 'shell' }] },
+        fix: {
+          kind: 'patch',
+          label: t('تغییر به پوسته', 'Switch to shell'),
+          changes: [{ path: 'print.outputMode', value: 'shell' }],
+        },
         penalty: 20,
       });
     }
@@ -269,17 +300,25 @@ export function modeIssues(p: VaseParams): Issue[] {
       id: 'mode-doublewall',
       check: 'mode',
       severity: 'info',
-      message: t('حالت دوجداره در فاز ۲؛ فعلاً به شکل پوسته ساخته می‌شود.', 'Double-wall mode lands in Phase 2; built as a shell for now.'),
+      message: t(
+        'حالت دوجداره در فاز ۲؛ فعلاً به شکل پوسته ساخته می‌شود.',
+        'Double-wall mode lands in Phase 2; built as a shell for now.',
+      ),
       penalty: 0,
     });
   }
-  const unsupported = p.effects.filter((e) => e.enabled && !['ribs', 'waves', 'noise', 'organic', 'facets'].includes(e.type));
+  const unsupported = p.effects.filter(
+    (e) => e.enabled && !['ribs', 'waves', 'noise', 'organic', 'facets'].includes(e.type),
+  );
   if (unsupported.length) {
     issues.push({
       id: 'mode-effects',
       check: 'mode',
       severity: 'info',
-      message: t('بعضی افکت‌ها در فاز ۲ فعال می‌شوند و فعلاً اعمال نمی‌شوند.', 'Some effects arrive in Phase 2 and are skipped for now.'),
+      message: t(
+        'بعضی افکت‌ها در فاز ۲ فعال می‌شوند و فعلاً اعمال نمی‌شوند.',
+        'Some effects arrive in Phase 2 and are skipped for now.',
+      ),
       penalty: 0,
     });
   }
@@ -296,8 +335,15 @@ export function stabilityIssues(b: BuildResult, p: VaseParams): Issue[] {
       id: 'stability-base',
       check: 'stability',
       severity: 'warn',
-      message: t('کف نسبت به ارتفاع باریک است؛ ممکن است واژگون شود.', 'Base is narrow for the height; it may tip over.'),
-      fix: { kind: 'patch', label: t(`قطر کف ← ${v}`, `Base Ø → ${v} mm`), changes: [{ path: 'dimensions.baseDiameter', value: Math.min(200, v) }] },
+      message: t(
+        'کف نسبت به ارتفاع باریک است؛ ممکن است واژگون شود.',
+        'Base is narrow for the height; it may tip over.',
+      ),
+      fix: {
+        kind: 'patch',
+        label: t(`قطر کف ← ${v}`, `Base Ø → ${v} mm`),
+        changes: [{ path: 'dimensions.baseDiameter', value: Math.min(200, v) }],
+      },
       penalty: 5,
     });
   }
@@ -321,7 +367,10 @@ export function stabilityIssues(b: BuildResult, p: VaseParams): Issue[] {
   if (p.print.useCase === 'freshFlowers' || p.print.useCase.endsWith('Planter')) {
     // cavity fill to 70 % height (water or soil ≈ 1 g/cm³ vs ~1.2 for plastic)
     const inner = surfaceOf(mesh, 'inner') ?? outer;
-    let wv = 0, wx = 0, wy = 0, prev: ReturnType<typeof ringMetrics> | null = null;
+    let wv = 0,
+      wx = 0,
+      wy = 0,
+      prev: ReturnType<typeof ringMetrics> | null = null;
     for (let r = 0; r < inner.rows; r++) {
       const m = ringMetrics(mesh, inner, r);
       if (m.z > 0.7 * H) continue;
@@ -350,8 +399,15 @@ export function stabilityIssues(b: BuildResult, p: VaseParams): Issue[] {
         id: 'stability-com',
         check: 'stability',
         severity: 'error',
-        message: t('مرکز جرم بیرون از ناحیهٔ امن کف است؛ گلدان واژگون می‌شود.', 'Centre of mass falls outside the safe base area; it will tip.'),
-        fix: { kind: 'patch', label: t('کاهش خمش', 'Reduce bend'), changes: [{ path: 'twist.bend.offset', value: p.twist.bend.offset * 0.5 }] },
+        message: t(
+          'مرکز جرم بیرون از ناحیهٔ امن کف است؛ گلدان واژگون می‌شود.',
+          'Centre of mass falls outside the safe base area; it will tip.',
+        ),
+        fix: {
+          kind: 'patch',
+          label: t('کاهش خمش', 'Reduce bend'),
+          changes: [{ path: 'twist.bend.offset', value: p.twist.bend.offset * 0.5 }],
+        },
         penalty: 25,
       });
     }
@@ -367,7 +423,10 @@ export function sanityIssues(b: BuildResult): { issues: Issue[]; manifold: boole
       id: 'sanity-rmin',
       check: 'sanity',
       severity: 'warn',
-      message: t('بخشی از سطح به حداقل شعاع ۵ میلی‌متر رسیده و صاف شده است.', 'Part of the surface hit the 5 mm minimum radius and was flattened.'),
+      message: t(
+        'بخشی از سطح به حداقل شعاع ۵ میلی‌متر رسیده و صاف شده است.',
+        'Part of the surface hit the 5 mm minimum radius and was flattened.',
+      ),
       fix: { kind: 'autofix', label: t('قابل‌چاپش کن', 'Make it printable') },
       penalty: 5,
     });
@@ -377,8 +436,15 @@ export function sanityIssues(b: BuildResult): { issues: Issue[]; manifold: boole
       id: 'sanity-narrow',
       check: 'sanity',
       severity: 'error',
-      message: t('بدنه برای حالت پوسته با این ضخامت دیواره خیلی باریک است.', 'Body is too narrow for a shell with this wall thickness.'),
-      fix: { kind: 'patch', label: t('حالت گلدان', 'Use vase mode'), changes: [{ path: 'print.outputMode', value: 'solidVase' }] },
+      message: t(
+        'بدنه برای حالت پوسته با این ضخامت دیواره خیلی باریک است.',
+        'Body is too narrow for a shell with this wall thickness.',
+      ),
+      fix: {
+        kind: 'patch',
+        label: t('حالت گلدان', 'Use vase mode'),
+        changes: [{ path: 'print.outputMode', value: 'solidVase' }],
+      },
       penalty: 20,
     });
   }
@@ -388,7 +454,10 @@ export function sanityIssues(b: BuildResult): { issues: Issue[]; manifold: boole
       id: 'sanity-manifold',
       check: 'sanity',
       severity: 'error',
-      message: t(`مش بسته نیست (${m.badEdges + m.flippedEdges} یال مشکل‌دار).`, `Mesh is not manifold (${m.badEdges + m.flippedEdges} bad edges).`),
+      message: t(
+        `مش بسته نیست (${m.badEdges + m.flippedEdges} یال مشکل‌دار).`,
+        `Mesh is not manifold (${m.badEdges + m.flippedEdges} bad edges).`,
+      ),
       penalty: 40,
     });
   }
@@ -397,15 +466,22 @@ export function sanityIssues(b: BuildResult): { issues: Issue[]; manifold: boole
       id: 'sanity-budget',
       check: 'sanity',
       severity: 'error',
-      message: t('تعداد مثلث‌ها بیش از ۲ میلیون است؛ کیفیت خروجی را کم کنید.', 'More than 2 M triangles; lower the export quality.'),
-      fix: { kind: 'patch', label: t('کیفیت زیاد', 'High quality'), changes: [{ path: 'render.exportQuality', value: 'high' }] },
+      message: t(
+        'تعداد مثلث‌ها بیش از ۲ میلیون است؛ کیفیت خروجی را کم کنید.',
+        'More than 2 M triangles; lower the export quality.',
+      ),
+      fix: {
+        kind: 'patch',
+        label: t('کیفیت زیاد', 'High quality'),
+        changes: [{ path: 'render.exportQuality', value: 'high' }],
+      },
       penalty: 20,
     });
   }
   return { issues, manifold: m.manifold };
 }
 
-export function useCaseIssues(p: VaseParams): Issue[] {
+export function adviceForUseCase(p: VaseParams): Issue[] {
   const u = p.print.useCase;
   const issues: Issue[] = [];
   if (u === 'freshFlowers') {
@@ -419,7 +495,14 @@ export function useCaseIssues(p: VaseParams): Issue[] {
       ),
       fix:
         p.print.material !== 'PETG'
-          ? { kind: 'patch', label: t('PETG و خط ۰.۸', 'PETG + 0.8 mm lines'), changes: [{ path: 'print.material', value: 'PETG' }, { path: 'print.lineWidth', value: 0.8 }] }
+          ? {
+              kind: 'patch',
+              label: t('PETG و خط ۰.۸', 'PETG + 0.8 mm lines'),
+              changes: [
+                { path: 'print.material', value: 'PETG' },
+                { path: 'print.lineWidth', value: 0.8 },
+              ],
+            }
           : undefined,
       penalty: 0,
     });
@@ -429,7 +512,10 @@ export function useCaseIssues(p: VaseParams): Issue[] {
       id: 'usecase-drainage',
       check: 'useCase',
       severity: 'warn',
-      message: t('گلدان فضای باز به سوراخ زهکشی نیاز دارد (فاز ۲).', 'Outdoor planters need a drainage hole (Phase 2).'),
+      message: t(
+        'گلدان فضای باز به سوراخ زهکشی نیاز دارد (فاز ۲).',
+        'Outdoor planters need a drainage hole (Phase 2).',
+      ),
       penalty: 5,
     });
   }

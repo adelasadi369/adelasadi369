@@ -93,9 +93,13 @@ class Builder {
       for (let i = 0; i < nT; i++) {
         const ip = ((i + 1) % nT) * 3;
         const im = ((i - 1 + nT) % nT) * 3;
-        const ax = ring[ip] - ring[im], ay = ring[ip + 1] - ring[im + 1], az = ring[ip + 2] - ring[im + 2];
+        const ax = ring[ip] - ring[im],
+          ay = ring[ip + 1] - ring[im + 1],
+          az = ring[ip + 2] - ring[im + 2];
         const o = i * 3;
-        const bx = rp[o] - rm[o], by = rp[o + 1] - rm[o + 1], bz = rp[o + 2] - rm[o + 2];
+        const bx = rp[o] - rm[o],
+          by = rp[o + 1] - rm[o + 1],
+          bz = rp[o + 2] - rm[o + 2];
         let nx = ay * bz - az * by;
         let ny = az * bx - ax * bz;
         let nz = ax * by - ay * bx;
@@ -111,7 +115,9 @@ class Builder {
     }
     const P = this.pos;
     const d2 = (p: number, q: number) => {
-      const dx = P[p * 3] - P[q * 3], dy = P[p * 3 + 1] - P[q * 3 + 1], dz = P[p * 3 + 2] - P[q * 3 + 2];
+      const dx = P[p * 3] - P[q * 3],
+        dy = P[p * 3 + 1] - P[q * 3 + 1],
+        dz = P[p * 3 + 2] - P[q * 3 + 2];
       return dx * dx + dy * dy + dz * dz;
     };
     for (let r = 0; r < nR - 1; r++) {
@@ -135,7 +141,16 @@ class Builder {
   }
 
   /** Flat cap fan around (cx, cy, z). up=true → normal +z. */
-  fan(kind: SurfaceKind, nT: number, ring: Float64Array, canonFirst: number, cx: number, cy: number, z: number, up: boolean) {
+  fan(
+    kind: SurfaceKind,
+    nT: number,
+    ring: Float64Array,
+    canonFirst: number,
+    cx: number,
+    cy: number,
+    z: number,
+    up: boolean,
+  ) {
     const first = this.v;
     const firstTri = this.t;
     const nz = up ? 1 : -1;
@@ -282,7 +297,12 @@ export function buildMesh(params: VaseParams, quality: Quality): BuildResult {
   }
   const B = new Builder(vCount, tCount);
 
-  B.grid('outer', nT, outerRings, outerRings.map(() => -1));
+  B.grid(
+    'outer',
+    nT,
+    outerRings,
+    outerRings.map(() => -1),
+  );
   const outerFirst = 0;
   const outerTop = outerFirst + (nZ - 1) * nT;
   let innerTooNarrow = 0;
@@ -350,7 +370,12 @@ export function buildMesh(params: VaseParams, quality: Quality): BuildResult {
     B.grid('rim', nT, rimRings, rimCanon);
 
     const innerDown = innerRingsUp.slice().reverse();
-    B.grid('inner', nT, innerDown, innerDown.map(() => -1));
+    B.grid(
+      'inner',
+      nT,
+      innerDown,
+      innerDown.map(() => -1),
+    );
     const innerBottom = innerFirst + (nIn - 1) * nT;
 
     if (zFloor > 0) {

@@ -32,11 +32,17 @@ export function facetsModifier(e: Facets, height: number, prev: PrevEval): { mod
   }
   // two planes per cell: lower (00,10,11) and upper (00,11,01); store n (3) + d
   const planes = new Float64Array(a * vs * 2 * 4);
-  const node = (i: number, k: number) => ((k * a + (i % a)) * 3);
+  const node = (i: number, k: number) => (k * a + (i % a)) * 3;
   const setPlane = (slot: number, p: number, q: number, r: number) => {
-    const ux = nodes[q] - nodes[p], uy = nodes[q + 1] - nodes[p + 1], uz = nodes[q + 2] - nodes[p + 2];
-    const vx = nodes[r] - nodes[p], vy = nodes[r + 1] - nodes[p + 1], vz = nodes[r + 2] - nodes[p + 2];
-    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const ux = nodes[q] - nodes[p],
+      uy = nodes[q + 1] - nodes[p + 1],
+      uz = nodes[q + 2] - nodes[p + 2];
+    const vx = nodes[r] - nodes[p],
+      vy = nodes[r + 1] - nodes[p + 1],
+      vz = nodes[r + 2] - nodes[p + 2];
+    const nx = uy * vz - uz * vy,
+      ny = uz * vx - ux * vz,
+      nz = ux * vy - uy * vx;
     planes[slot] = nx;
     planes[slot + 1] = ny;
     planes[slot + 2] = nz;
@@ -44,14 +50,14 @@ export function facetsModifier(e: Facets, height: number, prev: PrevEval): { mod
   };
   for (let k = 0; k < vs; k++) {
     for (let i = 0; i < a; i++) {
-      const base = ((k * a + i) * 2) * 4;
+      const base = (k * a + i) * 2 * 4;
       setPlane(base, node(i, k), node(i + 1, k), node(i + 1, k + 1));
       setPlane(base + 4, node(i, k), node(i + 1, k + 1), node(i, k + 1));
     }
   }
   const modify: ModifyFn = (thetaW, c, s, t, v) => {
     if (t < t0 || t > t1) return v;
-    const uA = ((thetaW / TAU) % 1 + 1) % 1 * a;
+    const uA = ((((thetaW / TAU) % 1) + 1) % 1) * a;
     const i = Math.min(a - 1, Math.floor(uA));
     const wV = ((t - t0) / (t1 - t0)) * vs;
     const k = Math.min(vs - 1, Math.max(0, Math.floor(wV)));

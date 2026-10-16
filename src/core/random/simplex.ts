@@ -2,7 +2,8 @@ import { mulberry32 } from './mulberry32';
 
 // 3D simplex noise (Gustavson), seeded permutation. Output ≈ [-1, 1].
 const GRAD3 = new Float64Array([
-  1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1,
+  1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1,
+  -1,
 ]);
 const F3 = 1 / 3;
 const G3 = 1 / 6;
@@ -37,18 +38,64 @@ export function createSimplex3(seed: number): Noise3 {
     const z0 = zin - (k - t);
     let i1: number, j1: number, k1: number, i2: number, j2: number, k2: number;
     if (x0 >= y0) {
-      if (y0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
-      else if (x0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 0; k2 = 1; }
-      else { i1 = 0; j1 = 0; k1 = 1; i2 = 1; j2 = 0; k2 = 1; }
+      if (y0 >= z0) {
+        i1 = 1;
+        j1 = 0;
+        k1 = 0;
+        i2 = 1;
+        j2 = 1;
+        k2 = 0;
+      } else if (x0 >= z0) {
+        i1 = 1;
+        j1 = 0;
+        k1 = 0;
+        i2 = 1;
+        j2 = 0;
+        k2 = 1;
+      } else {
+        i1 = 0;
+        j1 = 0;
+        k1 = 1;
+        i2 = 1;
+        j2 = 0;
+        k2 = 1;
+      }
     } else {
-      if (y0 < z0) { i1 = 0; j1 = 0; k1 = 1; i2 = 0; j2 = 1; k2 = 1; }
-      else if (x0 < z0) { i1 = 0; j1 = 1; k1 = 0; i2 = 0; j2 = 1; k2 = 1; }
-      else { i1 = 0; j1 = 1; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+      if (y0 < z0) {
+        i1 = 0;
+        j1 = 0;
+        k1 = 1;
+        i2 = 0;
+        j2 = 1;
+        k2 = 1;
+      } else if (x0 < z0) {
+        i1 = 0;
+        j1 = 1;
+        k1 = 0;
+        i2 = 0;
+        j2 = 1;
+        k2 = 1;
+      } else {
+        i1 = 0;
+        j1 = 1;
+        k1 = 0;
+        i2 = 1;
+        j2 = 1;
+        k2 = 0;
+      }
     }
-    const x1 = x0 - i1 + G3, y1 = y0 - j1 + G3, z1 = z0 - k1 + G3;
-    const x2 = x0 - i2 + 2 * G3, y2 = y0 - j2 + 2 * G3, z2 = z0 - k2 + 2 * G3;
-    const x3 = x0 - 1 + 3 * G3, y3 = y0 - 1 + 3 * G3, z3 = z0 - 1 + 3 * G3;
-    const ii = i & 255, jj = j & 255, kk = k & 255;
+    const x1 = x0 - i1 + G3,
+      y1 = y0 - j1 + G3,
+      z1 = z0 - k1 + G3;
+    const x2 = x0 - i2 + 2 * G3,
+      y2 = y0 - j2 + 2 * G3,
+      z2 = z0 - k2 + 2 * G3;
+    const x3 = x0 - 1 + 3 * G3,
+      y3 = y0 - 1 + 3 * G3,
+      z3 = z0 - 1 + 3 * G3;
+    const ii = i & 255,
+      jj = j & 255,
+      kk = k & 255;
 
     let n = 0;
     let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;

@@ -8,7 +8,10 @@ const make = (p: VaseParamsInput) => VaseParamsSchema.parse(p);
 const CASES: [string, VaseParamsInput][] = [
   ['default solid', {}],
   ['default shell', { print: { outputMode: 'shell' } }],
-  ['shell flat rim, open bottom', { print: { outputMode: 'shell' }, rim: { round: false }, base: { bottomThickness: 0 } }],
+  [
+    'shell flat rim, open bottom',
+    { print: { outputMode: 'shell' }, rim: { round: false }, base: { bottomThickness: 0 } },
+  ],
   [
     'twisted hex shell with lip, foot, flare',
     {

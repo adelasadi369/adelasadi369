@@ -11,7 +11,17 @@ export type { CompiledEffect, EffectCtx, OffsetFn, PrevEval } from './types';
 
 export function compileEffect(e: Effect, ctx: EffectCtx, prev: PrevEval): CompiledEffect {
   const mask = windowMask(e.start, e.end, e.fade);
-  const common = { type: e.type, mask, repetitions: 0, periodic: true, samplesPerRep: 8, verticalCycles: 0, helixTurns: 0, depth: 0, inward: 0 };
+  const common = {
+    type: e.type,
+    mask,
+    repetitions: 0,
+    periodic: true,
+    samplesPerRep: 8,
+    verticalCycles: 0,
+    helixTurns: 0,
+    depth: 0,
+    inward: 0,
+  };
   switch (e.type) {
     case 'ribs': {
       const reps = e.crisscross && e.helixTurns !== 0 ? 2 * e.count : e.count;

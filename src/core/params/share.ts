@@ -8,7 +8,9 @@ export function encodeShare(p: VaseParams): string {
   const delta: Record<string, unknown> = {};
   for (const d of diffParams(DEFAULT_PARAMS, p)) {
     // arrays of objects (effects, points) are stored whole
-    const top = d.path.match(/^(effects|profile\.controlPoints|twist\.customCurve|section\.(?:bottom|top)\.custom\.points)(\.|$)/);
+    const top = d.path.match(
+      /^(effects|profile\.controlPoints|twist\.customCurve|section\.(?:bottom|top)\.custom\.points)(\.|$)/,
+    );
     if (top) delta[top[1]] = top[1].split('.').reduce<unknown>((o, k) => (o as Record<string, unknown>)[k], p);
     else delta[d.path] = d.to;
   }

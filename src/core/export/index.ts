@@ -14,12 +14,24 @@ export interface ExportFile {
   data: Uint8Array;
 }
 
-const slug = (s: string) => (s || 'vaseforge-vase').toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, '-').replace(/^-|-$/g, '') || 'vase';
+const slug = (s: string) =>
+  (s || 'vaseforge-vase')
+    .toLowerCase()
+    .replace(/[^a-z0-9؀-ۿ]+/g, '-')
+    .replace(/^-|-$/g, '') || 'vase';
 
-export async function exportDesign(params: VaseParams, format: ExportFormat, quality: Quality = params.render.exportQuality): Promise<ExportFile> {
+export async function exportDesign(
+  params: VaseParams,
+  format: ExportFormat,
+  quality: Quality = params.render.exportQuality,
+): Promise<ExportFile> {
   const base = slug(params.name);
   if (format === 'json') {
-    return { name: `${base}.json`, mime: 'application/json', data: new TextEncoder().encode(JSON.stringify(params, null, 2)) };
+    return {
+      name: `${base}.json`,
+      mime: 'application/json',
+      data: new TextEncoder().encode(JSON.stringify(params, null, 2)),
+    };
   }
   const w = weld(buildMesh(params, quality).mesh);
   switch (format) {

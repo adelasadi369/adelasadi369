@@ -19,42 +19,171 @@ function primaries(preset: Exclude<ProfilePreset, 'custom'>, d: VaseParams['dime
   const tn = d.neckPosition / 100;
   switch (preset) {
     case 'straight':
-      return { knots: [[0, rb], [1, rb]], sigma: [0] };
+      return {
+        knots: [
+          [0, rb],
+          [1, rb],
+        ],
+        sigma: [0],
+      };
     case 'taper':
-      return { knots: [[0, rb], [1, rt]], sigma: [0] };
+      return {
+        knots: [
+          [0, rb],
+          [1, rt],
+        ],
+        sigma: [0],
+      };
     case 'convex':
-      return { knots: [[0, rb], [tb, rm], [1, rt]], sigma: [1, 1] };
+      return {
+        knots: [
+          [0, rb],
+          [tb, rm],
+          [1, rt],
+        ],
+        sigma: [1, 1],
+      };
     case 'concave':
-      return { knots: [[0, rb], [tb, rn], [1, rt]], sigma: [-1, -1] };
+      return {
+        knots: [
+          [0, rb],
+          [tb, rn],
+          [1, rt],
+        ],
+        sigma: [-1, -1],
+      };
     case 'teardrop':
-      return { knots: [[0, rb], [Math.min(tb, 0.4), rm], [1, rt]], sigma: [1, -1] };
+      return {
+        knots: [
+          [0, rb],
+          [Math.min(tb, 0.4), rm],
+          [1, rt],
+        ],
+        sigma: [1, -1],
+      };
     case 'sphere':
-      return { knots: [[0, rb], [0.5, rm], [1, rt]], sigma: [1, 1], fullness: 1 };
+      return {
+        knots: [
+          [0, rb],
+          [0.5, rm],
+          [1, rt],
+        ],
+        sigma: [1, 1],
+        fullness: 1,
+      };
     case 'jar':
-      return { knots: [[0, rb], [tb, rm], [tn, rn], [1, rt]], sigma: [1, 1, 0] };
+      return {
+        knots: [
+          [0, rb],
+          [tb, rm],
+          [tn, rn],
+          [1, rt],
+        ],
+        sigma: [1, 1, 0],
+      };
     case 'tulip':
-      return { knots: [[0, rb], [tb, rm], [tn, lerp(rm, rn, 0.5)], [1, rt]], sigma: [1, -1, 1] };
+      return {
+        knots: [
+          [0, rb],
+          [tb, rm],
+          [tn, lerp(rm, rn, 0.5)],
+          [1, rt],
+        ],
+        sigma: [1, -1, 1],
+      };
     case 'hourglass':
-      return { knots: [[0, rb], [0.5, rn], [1, rt]], sigma: [1, 1] };
+      return {
+        knots: [
+          [0, rb],
+          [0.5, rn],
+          [1, rt],
+        ],
+        sigma: [1, 1],
+      };
     case 'sCurve':
-      return { knots: [[0, rb], [tb, rm], [tn, rn], [1, rt]], sigma: [1, -1, -1] };
+      return {
+        knots: [
+          [0, rb],
+          [tb, rm],
+          [tn, rn],
+          [1, rt],
+        ],
+        sigma: [1, -1, -1],
+      };
     case 'amphora':
-      return { knots: [[0, rb], [tb, rm], [tn, rn], [0.93, rn], [1, rt]], sigma: [1, 1, 0, 1] };
+      return {
+        knots: [
+          [0, rb],
+          [tb, rm],
+          [tn, rn],
+          [0.93, rn],
+          [1, rt],
+        ],
+        sigma: [1, 1, 0, 1],
+      };
     case 'urn':
-      return { knots: [[0, rb], [0.12, lerp(rn, rb, 0.4)], [tb, rm], [tn, rn], [1, rt]], sigma: [-1, 1, 1, 1] };
+      return {
+        knots: [
+          [0, rb],
+          [0.12, lerp(rn, rb, 0.4)],
+          [tb, rm],
+          [tn, rn],
+          [1, rt],
+        ],
+        sigma: [-1, 1, 1, 1],
+      };
     case 'bottle':
-      return { knots: [[0, rb], [0.06, rm], [tb, rm], [tn, rn], [1, rt]], sigma: [1, 0, 1, 0] };
+      return {
+        knots: [
+          [0, rb],
+          [0.06, rm],
+          [tb, rm],
+          [tn, rn],
+          [1, rt],
+        ],
+        sigma: [1, 0, 1, 0],
+      };
     case 'doubleBulge':
       return {
-        knots: [[0, rb], [0.6 * tb, rm], [(tb + tn) / 2, rn], [tn, 0.85 * rm], [1, rt]],
+        knots: [
+          [0, rb],
+          [0.6 * tb, rm],
+          [(tb + tn) / 2, rn],
+          [tn, 0.85 * rm],
+          [1, rt],
+        ],
         sigma: [1, -1, -1, 1],
       };
     case 'flaredTrumpet':
-      return { knots: [[0, rb], [tb, rn], [1, rt]], sigma: [-1, -1] };
+      return {
+        knots: [
+          [0, rb],
+          [tb, rn],
+          [1, rt],
+        ],
+        sigma: [-1, -1],
+      };
     case 'goblet':
-      return { knots: [[0, rb], [0.1, rn * 0.5], [0.3, rn * 0.5], [tb, rm], [1, rt]], sigma: [-1, 0, 1, 1] };
+      return {
+        knots: [
+          [0, rb],
+          [0.1, rn * 0.5],
+          [0.3, rn * 0.5],
+          [tb, rm],
+          [1, rt],
+        ],
+        sigma: [-1, 0, 1, 1],
+      };
     case 'onionDome':
-      return { knots: [[0, rb], [tb, rm], [tn, rn], [1, rt]], sigma: [1, 1, -1] };
+      return {
+        knots: [
+          [0, rb],
+          [tb, rm],
+          [tn, rn],
+          [1, rt],
+        ],
+        sigma: [1, 1, -1],
+      };
   }
 }
 

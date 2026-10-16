@@ -26,13 +26,29 @@ const SAFE: Record<string, [number, number]> = {
 
 /** Paths randomize touches (top-level design params; effects get their own fields). */
 const RANDOM_PATHS = [
-  'dimensions.height', 'dimensions.baseDiameter', 'dimensions.topDiameter', 'dimensions.maxDiameter',
-  'dimensions.neckDiameter', 'dimensions.bellyPosition', 'dimensions.neckPosition',
-  'profile.preset', 'profile.strength',
-  'section.bottom.shape', 'section.bottom.sides', 'section.bottom.cornerRadius', 'section.bottom.starPoints',
-  'section.bottom.starInnerRatio', 'section.bottom.petals', 'section.bottom.petalDepth',
-  'section.bottom.superellipseExponent', 'section.bottom.aspectXY',
-  'twist.total', 'twist.curve', 'twist.lobes.count', 'twist.lobes.depth', 'twist.lobes.swirl',
+  'dimensions.height',
+  'dimensions.baseDiameter',
+  'dimensions.topDiameter',
+  'dimensions.maxDiameter',
+  'dimensions.neckDiameter',
+  'dimensions.bellyPosition',
+  'dimensions.neckPosition',
+  'profile.preset',
+  'profile.strength',
+  'section.bottom.shape',
+  'section.bottom.sides',
+  'section.bottom.cornerRadius',
+  'section.bottom.starPoints',
+  'section.bottom.starInnerRatio',
+  'section.bottom.petals',
+  'section.bottom.petalDepth',
+  'section.bottom.superellipseExponent',
+  'section.bottom.aspectXY',
+  'twist.total',
+  'twist.curve',
+  'twist.lobes.count',
+  'twist.lobes.depth',
+  'twist.lobes.swirl',
 ];
 
 const isLocked = (locks: readonly string[], path: string) => locks.some((l) => path === l || path.startsWith(`${l}.`));
@@ -84,7 +100,8 @@ export function randomize(p: VaseParams, seed = p.random.seed): VaseParams {
       if (f.kind === 'int') v = Math.round(v);
       out = setPath(out, path, v);
     }
-    if (!isLocked(locks, `effects.${i}.seed`) && 'seed' in e) out = setPath(out, `effects.${i}.seed`, Math.floor(rnd() * 1e6));
+    if (!isLocked(locks, `effects.${i}.seed`) && 'seed' in e)
+      out = setPath(out, `effects.${i}.seed`, Math.floor(rnd() * 1e6));
   });
   return normalizeParams(setPath(out, 'random.seed', (seed + 1) >>> 0));
 }
@@ -103,7 +120,11 @@ export function mutate(p: VaseParams, amount = 0.1, seed = p.random.seed): VaseP
     if (info.kind === 'int') v = Math.round(v);
     out = setPath(out, path, v);
   };
-  for (const path of RANDOM_PATHS) jitter(path, PARAMS.find((x) => x.path === path)!);
+  for (const path of RANDOM_PATHS)
+    jitter(
+      path,
+      PARAMS.find((x) => x.path === path)!,
+    );
   out.effects.forEach((e, i) => {
     for (const f of EFFECT_FIELDS[e.type]) {
       if (['start', 'end', 'fade', 'seed'].includes(f.path)) continue;

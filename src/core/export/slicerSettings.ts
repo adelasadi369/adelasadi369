@@ -36,6 +36,7 @@ export function recommendedSettings(p: VaseParams): Record<string, string | numb
       sparse_infill_density: '15%',
     });
   }
-  if (p.print.useCase === 'freshFlowers') Object.assign(s, { flow_ratio: '1.04', note: 'PETG + 0.8 mm lines recommended for water' });
+  if (p.print.useCase === 'freshFlowers')
+    Object.assign(s, { flow_ratio: '1.04', note: 'PETG + 0.8 mm lines recommended for water' });
   return s;
 }
