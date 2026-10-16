@@ -1,11 +1,13 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { VaseParams } from '../core/params/schema';
 import { useStore, type TabId } from '../state/store';
 import { Group, ParamControl } from './controls/ParamControl';
 import { isShown } from './controls/visibility';
 import { EffectStack } from './EffectStack';
 import { useT } from './hooks';
+import { PolarEditor } from './PolarEditor';
 import { ProfileEditor } from './ProfileEditor';
+import { SvgImportButton } from './SvgImportButton';
 
 type Rule = (p: VaseParams) => boolean;
 const NO_BELLY = ['straight', 'taper', 'concave', 'hourglass', 'flaredTrumpet'];
@@ -20,14 +22,9 @@ const VISIBLE: Record<string, Rule> = {
   'dimensions.bellyPosition': (p) => !['straight', 'taper', 'sphere', 'hourglass', 'custom'].includes(p.profile.preset),
   'dimensions.neckPosition': (p) => !NO_NECK.includes(p.profile.preset) && p.profile.preset !== 'hourglass',
   'profile.strength': (p) => !['straight', 'taper', 'sphere', 'custom'].includes(p.profile.preset),
-  'section.bottom.sides': (p) => p.section.bottom.shape === 'polygon',
-  'section.bottom.cornerRadius': (p) => p.section.bottom.shape === 'polygon',
-  'section.bottom.starPoints': (p) => p.section.bottom.shape === 'star',
-  'section.bottom.starInnerRatio': (p) => p.section.bottom.shape === 'star',
-  'section.bottom.petals': (p) => p.section.bottom.shape === 'flower',
-  'section.bottom.petalDepth': (p) => p.section.bottom.shape === 'flower',
-  'section.bottom.superellipseExponent': (p) => p.section.bottom.shape === 'superellipse',
   'twist.oscillations': (p) => p.twist.curve === 'sineBackForth',
+  'section.morphEasing': (p) => p.section.morphEnabled,
+  'section.rotationTop': (p) => p.section.morphEnabled,
   'twist.curve': (p) => p.twist.total !== 0,
   'twist.lobes.depth': (p) => p.twist.lobes.count > 0,
   'twist.lobes.swirl': (p) => p.twist.lobes.count > 0,
@@ -44,14 +41,38 @@ const VISIBLE: Record<string, Rule> = {
 };
 
 /** Basic-mode controls that are always shown regardless of their schema level. */
-const BASIC_EXTRA = new Set(['section.bottom.starPoints', 'section.bottom.petals']);
+const BASIC_EXTRA = new Set([
+  'section.bottom.starPoints',
+  'section.bottom.petals',
+  'section.top.starPoints',
+  'section.top.petals',
+]);
+
+/** Section fields shown per shape (bottom and top share the rules). */
+const SHAPE_FIELDS: Record<string, string[]> = {
+  polygon: ['sides', 'cornerRadius'],
+  star: ['starPoints', 'starInnerRatio'],
+  flower: ['petals', 'petalDepth'],
+  superellipse: ['superellipseExponent'],
+  supershape: ['supershape.m', 'supershape.n1', 'supershape.n2', 'supershape.n3', 'supershape.a', 'supershape.b'],
+  custom: ['custom.symmetry', 'custom.mirror'],
+};
+const ALL_SHAPE_FIELDS = new Set(Object.values(SHAPE_FIELDS).flat());
+
+function ruleFor(path: string): Rule | undefined {
+  if (VISIBLE[path]) return VISIBLE[path];
+  const m = /^section\.(bottom|top)\.(.+)$/.exec(path);
+  if (m && ALL_SHAPE_FIELDS.has(m[2])) {
+    const [, which, field] = m;
+    return (p) => (SHAPE_FIELDS[p.section[which as 'bottom' | 'top'].shape] ?? []).includes(field);
+  }
+  return undefined;
+}
 
 function useVisible(paths: string[]) {
   const params = useStore((s) => s.params);
   const level = useStore((s) => s.level);
-  return paths.filter(
-    (p) => (VISIBLE[p] ? VISIBLE[p](params) : true) && isShown(p, level, undefined, BASIC_EXTRA.has(p)),
-  );
+  return paths.filter((p) => (ruleFor(p)?.(params) ?? true) && isShown(p, level, undefined, BASIC_EXTRA.has(p)));
 }
 
 function Params({ paths }: { paths: string[] }) {
@@ -100,20 +121,41 @@ function ShapePanel() {
   );
 }
 
-const SECTION = [
-  'shape',
-  'sides',
-  'cornerRadius',
-  'starPoints',
-  'starInnerRatio',
-  'petals',
-  'petalDepth',
-  'superellipseExponent',
-  'aspectXY',
-];
+const SECTION = ['shape', ...ALL_SHAPE_FIELDS, 'aspectXY'];
 
 function SectionPanel() {
-  return <ParamGroup title={useT()('group.section')} paths={SECTION.map((k) => `section.bottom.${k}`)} />;
+  const t = useT();
+  const morph = useStore((s) => s.params.section.morphEnabled);
+  const shapes = useStore((s) => [s.params.section.bottom.shape, s.params.section.top.shape]);
+  const [which, setWhich] = useState<'bottom' | 'top'>('bottom');
+  const w = morph ? which : 'bottom';
+  const shape = w === 'bottom' ? shapes[0] : shapes[1];
+  return (
+    <>
+      <Group title={t('group.morph')}>
+        <Params paths={['section.morphEnabled', 'section.morphEasing', 'section.rotationTop']} />
+      </Group>
+      <Group title={t('group.section')}>
+        {morph && (
+          <div className="mb-2 flex gap-1 rounded-lg border border-line p-0.5 text-xs">
+            {(['bottom', 'top'] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setWhich(k)}
+                className={`flex-1 rounded-md py-1 ${w === k ? 'bg-ink text-white' : 'text-muted'}`}
+              >
+                {t(`section.${k}`)}
+              </button>
+            ))}
+          </div>
+        )}
+        <Params key={w} paths={SECTION.map((k) => `section.${w}.${k}`)} />
+        {shape === 'custom' && <PolarEditor which={w} />}
+        {shape === 'svg' && <SvgImportButton which={w} />}
+      </Group>
+    </>
+  );
 }
 
 function TwistPanel() {

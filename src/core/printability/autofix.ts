@@ -38,6 +38,13 @@ function knobsFor(p: VaseParams): Knob[] {
       k.push({ path: `effects.${i}.amount`, neutral: () => 0 });
     } else if (e.type === 'facets') {
       k.push({ path: `effects.${i}.jitter`, neutral: () => 0 });
+    } else if (e.type === 'texture') {
+      k.push({ path: `effects.${i}.depth`, neutral: () => 0 });
+    } else if (e.type === 'steps') {
+      k.push({ path: `effects.${i}.bevel`, neutral: () => 100 });
+    } else if (e.type === 'glitch') {
+      k.push({ path: `effects.${i}.maxOffset`, neutral: () => 0 });
+      k.push({ path: `effects.${i}.maxShift`, neutral: () => 0 });
     }
   });
   return k.filter((kn) => Math.abs((getPath(p, kn.path) as number) - kn.neutral(p)) > 1e-6);

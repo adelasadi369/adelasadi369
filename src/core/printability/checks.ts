@@ -132,16 +132,16 @@ export function featureIssues(b: BuildResult, p: VaseParams): Issue[] {
     }
   };
 
-  const sec = p.section.bottom;
-  if (sec.shape === 'star' || sec.shape === 'flower') {
+  field.sections.forEach((sec, k) => {
+    if (sec.eval.grooveDepth <= 0) return;
     check(
-      'section',
+      `section${k}`,
       t('مقطع', 'Section'),
-      field.section.repetitions,
-      (R) => field.section.grooveDepth * R,
+      sec.eval.repetitions,
+      (R) => sec.eval.grooveDepth * R,
       () => true,
     );
-  }
+  });
   if (field.lobesCount) {
     check(
       'lobes',
@@ -165,6 +165,8 @@ export function featureIssues(b: BuildResult, p: VaseParams): Issue[] {
       check(`fx${i}`, name, ce.repetitions, () => e.amplitude, active, `effects.${i}.amplitude`, e.amplitude);
     else if (e.type === 'organic')
       check(`fx${i}`, name, ce.repetitions, () => e.amount, active, `effects.${i}.amount`, e.amount);
+    else if (e.type === 'texture')
+      check(`fx${i}`, name, ce.repetitions, () => e.depth, active, `effects.${i}.depth`, e.depth);
   });
   return issues;
 }
@@ -307,17 +309,15 @@ export function modeIssues(p: VaseParams): Issue[] {
       penalty: 0,
     });
   }
-  const unsupported = p.effects.filter(
-    (e) => e.enabled && !['ribs', 'waves', 'noise', 'organic', 'facets'].includes(e.type),
-  );
+  const unsupported = p.effects.filter((e) => e.enabled && e.type === 'displacement');
   if (unsupported.length) {
     issues.push({
       id: 'mode-effects',
       check: 'mode',
       severity: 'info',
       message: t(
-        'بعضی افکت‌ها در فاز ۲ فعال می‌شوند و فعلاً اعمال نمی‌شوند.',
-        'Some effects arrive in Phase 2 and are skipped for now.',
+        'نقشهٔ برجستگی تصویری در فاز ۳ فعال می‌شود و فعلاً اعمال نمی‌شود.',
+        'Image displacement arrives in Phase 3 and is skipped for now.',
       ),
       penalty: 0,
     });

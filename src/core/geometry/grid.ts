@@ -18,9 +18,10 @@ export interface GridPlan {
 
 export function planGrid(field: Field, quality: Quality): GridPlan {
   const q = QUALITY_GRID[quality];
-  const { params, section, effects } = field;
+  const { params, effects } = field;
   let k = 1;
-  if (section.repetitions > 1 && params.section.bottom.shape !== 'circle') k = Math.max(k, section.repetitions);
+  for (const sec of field.sections)
+    if (sec.eval.repetitions > 1 && sec.shape !== 'circle') k = Math.max(k, sec.eval.repetitions);
   if (field.lobesCount) k = Math.max(k, field.lobesCount);
   let minCols = 0;
   for (const e of effects) {
@@ -30,7 +31,7 @@ export function planGrid(field: Field, quality: Quality): GridPlan {
   }
 
   // Align the grid with a helical rib if nothing else around the circumference needs alignment.
-  const sectionFree = params.section.bottom.shape === 'circle' && !field.lobesCount;
+  const sectionFree = field.sections.every((sec) => sec.shape === 'circle') && !field.lobesCount;
   let aligned: (typeof effects)[number] | null = null;
   if (sectionFree) {
     for (const e of effects) {

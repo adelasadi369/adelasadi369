@@ -19,4 +19,4 @@ export function useNum() {
 }
 
 /** Current UI phase: parameters/options from later phases stay hidden. */
-export const UI_PHASE = 1;
+export const UI_PHASE = 2;

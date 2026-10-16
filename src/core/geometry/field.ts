@@ -1,4 +1,4 @@
-import { DEG } from '../math';
+import { DEG, TAU, ease } from '../math';
 import type { VaseParams } from '../params/schema';
 import { compileEffect, type CompiledEffect } from './effects';
 import { buildProfile, type Profile } from './profile';
@@ -18,7 +18,12 @@ export interface Row {
   /** Height fraction used for body evaluation (differs inside the foot ring). */
   tb: number;
   R: number;
+  /** Corner radius / R for the bottom and top sections. */
   cn: number;
+  cn1: number;
+  /** Morph weight w(t) and renormaliser N(t) (1 when morphing is off). */
+  mw: number;
+  mnorm: number;
   flare: number;
   /** θ-independent base modifiers (foot ring), mm, ≤ 0. The chamfer is applied in mesh.ts. */
   radialOffset: number;
@@ -30,6 +35,8 @@ export interface Field {
   H: number;
   profile: Profile;
   section: SectionEval;
+  /** Active sections: [bottom] or [bottom, top] when morphing. */
+  sections: { eval: SectionEval; shape: string }[];
   effects: CompiledEffect[];
   lobesCount: number;
   twistFn: (t: number) => number;
@@ -45,9 +52,38 @@ export function compileField(params: VaseParams): Field {
   const profile = buildProfile(params, R_MIN);
   const section = makeSection(params.section.bottom);
   const cornerMm = params.section.bottom.cornerRadius;
+  const morph = params.section.morphEnabled;
+  const top = morph ? makeSection(params.section.top) : null;
+  const cornerTop = params.section.top.cornerRadius;
+  const rotTop = params.section.rotationTop * DEG;
+  const easing = params.section.morphEasing;
+  /** lerp(S0, S1 rotated, w) before renormalisation. */
+  const mixed = (thetaW: number, cn: number, cn1: number, w: number) =>
+    w <= 0
+      ? section(thetaW, cn)
+      : w >= 1
+        ? top!(thetaW - rotTop, cn1)
+        : section(thetaW, cn) * (1 - w) + top!(thetaW - rotTop, cn1) * w;
+  // N(t) = max_θ of the blend: 65-entry table over t, 512 θ samples each.
+  const normTable = new Float64Array(65).fill(1);
+  if (top) {
+    for (let k = 0; k <= 64; k++) {
+      const tt = k / 64;
+      const R = profile.R(tt);
+      const w = ease(easing, tt);
+      let m = 0;
+      for (let i = 0; i < 512; i++) m = Math.max(m, mixed((TAU * i) / 512, cornerMm / R, cornerTop / R, w));
+      normTable[k] = m > 0 ? m : 1;
+    }
+  }
+  const normAt = (tt: number) => {
+    const x = Math.min(64, Math.max(0, tt * 64));
+    const i = Math.min(63, Math.floor(x));
+    return normTable[i] + (normTable[i + 1] - normTable[i]) * (x - i);
+  };
   const lobes = buildLobes(params.twist.lobes);
   const twistFn = buildTwist(params.twist);
-  const ctx = { height: H, refRadius: params.dimensions.maxDiameter / 2 };
+  const ctx = { height: H, refRadius: params.dimensions.maxDiameter / 2, maxOverhang: params.print.maxOverhang };
   const effects: CompiledEffect[] = [];
   const active: CompiledEffect[] = [];
 
@@ -85,6 +121,9 @@ export function compileField(params: VaseParams): Field {
       tb,
       R,
       cn: cornerMm / R,
+      cn1: cornerTop / R,
+      mw: top ? ease(easing, tb) : 0,
+      mnorm: top ? normAt(tb) : 1,
       flare: fl,
       radialOffset: off,
       masks,
@@ -92,7 +131,7 @@ export function compileField(params: VaseParams): Field {
   };
 
   const base = (thetaW: number, r: Row) => {
-    let s = section(thetaW, r.cn);
+    let s = top ? mixed(thetaW, r.cn, r.cn1, r.mw) / r.mnorm : section(thetaW, r.cn);
     if (lobes) s *= lobes(thetaW, r.tb);
     return r.R * s + r.flare;
   };
@@ -120,10 +159,18 @@ export function compileField(params: VaseParams): Field {
   for (const e of params.effects) {
     if (!e.enabled) continue;
     const n = active.length;
+    let lastT = NaN;
+    let lastRow: Row | null = null;
+    let lastMasks: number[] = [];
     const prev = (thetaW: number, t: number) => {
-      const r = row(t * H);
-      const masks = active.slice(0, n).map((x) => x.mask(r.tb));
-      return applyEffects(base(thetaW, r), thetaW, Math.cos(thetaW), Math.sin(thetaW), r.tb, masks, n);
+      if (t !== lastT || !lastRow) {
+        lastT = t;
+        lastRow = row(t * H);
+        const tb = lastRow.tb;
+        lastMasks = active.slice(0, n).map((x) => x.mask(tb));
+      }
+      const r = lastRow;
+      return applyEffects(base(thetaW, r), thetaW, Math.cos(thetaW), Math.sin(thetaW), r.tb, lastMasks, n);
     };
     const ce = compileEffect(e, ctx, prev);
     effects.push(ce);
@@ -138,6 +185,10 @@ export function compileField(params: VaseParams): Field {
     H,
     profile,
     section,
+    sections: [
+      { eval: section, shape: params.section.bottom.shape },
+      ...(top ? [{ eval: top, shape: params.section.top.shape }] : []),
+    ],
     effects,
     lobesCount: lobes ? params.twist.lobes.count : 0,
     twistFn,

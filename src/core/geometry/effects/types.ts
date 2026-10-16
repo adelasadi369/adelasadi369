@@ -3,6 +3,8 @@ export interface EffectCtx {
   height: number;
   /** Reference radius for isotropic noise sampling (maxDiameter / 2). */
   refRadius: number;
+  /** Printer overhang limit in degrees (modifiers size their ramps with it). */
+  maxOverhang: number;
 }
 
 /** Radial offset in mm at warped angle θw, height fraction t (z = t·H). */

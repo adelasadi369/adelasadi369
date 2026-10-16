@@ -97,5 +97,10 @@
   "severity.info": "نکته",
   "lang.toggle": "English",
   "phase2": "فاز ۲",
-  "name.placeholder": "گلدان بی‌نام"
+  "name.placeholder": "گلدان بی‌نام",
+  "svg.import": "وارد کردن طرح SVG",
+  "svg.hint": "یک خط بستهٔ «ستاره‌ای» (هر پرتو از مرکز فقط یک بار لبه را قطع کند).",
+  "section.bottom": "پایین",
+  "section.top": "بالا",
+  "group.morph": "تبدیل تدریجی"
 }

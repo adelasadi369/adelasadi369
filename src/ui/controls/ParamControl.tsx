@@ -9,7 +9,6 @@ import { isShown } from './visibility';
 
 /** Enum options hidden until their phase ships. */
 const LATER_OPTIONS: Record<string, string[]> = {
-  shape: ['supershape', 'custom', 'svg'],
   outputMode: ['doubleWallVase'],
 };
 

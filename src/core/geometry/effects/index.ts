@@ -1,9 +1,12 @@
 import type { Effect } from '../../params/schema';
 import { facetsModifier } from './facets';
+import { glitchModifier } from './glitch';
 import { windowMask } from './mask';
 import { organicOffset } from './organic';
 import { noiseOffset } from './noise';
 import { ribsOffset } from './ribs';
+import { stepsModifier } from './steps';
+import { textureOffset, textureRepeats } from './textures';
 import type { CompiledEffect, EffectCtx, PrevEval } from './types';
 import { wavesOffset } from './waves';
 
@@ -81,6 +84,44 @@ export function compileEffect(e: Effect, ctx: EffectCtx, prev: PrevEval): Compil
         samplesPerRep: 24,
         depth: 0,
         inward: e.jitter + 1,
+      };
+    }
+    case 'texture': {
+      const tx = textureOffset(e, ctx);
+      const reps = textureRepeats(e);
+      return {
+        ...common,
+        offset: tx.offset,
+        repetitions: reps,
+        periodic: e.pattern !== 'bark',
+        samplesPerRep: 8,
+        verticalCycles: ctx.height / tx.cellHeight,
+        depth: e.depth,
+        inward: e.depth,
+      };
+    }
+    case 'steps': {
+      const st = stepsModifier(e, prev);
+      return {
+        ...common,
+        offset: () => 0,
+        modify: st.modify,
+        rowBreaks: st.rowBreaks,
+        periodic: false,
+        depth: 0,
+        inward: 0,
+      };
+    }
+    case 'glitch': {
+      const g = glitchModifier(e, ctx.height, ctx.refRadius, ctx.maxOverhang, prev);
+      return {
+        ...common,
+        offset: () => 0,
+        modify: g.modify,
+        rowBreaks: g.rowBreaks,
+        periodic: false,
+        depth: 0,
+        inward: e.maxOffset,
       };
     }
     default:
