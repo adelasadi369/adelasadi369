@@ -1,8 +1,7 @@
 import { normalizeParams } from '../core/params/normalize';
 import type { I18nText, VaseParams } from '../core/params/schema';
+import { PRESET_FILES } from './files';
 import index from './index.json';
-
-const files = import.meta.glob<{ default: unknown }>('./*.json', { eager: true });
 
 export interface Preset {
   id: string;
@@ -13,5 +12,5 @@ export interface Preset {
 export const PRESETS: Preset[] = index.map((p) => ({
   id: p.id,
   name: p.name,
-  params: normalizeParams(files[`./${p.id}.json`].default),
+  params: normalizeParams(PRESET_FILES[p.id]),
 }));

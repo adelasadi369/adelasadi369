@@ -54,5 +54,47 @@
       "fa": "چندوجهی",
       "en": "Low-Poly Facet"
     }
+  },
+  {
+    "id": "lattice-teardrop",
+    "name": {
+      "fa": "قطرهٔ مشبک",
+      "en": "Lattice Teardrop"
+    }
+  },
+  {
+    "id": "supershape-bloom",
+    "name": {
+      "fa": "شکوفهٔ سوپرشیپ",
+      "en": "Supershape Bloom"
+    }
+  },
+  {
+    "id": "stone-glitch",
+    "name": {
+      "fa": "سنگ گلیچ",
+      "en": "Stone / Glitch"
+    }
+  },
+  {
+    "id": "hammered-urn",
+    "name": {
+      "fa": "کوزهٔ چکشی",
+      "en": "Hammered Urn"
+    }
+  },
+  {
+    "id": "stepped-square",
+    "name": {
+      "fa": "مربع پلکانی",
+      "en": "Stepped Square"
+    }
+  },
+  {
+    "id": "planter-classic",
+    "name": {
+      "fa": "گلدان کلاسیک",
+      "en": "Planter Classic"
+    }
   }
 ]

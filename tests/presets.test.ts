@@ -9,8 +9,9 @@ import { PRESET_SOURCES } from '../scripts/presets.src';
 import { slice } from './helpers';
 
 describe('presets', () => {
-  it('has the 8 Phase-1 presets, in sync with their sources', () => {
+  it('has all 14 trend presets, in sync with their sources', () => {
     expect(PRESETS.map((p) => p.id)).toEqual(PRESET_SOURCES.map((s) => s.id));
+    expect(PRESETS).toHaveLength(14);
     for (const p of PRESETS) {
       const src = PRESET_SOURCES.find((s) => s.id === p.id)!;
       const regenerated = normalizeParams({ ...src.params, name: src.name.en });
