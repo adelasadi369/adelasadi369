@@ -3,7 +3,10 @@
  * Endpoints (JSON only): POST /api/ai/params | /api/ai/refine | /api/ai/image, GET /api/ai/health
  */
 import Anthropic from '@anthropic-ai/sdk';
+import { existsSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { DEFAULT_MODEL, handle, type Route } from './ai';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -12,8 +15,20 @@ const ORIGIN = process.env.ALLOWED_ORIGIN ?? '';
 const MAX_BODY = 8 * 1024 * 1024;
 const RATE = { capacity: 20, refillPerMin: 4 }; // per IP
 
+/** API key, auth token, a named profile, or an `ant auth login` profile on disk. */
+function hasCredentials(): boolean {
+  const e = process.env;
+  if (e.ANTHROPIC_API_KEY || e.ANTHROPIC_AUTH_TOKEN || e.ANTHROPIC_PROFILE || e.ANTHROPIC_FEDERATION_RULE_ID)
+    return true;
+  const dir = e.XDG_CONFIG_HOME ? join(e.XDG_CONFIG_HOME, 'anthropic') : join(homedir(), '.config', 'anthropic');
+  return existsSync(dir);
+}
+
 let client: Anthropic | null = null;
-const getClient = () => (client ??= new Anthropic({ maxRetries: 2, timeout: 120_000 }));
+const getClient = () => {
+  if (!hasCredentials()) throw new Error('not configured');
+  return (client ??= new Anthropic({ maxRetries: 2, timeout: 120_000 }));
+};
 
 const buckets = new Map<string, { tokens: number; at: number }>();
 function allow(ip: string): boolean {
@@ -50,7 +65,11 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
-const ROUTES: Record<string, Route> = { '/api/ai/params': 'params', '/api/ai/refine': 'refine', '/api/ai/image': 'image' };
+const ROUTES: Record<string, Route> = {
+  '/api/ai/params': 'params',
+  '/api/ai/refine': 'refine',
+  '/api/ai/image': 'image',
+};
 
 createServer(async (req, res) => {
   const url = (req.url ?? '').split('?')[0];
@@ -63,15 +82,19 @@ createServer(async (req, res) => {
     return res.end();
   }
   if (req.method === 'GET' && url === '/api/ai/health') {
-    return send(res, 200, { ok: true, configured: !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN), model: MODEL });
+    return send(res, 200, { ok: true, configured: hasCredentials(), model: MODEL });
   }
   const route = ROUTES[url];
   if (req.method !== 'POST' || !route) return send(res, 404, { ok: false, error: { code: 'not_found' } });
-  const ip = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0].trim() || req.socket.remoteAddress || '?';
+  const ip =
+    (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0].trim() || req.socket.remoteAddress || '?';
   if (!allow(ip)) {
     return send(res, 429, {
       ok: false,
-      error: { code: 'rate_limited', message: { en: 'Too many requests. Wait a minute.', fa: 'درخواست‌ها زیاد است؛ کمی صبر کنید.' } },
+      error: {
+        code: 'rate_limited',
+        message: { en: 'Too many requests. Wait a minute.', fa: 'درخواست‌ها زیاد است؛ کمی صبر کنید.' },
+      },
     });
   }
   let body: unknown;
@@ -81,7 +104,13 @@ createServer(async (req, res) => {
     const big = (e as Error).message === 'too_large';
     return send(res, big ? 413 : 400, {
       ok: false,
-      error: { code: 'bad_request', message: { en: big ? 'Request too large.' : 'Invalid JSON.', fa: big ? 'درخواست خیلی بزرگ است.' : 'JSON نامعتبر.' } },
+      error: {
+        code: 'bad_request',
+        message: {
+          en: big ? 'Request too large.' : 'Invalid JSON.',
+          fa: big ? 'درخواست خیلی بزرگ است.' : 'JSON نامعتبر.',
+        },
+      },
     });
   }
   try {

@@ -343,3 +343,47 @@ refines the formulas above:
   always run it.
 - **Auto-fix decides at preview resolution.** Its ablation probes use the
   low grid.
+
+## 12. Implementation notes (Phase 2)
+
+- **Mesh builder.**
+  - A growable builder with explicit surfaces: grids (periodic or open),
+    fans, and flat-shaded `faces` that duplicate existing vertices.
+  - A `canonical` map welds render-split vertices.
+  - Every mode is checked for manifoldness in the tests.
+- **Ruffle / slant.** Rows above `z_s = H − ruffle − slant − 2 mm` are
+  remapped per column to `z_top(θ)`. Each remapped vertex re-evaluates the
+  field at its true height. The slant uses the circle approximation of the
+  cut plane (exact for round sections).
+- **Concave base / drainage.**
+  - The bottom becomes rings scaled about the base centre,
+    `z = c·(1 − (s/0.8)²)⁺`, inner → outer, normal down.
+  - A hole adds an annular floor, an annular bottom and a vertical hole
+    wall. All of them use radial strips along the base vertices'
+    directions, so the base stays star-shaped and free of overlaps.
+  - The hole is clamped to 0.6 × the smallest base/floor radius, with a
+    warning.
+- **Double wall.**
+  - Outer, inner and rim grids get one extra seam column, offset by
+    ±0.00005 mm / r.
+  - A 2-column seam strip closes the outer wall below the floor.
+  - Two planar slit faces run from the floor to the rim arc.
+  - The floor fan's wedge plus a slit-gap quad close the floor.
+  - Every layer above the floor slices to one C-shaped contour.
+- **Follow liner.** An exact sampled erosion: for each inner ray, take the
+  nearest entry into the balls of radius `w` around outer samples within
+  `w` (rows and columns). The result is never thinner than the wall and
+  can't self-intersect.
+- **Steps.** Each level is cached as a 2048-sample θ-ring of the field
+  below it. Rows snap to step and bevel edges.
+- **Glitch.** Seeded, non-overlapping bands. Edge ramps are
+  `(|Δr| + 0.3·R̄·|Δθ|)/tan α + 0.5 mm`.
+- **Textures.** Cell space `U = repeats·θ/2π`, `V = z / (aspect·2πR̄/repeats)`.
+  Hammered uses a Voronoi hash wrapped with `i mod repeats`. Bark uses
+  cylindrical noise. Basketweave forces an even repeat count.
+- **Morph.**
+  `Ŝ = lerp(S0(θ), S1(θ − rot), ease(t)) / N(t)`, where the 65-entry `N(t)`
+  table keeps `R(t)` the true maximum radius.
+- **Saucer.** A separate shell body. Its inner wall is the vase's base
+  contour plus `gap`, with flare `rim·u²`. The viewer and 3MF place it
+  10 mm beside the vase; STL/OBJ exports become a ZIP.

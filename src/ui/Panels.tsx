@@ -138,10 +138,9 @@ const SECTION = ['shape', ...ALL_SHAPE_FIELDS, 'aspectXY'];
 function SectionPanel() {
   const t = useT();
   const morph = useStore((s) => s.params.section.morphEnabled);
-  const shapes = useStore((s) => [s.params.section.bottom.shape, s.params.section.top.shape]);
   const [which, setWhich] = useState<'bottom' | 'top'>('bottom');
   const w = morph ? which : 'bottom';
-  const shape = w === 'bottom' ? shapes[0] : shapes[1];
+  const shape = useStore((s) => s.params.section[w].shape);
   return (
     <>
       <Group title={t('group.morph')}>

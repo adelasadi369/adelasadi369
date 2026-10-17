@@ -11,7 +11,11 @@ function mockClient(result: { parsed_output: unknown; stop_reason?: string; mode
 
 describe('AI proxy handler', () => {
   it('text → params: sends a cached system prompt, structured output, fallbacks; returns parsed data', async () => {
-    const proposal = { basePreset: 'twisted-hex', changes: [{ path: 'twist.total', valueJson: '200' }], summary: { fa: 'الف', en: 'a' } };
+    const proposal = {
+      basePreset: 'twisted-hex',
+      changes: [{ path: 'twist.total', valueJson: '200' }],
+      summary: { fa: 'الف', en: 'a' },
+    };
     const { client, parse } = mockClient({ parsed_output: proposal });
     const r = await handle('params', { prompt: 'یک گلدان پیچان شش‌ضلعی', lang: 'fa' }, () => client);
     expect(r.status).toBe(200);
@@ -28,7 +32,11 @@ describe('AI proxy handler', () => {
   });
 
   it('refusals and unparseable output become typed errors', async () => {
-    let r = await handle('params', { prompt: 'x' }, () => mockClient({ parsed_output: null, stop_reason: 'refusal' }).client);
+    let r = await handle(
+      'params',
+      { prompt: 'x' },
+      () => mockClient({ parsed_output: null, stop_reason: 'refusal' }).client,
+    );
     expect(r).toMatchObject({ status: 422, body: { ok: false, error: { code: 'refused' } } });
     r = await handle('params', { prompt: 'x' }, () => mockClient({ parsed_output: null }).client);
     expect(r).toMatchObject({ status: 502, body: { error: { code: 'invalid_output' } } });
@@ -46,9 +54,16 @@ describe('AI proxy handler', () => {
 
   it('image requests send the image block first, then the silhouette hint', async () => {
     const { client, parse } = mockClient({ parsed_output: {} });
-    await handle('image', { imageBase64: 'AAAA', mediaType: 'image/png', silhouette: [{ t: 0, r: 0.8 }] }, () => client);
+    await handle(
+      'image',
+      { imageBase64: 'AAAA', mediaType: 'image/png', silhouette: [{ t: 0, r: 0.8 }] },
+      () => client,
+    );
     const content = parse.mock.calls[0][0].messages[0].content;
-    expect(content[0]).toMatchObject({ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } });
+    expect(content[0]).toMatchObject({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/png', data: 'AAAA' },
+    });
     expect(content[1].text).toContain('(0.00, 0.80)');
   });
 });

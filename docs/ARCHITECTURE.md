@@ -165,17 +165,37 @@ the UI (labels, tooltips, units, steps, Basic/Advanced, phase gating) and
 - **Params JSON** and a **ZIP bundle** for multi-body output.
 - **Spiral G-code** (P3) is sampled straight from `r(θ, z)`, not the mesh.
 
-## 9. AI module (Phase 2)
+## 9. AI module (Phase 2, implemented)
 
-- `server/` proxy endpoints `params | refine | image | variations`. The key
-  lives only on the server, with per-IP rate limiting, size limits on
-  images, and a JSON-only response contract.
-- **Prompt =** system rules (return only JSON, start from the nearest
-  preset, stay in range, prefer vase-mode-safe choices) + JSON Schema +
-  compact preset library + printability rules summary + user text.
-- **Client pipeline:** `safeParse → clamp → normalise → autofix → summary`.
-  Refinement returns an RFC 6902 patch. The patch is applied to a copy,
-  re-validated, and rejected as a whole if any op fails.
+- **Proxy:** `server/index.ts` (Node `http`) wraps the pure `server/ai.ts`
+  handler with an injected client. The Anthropic SDK call is
+  `beta.messages.parse` with:
+  - model `claude-opus-5-5`, overridable with `VASEFORGE_MODEL`;
+  - `output_config.effort: "medium"`;
+  - structured output from the zod schemas;
+  - server-side refusal fallback (`fallbacks: "default"`);
+  - a cached system prompt.
+- **System prompt:** built from the parameter registry
+  (path | range | meaning) plus the preset library and the printability
+  rules. It is stable per process, so it is served from the prompt cache.
+- **Contracts** (`src/ai/schema.ts`):
+  - `DesignProposal` = closest preset + `{path, valueJson}` changes;
+  - `RefinePatch` = RFC 6902 ops;
+  - `ImageAnalysis` = 8 profile radius factors, section, ribs, texture,
+    twist, colour.
+  - Values travel as JSON strings, so one small schema covers every
+    parameter type.
+- **Client pipeline:** proposal or patch → known paths only (unknown ones
+  are reported) → `normalizeParams` (clamp + cross-field fixes) →
+  worker auto-fix (when the score is < 90 or there are errors) → one
+  history entry and an interpretation card. A JSON Patch is applied
+  atomically, so a failing op leaves the design unchanged.
+- **Image:** the browser downsizes the photo to ≤ 1280 px JPEG and
+  extracts a silhouette (corner-colour background mask). That silhouette
+  is sent as a hint, or applied directly with "use silhouette only", with
+  no AI involved.
+- **Variations:** 6 seeded mutations (±15 % / ±30 %, fresh effect seeds)
+  generated in the worker and auto-fixed. No AI call.
 - Slider edits never touch the network.
 
 ## 10. Testing

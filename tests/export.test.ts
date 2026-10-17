@@ -87,12 +87,20 @@ describe('3MF', () => {
 });
 
 describe('multi-body export', () => {
-  const withSaucer = { ...params, base: { ...params.base, saucer: { enabled: true, gap: 3, height: 14, rim: 2 } }, render: { ...params.render, exportQuality: 'low' as const } };
+  const withSaucer = {
+    ...params,
+    base: { ...params.base, saucer: { enabled: true, gap: 3, height: 14, rim: 2 } },
+    render: { ...params.render, exportQuality: 'low' as const },
+  };
   it('STL with a saucer becomes a ZIP of two bodies + params', async () => {
     const f = await exportDesign(withSaucer, 'stl');
     expect(f.name).toBe('japandi-ribbed.zip');
     const files = await readZip(f.data);
-    expect(Object.keys(files).sort()).toEqual(['japandi-ribbed-saucer.stl', 'japandi-ribbed.json', 'japandi-ribbed.stl']);
+    expect(Object.keys(files).sort()).toEqual([
+      'japandi-ribbed-saucer.stl',
+      'japandi-ribbed.json',
+      'japandi-ribbed.stl',
+    ]);
     expect(readSTL(files['japandi-ribbed-saucer.stl'].slice().buffer).count).toBeGreaterThan(100);
   });
   it('3MF holds two objects, saucer placed beside the vase', async () => {

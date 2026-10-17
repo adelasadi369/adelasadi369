@@ -7,7 +7,10 @@ import { checkManifold } from '../src/core/printability/sanity';
 import { slice } from './helpers';
 
 const ngon = (n: number, r = 50, cx = 10, cy = -5): Pt[] =>
-  Array.from({ length: n }, (_, i) => [cx + r * Math.cos((2 * Math.PI * i) / n), cy + r * Math.sin((2 * Math.PI * i) / n)]);
+  Array.from({ length: n }, (_, i) => [
+    cx + r * Math.cos((2 * Math.PI * i) / n),
+    cy + r * Math.sin((2 * Math.PI * i) / n),
+  ]);
 
 describe('SVG → polar', () => {
   it('accepts a star-shaped outline and normalises max to 1', () => {

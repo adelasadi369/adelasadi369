@@ -26,7 +26,10 @@ export interface AiError {
   message: { fa: string; en: string };
 }
 
-export type AiResult = { status: number; body: { ok: true; data: unknown; model: string } | { ok: false; error: AiError } };
+export type AiResult = {
+  status: number;
+  body: { ok: true; data: unknown; model: string } | { ok: false; error: AiError };
+};
 
 const err = (status: number, code: AiError['code'], en: string, fa: string): AiResult => ({
   status,
@@ -59,20 +62,40 @@ async function call<S extends z.ZodType>(
     messages,
   });
   if (response.stop_reason === 'refusal') {
-    return err(422, 'refused', 'The model declined this request. Try rephrasing it.', 'مدل این درخواست را نپذیرفت؛ آن را طور دیگری بنویسید.');
+    return err(
+      422,
+      'refused',
+      'The model declined this request. Try rephrasing it.',
+      'مدل این درخواست را نپذیرفت؛ آن را طور دیگری بنویسید.',
+    );
   }
   if (response.parsed_output == null) {
-    return err(502, 'invalid_output', 'The model returned an unexpected format. Please try again.', 'پاسخ مدل قالب درستی نداشت؛ دوباره تلاش کنید.');
+    return err(
+      502,
+      'invalid_output',
+      'The model returned an unexpected format. Please try again.',
+      'پاسخ مدل قالب درستی نداشت؛ دوباره تلاش کنید.',
+    );
   }
   return { status: 200, body: { ok: true, data: response.parsed_output, model: response.model } };
 }
 
-export async function handle(route: Route, rawBody: unknown, getClient: () => ClientLike, model = DEFAULT_MODEL): Promise<AiResult> {
+export async function handle(
+  route: Route,
+  rawBody: unknown,
+  getClient: () => ClientLike,
+  model = DEFAULT_MODEL,
+): Promise<AiResult> {
   let client: ClientLike;
   try {
     client = getClient();
   } catch {
-    return err(503, 'not_configured', 'AI is not configured on the server (set ANTHROPIC_API_KEY).', 'هوش مصنوعی روی سرور پیکربندی نشده است (ANTHROPIC_API_KEY).');
+    return err(
+      503,
+      'not_configured',
+      'AI is not configured on the server (set ANTHROPIC_API_KEY).',
+      'هوش مصنوعی روی سرور پیکربندی نشده است (ANTHROPIC_API_KEY).',
+    );
   }
   try {
     switch (route) {
@@ -85,7 +108,10 @@ export async function handle(route: Route, rawBody: unknown, getClient: () => Cl
       case 'refine': {
         const req = RefineRequest.safeParse(rawBody);
         if (!req.success) return err(400, 'bad_request', 'Invalid request.', 'درخواست نامعتبر است.');
-        const history: Anthropic.Beta.BetaMessageParam[] = req.data.history.map((h) => ({ role: h.role, content: h.text }));
+        const history: Anthropic.Beta.BetaMessageParam[] = req.data.history.map((h) => ({
+          role: h.role,
+          content: h.text,
+        }));
         const msg = `Current design JSON:\n${JSON.stringify(req.data.params)}\n\nRequest: ${req.data.message}`;
         return await call(client, model, 'refine', RefinePatch, [...history, { role: 'user', content: msg }]);
       }
@@ -112,7 +138,12 @@ export async function handle(route: Route, rawBody: unknown, getClient: () => Cl
       return err(503, 'not_configured', 'The server API key was rejected.', 'کلید API سرور پذیرفته نشد.');
     }
     if (e instanceof Anthropic.RateLimitError) {
-      return err(429, 'rate_limited', 'The AI service is busy. Try again in a minute.', 'سرویس شلوغ است؛ یک دقیقهٔ دیگر تلاش کنید.');
+      return err(
+        429,
+        'rate_limited',
+        'The AI service is busy. Try again in a minute.',
+        'سرویس شلوغ است؛ یک دقیقهٔ دیگر تلاش کنید.',
+      );
     }
     if (e instanceof Anthropic.BadRequestError) {
       return err(400, 'bad_request', 'The AI service rejected the request.', 'سرویس هوش مصنوعی درخواست را نپذیرفت.');
