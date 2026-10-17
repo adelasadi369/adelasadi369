@@ -1,4 +1,5 @@
 import { TAU } from '../math';
+import { boreMinColumns, computeBore, isBoreLiner } from '../insert';
 import { QUALITY_GRID, type VaseParams } from '../params/schema';
 import type { Field } from './field';
 
@@ -28,6 +29,12 @@ export function planGrid(field: Field, quality: Quality): GridPlan {
     if (e.unsupported) continue;
     if (e.periodic) k = Math.max(k, e.repetitions);
     minCols = Math.max(minCols, e.samplesPerRep * e.repetitions);
+  }
+  if (isBoreLiner(params)) {
+    // exact bore: facets within the sag budget, grip ribs centred on columns
+    const { insert } = params;
+    minCols = Math.max(minCols, boreMinColumns(insert, computeBore(insert, params.print.printer).radius));
+    if (insert.ribs.count > 0 && insert.ribs.interference > 0) k = Math.max(k, insert.ribs.count);
   }
 
   // Align the grid with a helical rib if nothing else around the circumference needs alignment.

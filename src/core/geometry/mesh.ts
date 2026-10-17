@@ -1,3 +1,4 @@
+import { boreBottom, bottomHoleRadius, boreProfile, boreRay, isBoreLiner, type BoreProfile } from '../insert';
 import { DEG, TAU } from '../math';
 import type { VaseParams } from '../params/schema';
 import { compileField, R_MIN, type Field, type Row } from './field';
@@ -40,6 +41,26 @@ export interface VaseMesh {
   /** Drainage hole had to be shrunk to fit inside the floor. */
   holeClamped: boolean;
   plan: GridPlan;
+  /** Shell bore liner only. */
+  bore?: BoreInfo;
+}
+
+/** What the printability checks need to know about the bore liner (all lengths mm). */
+export interface BoreInfo {
+  radius: number;
+  /** Bore wall start (top of floor/lip, 0 when open). */
+  zBottom: number;
+  /** Nominal flat bore top (before ruffle/slant). */
+  zTop: number;
+  coreWall: number;
+  /** Smallest horizontal wall r_outer − r_bore along the slice rays. */
+  minWall: number;
+  /** Height range where the wall is thinner than coreWall, or null. */
+  thin: [number, number] | null;
+  /** Uniform scale of the outer radii that restores coreWall everywhere (≥ 1). */
+  scaleNeeded: number;
+  /** Vertices whose slice centre lies outside the bore (bend too strong for a straight tube). */
+  offAxis: number;
 }
 
 export interface BuildResult {
@@ -352,14 +373,15 @@ export function buildMesh(params: VaseParams, quality: Quality): BuildResult {
   const shell = mode !== 'solidVase';
   const doubleWall = mode === 'doubleWallVase';
   const fullShell = mode === 'shell';
+  const boreMode = isBoreLiner(params);
   const H = field.H;
   const wall = params.print.wallThickness;
-  const lip = shell ? params.rim.lipThickness : 0;
+  const lip = shell && !boreMode ? params.rim.lipThickness : 0;
   const round = shell && params.rim.round;
   const rho = round ? (wall + lip) / 2 : 0;
   const Hw = H - rho;
-  const concave = fullShell ? params.base.concave : 0;
-  let zFloor = shell ? Math.min(params.base.bottomThickness, Hw * 0.5) : 0;
+  const concave = fullShell && !boreMode ? params.base.concave : 0;
+  let zFloor = shell ? Math.min(boreMode ? boreBottom(params.insert) : params.base.bottomThickness, Hw * 0.5) : 0;
   if (doubleWall) zFloor = Math.max(zFloor, 0.8);
   if (concave > 0) zFloor = Math.max(zFloor, concave + 1.2);
 
@@ -371,6 +393,8 @@ export function buildMesh(params: VaseParams, quality: Quality): BuildResult {
 
   const breaks = rowBreakpoints(params, H, zFloor, field);
   if (cutDepth > 0) breaks.push(zS);
+  const prof: BoreProfile | null = boreMode ? boreProfile(params, Hw, H) : null;
+  if (prof) breaks.push(...prof.breaks);
   const rows = buildRows(nZ, Hw, breaks);
   let jFloor = 0;
   if (zFloor > 0) {
@@ -466,6 +490,7 @@ export function buildMesh(params: VaseParams, quality: Quality): BuildResult {
   const outerAt = (j: number, i: number) => outerFirst + j * nC + i;
   let innerTooNarrow = 0;
   let holeClamped = false;
+  let bore: BoreInfo | undefined;
 
   if (!shell) {
     const r0 = rowCtx[0];
@@ -583,8 +608,9 @@ export function buildMesh(params: VaseParams, quality: Quality): BuildResult {
       const outer0 = outerRings[0];
       const rminOuter = minRadius(outer0, c0x, c0y);
       const rminFloor = minRadius(innerFloorRing, rfl.cx, rfl.cy);
-      let hr = fullShell ? params.base.drainageHole / 2 : 0;
-      const hrMax = 0.6 * Math.min(rminOuter, rminFloor);
+      let hr = prof ? bottomHoleRadius(params.insert, prof.bore.radius) : fullShell ? params.base.drainageHole / 2 : 0;
+      // a bore lip only needs to stay inside the bore; a drainage hole keeps 40 % of the floor
+      const hrMax = prof ? Math.min(rminOuter, rminFloor) - 1 : 0.6 * Math.min(rminOuter, rminFloor);
       if (hr > hrMax) {
         hr = hrMax;
         holeClamped = true;
@@ -629,9 +655,10 @@ export function buildMesh(params: VaseParams, quality: Quality): BuildResult {
     }
   }
 
-  // ---- inner radii (shell): smooth liner or follow (exact sampled erosion), see GEOMETRY.md §7
+  // ---- inner radii (shell): smooth liner, follow (exact sampled erosion) or bore, see GEOMETRY.md §7
   function innerRadii(): Float64Array {
     const rIn = new Float64Array(N);
+    if (prof) return boreRadii(rIn, prof);
     const dTheta = TAU / nT;
     const lipZone = Math.max(3 * lip, 4);
     const follow = params.print.innerSurface === 'follow';
@@ -668,6 +695,36 @@ export function buildMesh(params: VaseParams, quality: Quality): BuildResult {
       }
     }
     return rIn;
+
+    /** Exact bore: each ray from the slice centre stops on the bore profile about the vertical axis. */
+    function boreRadii(out: Float64Array, pr: BoreProfile): Float64Array {
+      const coreWall = params.insert.coreWall;
+      let minWall = Infinity;
+      let scaleNeeded = 1;
+      let offAxis = 0;
+      let thin: [number, number] | null = null;
+      for (let j = jFloor; j < nZ; j++) {
+        for (let i = 0; i < nC; i++) {
+          const o = j * nC + i;
+          const zTop = g.z[(nZ - 1) * nC + i];
+          let r = boreRay(pr, g.cx[o], g.cy[o], g.ang[o], g.z[o], zTop);
+          if (Number.isNaN(r)) {
+            offAxis++;
+            r = Math.max(0.5, rOut[o] - wall);
+          }
+          out[o] = r;
+          const w = rOut[o] - r;
+          if (w < minWall) minWall = w;
+          if (w < coreWall) {
+            const z = g.z[o];
+            thin = thin ? [Math.min(thin[0], z), Math.max(thin[1], z)] : [z, z];
+            scaleNeeded = Math.max(scaleNeeded, (r + coreWall) / rOut[o]);
+          }
+        }
+      }
+      bore = { radius: pr.bore.radius, zBottom: pr.zBottom, zTop: Hw, coreWall, minWall, thin, scaleNeeded, offAxis };
+      return out;
+    }
 
     /** Inner boundary of the outer solid eroded by a ball of radius `wall`, sampled on the grid. */
     function erosion(j: number, i: number): number {
@@ -717,6 +774,7 @@ export function buildMesh(params: VaseParams, quality: Quality): BuildResult {
     innerTooNarrow,
     holeClamped,
     plan,
+    bore,
   };
   const saucer = params.base.saucer.enabled ? buildSaucer(params, outerRings[0], rowCtx[0]) : undefined;
   return { field, mesh, saucer };
