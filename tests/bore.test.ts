@@ -3,7 +3,9 @@ import { BORE_SAG, computeBore } from '../src/core/insert';
 import { buildMesh, type BuildResult } from '../src/core/geometry/mesh';
 import { normalizeParams } from '../src/core/params/normalize';
 import type { VaseParams, VaseParamsInput } from '../src/core/params/schema';
+import { analyze, evaluate } from '../src/core/printability';
 import { checkManifold, signedVolume } from '../src/core/printability/sanity';
+import { setPath } from '../src/core/params/paths';
 import { PRESETS } from '../src/presets';
 import { slice } from './helpers';
 
@@ -121,5 +123,44 @@ describe('shell bore liner', () => {
   it('leaves non-bore modes untouched', () => {
     const b = buildMesh(normalizeParams({ print: { outputMode: 'shell' } }), 'low');
     expect(b.mesh.bore).toBeUndefined();
+  });
+});
+
+describe('bore printability', () => {
+  it('every preset with a bore passes the accuracy check at preview quality', () => {
+    for (const preset of PRESETS) {
+      const p = boreParams(preset.params, { od: 36 });
+      const { report } = evaluate(p, p.render.previewQuality);
+      const ids = report.issues.map((i) => i.id);
+      expect(ids, preset.id).toContain('bore-ok');
+      expect(ids, preset.id).not.toContain('bore-accuracy');
+      expect(report.manifold).toBe(true);
+      expect(report.stats.boreDiameter).toBeCloseTo(2 * computeBore(p.insert, p.print.printer).radius, 9);
+    }
+  });
+
+  it('flags r_outer < R_bore + wall as an error whose fix clears it', () => {
+    let p = boreParams({ dimensions: { baseDiameter: 56, maxDiameter: 60, topDiameter: 56 } }, { od: 50 });
+    const r = analyze(buildMesh(p, 'low'), p);
+    const issue = r.issues.find((i) => i.id === 'bore-wall')!;
+    expect(issue.severity).toBe('error');
+    expect(r.score).toBeLessThanOrEqual(69);
+    expect(issue.fix?.kind).toBe('patch');
+    if (issue.fix?.kind === 'patch') for (const c of issue.fix.changes) p = setPath(p, c.path, c.value);
+    p = normalizeParams(p);
+    expect(analyze(buildMesh(p, 'low'), p).issues.some((i) => i.id === 'bore-wall')).toBe(false);
+  });
+
+  it('warns about a press fit on glass and a tube shorter than the sleeve', () => {
+    const p = boreParams({ dimensions: { height: 200 } }, { od: 40, fit: 'press', clearance: 0.1, length: 150 });
+    const ids = analyze(buildMesh(p, 'low'), p).issues.map((i) => i.id);
+    expect(ids).toContain('insert-press-glass');
+    expect(ids).toContain('insert-short');
+  });
+
+  it('a bend that leaves the bore axis is an error', () => {
+    const p = boreParams({ twist: { bend: { offset: 30 } } }, { od: 30 });
+    const ids = analyze(buildMesh(p, 'low'), p).issues.map((i) => i.id);
+    expect(ids).toContain('bore-axis');
   });
 });

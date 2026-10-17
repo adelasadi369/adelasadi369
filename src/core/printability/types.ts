@@ -1,7 +1,8 @@
 import type { I18nText } from '../params/schema';
 
 export type Severity = 'info' | 'warn' | 'error';
-export type CheckId = 'overhang' | 'features' | 'walls' | 'bounds' | 'mode' | 'stability' | 'sanity' | 'useCase';
+export type CheckId =
+  'overhang' | 'features' | 'walls' | 'bounds' | 'mode' | 'stability' | 'sanity' | 'useCase' | 'bore';
 
 export interface ParamChange {
   path: string;
@@ -36,6 +37,8 @@ export interface Stats {
   surfaceCm2: number;
   triangles: number;
   stlBytes: number;
+  /** Design bore Ø (shell bore liner only). */
+  boreDiameter?: number;
 }
 
 export interface OverhangSummary {
