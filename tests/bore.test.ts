@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BORE_SAG, computeBore } from '../src/core/insert';
-import { buildMesh, type BuildResult } from '../src/core/geometry/mesh';
+import { buildFitTestRing, buildMesh, type BuildResult } from '../src/core/geometry/mesh';
+import { exportDesign, fitRingName } from '../src/core/export';
 import { normalizeParams } from '../src/core/params/normalize';
 import type { VaseParams, VaseParamsInput } from '../src/core/params/schema';
 import { analyze, evaluate } from '../src/core/printability';
@@ -162,5 +163,40 @@ describe('bore printability', () => {
     const p = boreParams({ twist: { bend: { offset: 30 } } }, { od: 30 });
     const ids = analyze(buildMesh(p, 'low'), p).issues.map((i) => i.id);
     expect(ids).toContain('bore-axis');
+  });
+});
+
+describe('fit test ring', () => {
+  it.each(['open', 'lip', 'floor', 'drain'] as const)('is a sound 10 mm slice of the bore (%s)', (bottom) => {
+    const p = boreParams({}, { od: 50, bottom, ribs: { count: bottom === 'lip' ? 4 : 0 } });
+    const ring = buildFitTestRing(p, 'low');
+    expectSound({ mesh: ring } as BuildResult);
+    expect(ring.height).toBe(10);
+    let zMin = Infinity;
+    for (let i = 2; i < ring.positions.length; i += 3) zMin = Math.min(zMin, ring.positions[i]);
+    expect(zMin).toBe(0);
+    const R = computeBore(p.insert, p.print.printer).radius;
+    const rings = boreRings({ mesh: ring } as BuildResult);
+    // the bore starts on the floor/lip (or at z = 0) and opens by the bottom chamfer there for open/lip bottoms
+    const bottomRing = rings.at(-1)!;
+    expect(bottomRing.z).toBeCloseTo(bottom === 'open' ? 0 : 1.6, 5);
+    const cb = bottom === 'open' || bottom === 'lip' ? 0.6 : 0;
+    expect(Math.max(...bottomRing.rho)).toBeCloseTo(R + cb, 4);
+    const plain = rings.filter((r) => r.z > bottomRing.z + 1);
+    for (const r of plain) expect(Math.max(...r.rho)).toBeCloseTo(R, 4);
+  });
+
+  it('exports as STL named after the target Ø and hole compensation', async () => {
+    const p = boreParams({}, { od: 50, clearance: 0.1, odTolerance: 0.3 });
+    expect(fitRingName(p)).toBe('fit-ring_D50.50_hc0.05');
+    const q = normalizeParams({
+      ...p,
+      print: { ...p.print, printer: { ...p.print.printer, holeCompensation: 0.125 } },
+    });
+    expect(fitRingName(q)).toBe('fit-ring_D50.50_hc0.125');
+    const f = await exportDesign(p, 'fitRing', 'low');
+    expect(f.name).toBe('fit-ring_D50.50_hc0.05.stl');
+    const tris = new DataView(f.data.buffer, f.data.byteOffset).getUint32(80, true);
+    expect(f.data.byteLength).toBe(84 + 50 * tris);
   });
 });
