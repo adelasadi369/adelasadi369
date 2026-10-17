@@ -1,0 +1,103 @@
+{
+  "description": "Golden mesh fingerprints of every vase preset at its preview quality. Must stay unchanged through the sleeve phases unless a change is intentional and documented. Regenerate with `npm run golden`.",
+  "presets": {
+    "japandi-ribbed": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 96962,
+      "triangleCount": 192000,
+      "positionsFnv1a": "744979d0"
+    },
+    "twisted-hex": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 52118,
+      "triangleCount": 103200,
+      "positionsFnv1a": "d261397c"
+    },
+    "fluted-column": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 53330,
+      "triangleCount": 105600,
+      "positionsFnv1a": "db1cbb10"
+    },
+    "helix-ribs": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 58178,
+      "triangleCount": 115200,
+      "positionsFnv1a": "22bac1c4"
+    },
+    "ripple-wave": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 51714,
+      "triangleCount": 102400,
+      "positionsFnv1a": "3be86e02"
+    },
+    "star-bloom": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 51714,
+      "triangleCount": 102400,
+      "positionsFnv1a": "89183da0"
+    },
+    "silk-drape": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 51714,
+      "triangleCount": 102400,
+      "positionsFnv1a": "9b9bed94"
+    },
+    "low-poly-facet": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 52724,
+      "triangleCount": 104400,
+      "positionsFnv1a": "8d01925a"
+    },
+    "lattice-teardrop": {
+      "quality": "medium",
+      "outputMode": "shell",
+      "vertexCount": 143266,
+      "triangleCount": 283712,
+      "positionsFnv1a": "c8256ab5"
+    },
+    "supershape-bloom": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 52522,
+      "triangleCount": 104000,
+      "positionsFnv1a": "5b35d8e5"
+    },
+    "stone-glitch": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 51714,
+      "triangleCount": 102400,
+      "positionsFnv1a": "dd40fa5b"
+    },
+    "hammered-urn": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 54542,
+      "triangleCount": 108000,
+      "positionsFnv1a": "13f430fc"
+    },
+    "stepped-square": {
+      "quality": "medium",
+      "outputMode": "solidVase",
+      "vertexCount": 51714,
+      "triangleCount": 102400,
+      "positionsFnv1a": "785fa9"
+    },
+    "planter-classic": {
+      "quality": "medium",
+      "outputMode": "shell",
+      "vertexCount": 130880,
+      "triangleCount": 257920,
+      "positionsFnv1a": "b8985ed"
+    }
+  }
+}

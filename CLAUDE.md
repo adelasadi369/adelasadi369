@@ -1,0 +1,135 @@
+# CLAUDE.md — VaseForge
+
+## Purpose
+
+VaseForge (وازفورج) is a local web app that generates parametric, trend-driven vases for FDM printers.
+Every mesh it produces is manifold, slicer-ready and checked for printability on every change.
+The current work adds **sleeves**: 3D-printed organic shells that wrap a straight glass or steel
+tube insert (see `docs/references/` for the target look).
+
+Read these before non-trivial work:
+
+- `docs/sleeve-integration.md`: **authoritative** plan for the sleeve work. It wins over `docs/sleeve-spec.md`.
+- `docs/ARCHITECTURE.md`: layering, data flow, params pipeline, printability, exports, AI.
+- `docs/GEOMETRY.md`: every formula (master field, profiles, sections, effects, rim/base, mesh assembly).
+- `docs/sleeve-spec.md`: the original sleeve brief (requirements and parameter list; skim only).
+
+## Stack
+
+- Vite + React 18 + TypeScript (strict), Tailwind 4 (fa RTL / en LTR, Vazirmatn font).
+- three.js via @react-three/fiber and drei for the viewer.
+- zustand (state), comlink (workers), zod 4 (params), lz-string (share links).
+- `server/`: tiny Node AI proxy using the Anthropic SDK; it holds the API key.
+- vitest for tests (core only, Node environment, no DOM).
+
+## Core invariant
+
+> UI and AI produce **params** only. Geometry comes from deterministic build functions, one per mesh path.
+
+Today there is one path: `buildMesh(params, quality)` in `src/core/geometry/mesh.ts`.
+Every slice is a star-shaped polar function `r(θ)` about its slice centre `C(t)`, built on a
+twist-aligned grid, so topology is fixed (genus 0) and the manifold check is cached per topology.
+Output modes: `solidVase`, `shell`, `doubleWallVase`. **Never break the star-shaped invariant for these modes.**
+
+## Architecture summary
+
+```
+src/core/          pure TS — no DOM, no three, no react/zustand (enforced by eslint)
+  params/          schema.ts (zod + paramMeta, SCHEMA_VERSION, DEFAULT_PARAMS), clamp, normalize, share, paths
+  geometry/        profile · sections · twist · effects/* · field (compileField) · grid · mesh (buildMesh)
+  printability/    checks, overhang, sanity (manifold, signed volume), stats, autofix, index (analyze/score)
+  export/          stl · obj · threeMF · zip · weld · slicerSettings
+  random/          mulberry32, simplex 2D/3D
+  jsonpatch/       RFC 6902 apply + validate
+src/workers/       geometry.worker.ts: regen(params, quality) → transferable buffers + report; export runs in a 2nd instance
+src/state/         zustand store (params, locks, history/undo, result, ui prefs), RegenScheduler (latest-wins)
+src/ui/            panels, editors, viewer (heatmap, clipping, dimensions), TopBar, PrintCheck, AiPanel
+src/persist/       IndexedDB designs; share links are lz-string diffs vs DEFAULT_PARAMS
+src/ai/            prompts (system prompt generated from paramMeta), schema, client, apply
+src/presets/       14 generated preset JSON files + index (built by scripts/build-presets.ts)
+server/            AI proxy: /api/ai/params | refine | image | health
+tests/             vitest, core only
+```
+
+Key flows:
+
+- **Params pipeline:** `raw → migrate → clamp → parse → normalize`. Ranges live only in the zod schema;
+  `clamp.ts` reads them. `paramMeta` drives UI controls, `visibility.ts` and the AI prompt.
+- **Regen:** slider sets params (transient during drag, one history entry on release) → worker builds at
+  `low` while dragging and `render.previewQuality` on release → buffers come back as Transferables.
+- **Printability:** `analyze()` → `{ score, issues[], stats, vertexOverhang }`. Issues carry severity,
+  height range, fa/en message and a declarative `fixAction`. Any error caps the score at 69.
+  Auto-fix is ablation-based on a low-res grid and lands as one undoable history entry.
+- **Exports:** binary STL, OBJ, 3MF (hand-written zip, `CompressionStream`), JSON, ZIP bundle.
+
+`src/core/params/schema.ts` is large (~1400 lines). Grep it for the block you need instead of reading it whole.
+
+## Sleeve plan (summary — `docs/sleeve-integration.md` is authoritative)
+
+- Sleeve = new `print.outputMode = 'sleeve'` with its **own** deterministic mesh path,
+  `buildSleeveMesh(params, quality)`, because sleeves need through-holes (genus > 0) and free-standing fingers.
+- Skin = the existing master field `r(θ, z)` rasterised to a periodic map and turned into an SDF, so all
+  vase styles and effects work on sleeves. Composition order is fixed (integration doc §3):
+  skin → smin fingers/drips → smin core tube → smax top edge → smax holes (teardrop tops) → flat base → exact bore (last).
+- New pure modules: `src/core/insert/` (computeBore), `src/core/sdf/`, `src/core/sleeve/`, `src/core/mc/`
+  (marching cubes, snapping, smoothing, island removal, manifold check — not cached by topology).
+- `buildSleeveMesh` returns the **same buffer contract** as the grid path (positions, indices, normals,
+  per-vertex overhang, report) so viewer, heatmap, clipping and exporters work unchanged.
+- New params: `insert` (shared), printer `holeCompensation`, `sleeve.{fingers,drips,holes,topEdge,mesh,selfSupporting}`.
+  Bump `SCHEMA_VERSION` with a migration. Prefer existing params; document any new one in the integration doc.
+- Bore accuracy must be ±0.05 mm. `R_bore` is derived by `computeBore`, never stored.
+- The AI must never change `insert.*` unless the user explicitly asks.
+
+Phases (one branch `sleeve/sN` and one PR each):
+
+| Phase | Scope                                                                                                                               |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| S0    | CLAUDE.md, baseline green, golden test. No behaviour change.                                                                        |
+| S1    | `insert` block, `computeBore`, shell `liner: 'bore'`, printer `holeCompensation`, Fit Test Ring, calibration modal, bore check.     |
+| S2    | `outputMode: 'sleeve'` + Vase/Sleeve switch, skin map, SDF core/bore/base/top edge/noise holes, MC pipeline, sleeve checks, export. |
+| S3    | Fingers, drips, all hole modes + teardrop + bridges, six `sleeve-*` presets, sleeve auto-fix, variations.                           |
+| S4    | Viewer insert/material previews, AI sleeve rules, multi-bore batch export, perf, docs update.                                       |
+
+Do only the phase you were asked for.
+
+## Commands
+
+```bash
+npm ci               # install (lockfile)
+npm run dev          # Vite dev server on :5173 (proxies /api to :8787)
+npm run server       # AI proxy on :8787 (needs ANTHROPIC_API_KEY)
+npm run typecheck    # tsc -b (src + tests, scripts, server)
+npm run lint         # eslint
+npm test             # vitest run (core tests, ~10 s)
+npm run presets      # regenerate src/presets/*.json from scripts/presets.src.ts
+npm run golden       # regenerate tests/golden/vase-presets.json (intentional geometry changes only)
+npm run format       # prettier --write
+npm run build        # typecheck + production build
+```
+
+## Golden test (safety net)
+
+`tests/golden.test.ts` builds every preset in its own output mode at its `render.previewQuality` and
+compares vertex count, triangle count and the FNV-1a hash of the Float32 position buffer with
+`tests/golden/vase-presets.json`. It must stay green through every sleeve phase. If a change to the
+vase path is intentional, run `npm run golden`, commit the JSON and explain the change in the PR.
+Never regenerate it just to make a red test pass.
+
+## Conventions
+
+- `src/core/**` stays pure and deterministic: no DOM, three, react, zustand or UI imports; no `Math.random`
+  (use `src/core/random`, seeded). Same params ⇒ identical buffers.
+- New params go through zod with ranges + `paramMeta` (fa/en label, tooltip, unit, step, Basic/Advanced).
+  Never duplicate ranges outside the schema. Schema changes bump `SCHEMA_VERSION` with a migration.
+- Every user-facing string is bilingual (fa/en). Param labels live in the schema registry; UI chrome strings in `src/i18n/`.
+- Presets are generated: edit `scripts/presets.src.ts`, then `npm run presets`. Don't hand-edit preset JSON.
+- Printability issues use the existing issue/score/`fixAction` framework; don't invent parallel reporting.
+- Workers return Transferable typed arrays; keep the mesh buffer contract identical across mesh paths.
+- Tests live in `tests/*.test.ts` (core only, Node env, no DOM). Add tests with every geometry change.
+- Style: Prettier (single quotes, 120 cols, trailing commas). Match the surrounding comment density.
+- Keep `docs/ARCHITECTURE.md` / `docs/GEOMETRY.md` accurate when behaviour changes.
+
+## Definition of done
+
+**Every phase ends with `npm run typecheck && npm run lint && npm test` all green**, the golden test
+included, then a commit on the phase branch and a PR.
