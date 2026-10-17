@@ -26,6 +26,8 @@ export function decodeShare(token: string): VaseParams | null {
     const delta = JSON.parse(json) as Record<string, unknown>;
     let p: unknown = structuredClone(DEFAULT_PARAMS);
     for (const [path, v] of Object.entries(delta)) p = setPath(p, path, v);
+    // the delta is relative to the defaults of the token's version; new blocks only ever add defaults
+    p = setPath(p, 'version', Math.min(Number(m[1]), SCHEMA_VERSION));
     return normalizeParams(p);
   } catch {
     return null;

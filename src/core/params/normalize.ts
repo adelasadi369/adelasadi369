@@ -1,12 +1,13 @@
 import { clampToSchema } from './clamp';
+import { migrateParams } from './migrate';
 import { DEFAULT_PARAMS, SCHEMA_VERSION, VaseParamsSchema, type VaseParams } from './schema';
 
 let idCounter = 0;
 const newId = () => `fx${Date.now().toString(36)}${(idCounter++).toString(36)}`;
 
-/** Make any raw input a valid VaseParams: clamp → fix cross-field rules → parse. Never throws. */
+/** Make any raw input a valid VaseParams: migrate → clamp → fix cross-field rules → parse. Never throws. */
 export function normalizeParams(raw: unknown): VaseParams {
-  const clamped = (clampToSchema(VaseParamsSchema, raw) ?? {}) as Record<string, unknown>;
+  const clamped = (clampToSchema(VaseParamsSchema, migrateParams(raw)) ?? {}) as Record<string, unknown>;
   const base = VaseParamsSchema.safeParse(clamped);
   const p: VaseParams = structuredClone(base.success ? base.data : fixLoose(clamped));
   p.version = SCHEMA_VERSION;

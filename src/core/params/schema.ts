@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 
-export const SCHEMA_VERSION = 1 as const;
+export const SCHEMA_VERSION = 2 as const;
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -1113,25 +1113,260 @@ export const BaseSchema = z
   .prefault({});
 
 // ---------------------------------------------------------------------------
+// G2) Insert (glass / steel tube) — shared by the shell bore liner and sleeves.
+//     R_bore is derived in core/insert/computeBore, never stored.
+// ---------------------------------------------------------------------------
+
+export const INSERT_TYPES = ['glass', 'steel', 'custom'] as const;
+export const FIT_TYPES = ['press', 'snug', 'slip'] as const;
+export const INSERT_BOTTOMS = ['open', 'lip', 'floor', 'drain'] as const;
+
+export const InsertSchema = z
+  .object({
+    type: enm(INSERT_TYPES, 'glass', {
+      fa: 'نوع لوله',
+      en: 'Insert type',
+      basic: true,
+      phase: 2,
+      tip: ['جنس لولهٔ داخلی؛ برای پیش‌تنظیم‌ها و نمایش.', 'Tube material; used for presets and rendering.'],
+      options: { glass: t('شیشه', 'Glass'), steel: t('استیل', 'Stainless steel'), custom: t('سفارشی', 'Custom') },
+    }),
+    od: num(10, 150, 50, {
+      fa: 'قطر بیرونی لوله',
+      en: 'Tube outer Ø',
+      basic: true,
+      phase: 2,
+      unit: 'mm',
+      step: 0.01,
+      tip: [
+        'لوله را در چند نقطه با کولیس اندازه بگیرید و بزرگ‌ترین عدد را وارد کنید.',
+        'Measure the tube at several points and enter the largest value.',
+      ],
+    }),
+    odTolerance: num(0, 2, 0.3, {
+      fa: 'تلورانس قطر لوله',
+      en: 'OD tolerance',
+      phase: 2,
+      unit: 'mm',
+      step: 0.05,
+      tip: [
+        'تغییرات قطر لولهٔ دست‌ساز (±)؛ نصفش به لقی هر طرف اضافه می‌شود.',
+        'Expected ± variation of a handmade tube; half of it is added per side.',
+      ],
+    }),
+    fit: enm(FIT_TYPES, 'slip', {
+      fa: 'نوع جاافتادن',
+      en: 'Fit',
+      basic: true,
+      phase: 2,
+      tip: [
+        'پرسی ۰.۱۰، جذب ۰.۱۸، لغزشی ۰.۲۵ میلی‌متر لقی در هر طرف. پرسی برای شیشه نه.',
+        'Press 0.10, snug 0.18, slip 0.25 mm clearance per side. Press is not for glass.',
+      ],
+      options: { press: t('پرسی', 'Press'), snug: t('جذب', 'Snug'), slip: t('لغزشی', 'Slip') },
+    }),
+    clearance: num(0, 1, 0.25, {
+      fa: 'لقی هر طرف',
+      en: 'Clearance per side',
+      phase: 2,
+      unit: 'mm',
+      step: 0.01,
+      tip: ['فاصلهٔ لوله تا دیوارهٔ حفره در هر طرف؛ با نوع جاافتادن تنظیم می‌شود.', 'Gap per side; set by the fit.'],
+    }),
+    length: num(20, 400, 200, {
+      fa: 'طول لوله',
+      en: 'Tube length',
+      phase: 2,
+      unit: 'mm',
+      step: 0.5,
+      tip: ['طول لولهٔ داخلی.', 'Length of the tube insert.'],
+    }),
+    protrusion: num(0, 200, 0, {
+      fa: 'بیرون‌زدگی لوله',
+      en: 'Tube protrusion',
+      phase: 2,
+      unit: 'mm',
+      step: 0.5,
+      tip: [
+        'چقدر لوله از بالای غلاف بیرون می‌زند؛ برای پیش‌نمایش و کنترل طول.',
+        'How far the tube sticks out above the top; preview and length check.',
+      ],
+    }),
+    coreWall: num(1.2, 4, 2, {
+      fa: 'دیوارهٔ دور حفره',
+      en: 'Core wall',
+      basic: true,
+      phase: 2,
+      unit: 'mm',
+      step: 0.05,
+      tip: ['حداقل ضخامت دیواره دور حفرهٔ لوله.', 'Minimum wall around the bore.'],
+    }),
+    bottom: enm(INSERT_BOTTOMS, 'open', {
+      fa: 'کف حفره',
+      en: 'Bore bottom',
+      basic: true,
+      phase: 2,
+      tip: [
+        'باز، لبهٔ نگه‌دارنده، کف بسته یا کف با سوراخ تخلیه.',
+        'Open, inner lip ring, closed floor or floor with a drain hole.',
+      ],
+      options: {
+        open: t('باز', 'Open'),
+        lip: t('لبهٔ داخلی', 'Inner lip'),
+        floor: t('کف بسته', 'Closed floor'),
+        drain: t('کف با سوراخ', 'Floor + drain'),
+      },
+    }),
+    lipWidth: num(1, 10, 2.5, {
+      fa: 'پهنای لبه',
+      en: 'Lip width',
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: ['چقدر لبهٔ کف زیر لوله جلو می‌آید.', 'How far the lip reaches under the tube.'],
+    }),
+    lipThickness: num(0.6, 5, 1.6, {
+      fa: 'ضخامت لبه',
+      en: 'Lip thickness',
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: ['ضخامت لبهٔ کف.', 'Thickness of the bottom lip.'],
+    }),
+    floorThickness: num(0.8, 5, 1.6, {
+      fa: 'ضخامت کف',
+      en: 'Floor thickness',
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: ['ضخامت کف بسته زیر لوله.', 'Closed floor thickness under the tube.'],
+    }),
+    drainDiameter: num(2, 40, 8, {
+      fa: 'قطر سوراخ تخلیه',
+      en: 'Drain Ø',
+      phase: 2,
+      unit: 'mm',
+      step: 0.5,
+      tip: ['قطر سوراخ کف.', 'Drain hole diameter.'],
+    }),
+    entryChamfer: num(0, 2, 0.8, {
+      fa: 'پخ ورودی',
+      en: 'Entry chamfer',
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: ['پخ ۴۵° لبهٔ بالای حفره برای جاافتادن راحت لوله.', '45° chamfer on the top edge of the bore.'],
+    }),
+    bottomChamfer: num(0, 1.5, 0.6, {
+      fa: 'پخ پایین حفره',
+      en: 'Bottom chamfer',
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: [
+        'پخ ۴۵° پایین حفره (کف باز یا لبه)؛ پای فیل لایه‌های اول را جبران می‌کند.',
+        '45° chamfer at the bore bottom (open/lip); offsets first-layer elephant’s foot.',
+      ],
+    }),
+    ribs: z
+      .object({
+        count: int(0, 8, 0, {
+          fa: 'تعداد زائده‌های نگه‌دارنده',
+          en: 'Grip ribs',
+          phase: 2,
+          step: 1,
+          tip: [
+            'برجستگی‌های عمودی داخل حفره که لوله را می‌گیرند. ۰ = خاموش.',
+            'Vertical bumps that grip the tube. 0 = off.',
+          ],
+        }),
+        width: num(0.5, 5, 1.6, {
+          fa: 'پهنای زائده',
+          en: 'Rib width',
+          phase: 2,
+          unit: 'mm',
+          step: 0.1,
+          tip: ['پهنای هر زائده دور محیط.', 'Width of each rib around the circumference.'],
+        }),
+        interference: num(0, 0.3, 0.15, {
+          fa: 'تداخل زائده',
+          en: 'Rib interference',
+          phase: 2,
+          unit: 'mm',
+          step: 0.01,
+          tip: ['چقدر زائده به داخل حفره می‌آید.', 'How far each rib reaches into the bore.'],
+        }),
+        heightFraction: pct(50, {
+          fa: 'ارتفاع زائده‌ها',
+          en: 'Rib height',
+          phase: 2,
+          tip: ['درصد ارتفاع حفره که زائده دارد (از پایین).', 'Share of the bore height with ribs (from the bottom).'],
+        }),
+      })
+      .prefault({}),
+    grooves: z
+      .object({
+        count: int(0, 2, 0, {
+          fa: 'شیار اورینگ',
+          en: 'O-ring grooves',
+          phase: 2,
+          step: 1,
+          tip: ['شیار دور حفره برای حلقهٔ سیلیکونی. ۰ = خاموش.', 'Grooves for a silicone ring. 0 = off.'],
+        }),
+        width: num(1, 6, 2.5, {
+          fa: 'پهنای شیار',
+          en: 'Groove width',
+          phase: 2,
+          unit: 'mm',
+          step: 0.1,
+          tip: ['پهنای شیار در ارتفاع.', 'Groove height along the bore.'],
+        }),
+        depth: num(0.3, 2, 1, {
+          fa: 'عمق شیار',
+          en: 'Groove depth',
+          phase: 2,
+          unit: 'mm',
+          step: 0.05,
+          tip: ['عمق شیار در دیواره.', 'Groove depth into the wall.'],
+        }),
+        z1: pct(30, {
+          fa: 'ارتفاع شیار ۱',
+          en: 'Groove 1 height',
+          phase: 2,
+          tip: ['مرکز شیار اول، درصد ارتفاع.', 'Centre of groove 1, % of height.'],
+        }),
+        z2: pct(70, {
+          fa: 'ارتفاع شیار ۲',
+          en: 'Groove 2 height',
+          phase: 2,
+          tip: ['مرکز شیار دوم، درصد ارتفاع.', 'Centre of groove 2, % of height.'],
+        }),
+      })
+      .prefault({}),
+  })
+  .prefault({});
+
+// ---------------------------------------------------------------------------
 // H) Output & print
 // ---------------------------------------------------------------------------
 
 export const OUTPUT_MODES = ['solidVase', 'shell', 'doubleWallVase'] as const;
 export const USE_CASES = ['dryDecor', 'freshFlowers', 'indoorPlanter', 'outdoorPlanter'] as const;
 export const MATERIALS = ['PLA', 'silkPLA', 'PETG', 'ASA', 'TPU'] as const;
+export const INNER_SURFACES = ['smoothLiner', 'follow', 'bore'] as const;
 
-/** Usable build volume in mm. */
+/** Usable build volume in mm; default hole compensation per side (mm), refined by calibration. */
 export const PRINTER_PRESETS = {
-  bambuA1: { name: 'Bambu Lab A1', bedX: 256, bedY: 256, bedZ: 256 },
-  bambuA1mini: { name: 'Bambu Lab A1 mini', bedX: 180, bedY: 180, bedZ: 180 },
-  bambuP1S: { name: 'Bambu Lab P1S', bedX: 256, bedY: 256, bedZ: 256 },
-  bambuX1C: { name: 'Bambu Lab X1C', bedX: 256, bedY: 256, bedZ: 256 },
-  bambuH2D: { name: 'Bambu Lab H2D (single nozzle)', bedX: 325, bedY: 320, bedZ: 325 },
-  prusaMK4: { name: 'Prusa MK4', bedX: 250, bedY: 210, bedZ: 220 },
-  prusaCoreOne: { name: 'Prusa Core One', bedX: 250, bedY: 220, bedZ: 270 },
-  ender3: { name: 'Creality Ender-3', bedX: 220, bedY: 220, bedZ: 250 },
-  crealityK1: { name: 'Creality K1', bedX: 220, bedY: 220, bedZ: 250 },
-  custom: { name: 'Custom', bedX: 220, bedY: 220, bedZ: 250 },
+  bambuA1: { name: 'Bambu Lab A1', bedX: 256, bedY: 256, bedZ: 256, holeCompensation: 0.05 },
+  bambuA1mini: { name: 'Bambu Lab A1 mini', bedX: 180, bedY: 180, bedZ: 180, holeCompensation: 0.05 },
+  bambuP1S: { name: 'Bambu Lab P1S', bedX: 256, bedY: 256, bedZ: 256, holeCompensation: 0.05 },
+  bambuX1C: { name: 'Bambu Lab X1C', bedX: 256, bedY: 256, bedZ: 256, holeCompensation: 0.05 },
+  bambuH2D: { name: 'Bambu Lab H2D (single nozzle)', bedX: 325, bedY: 320, bedZ: 325, holeCompensation: 0.05 },
+  prusaMK4: { name: 'Prusa MK4', bedX: 250, bedY: 210, bedZ: 220, holeCompensation: 0.05 },
+  prusaCoreOne: { name: 'Prusa Core One', bedX: 250, bedY: 220, bedZ: 270, holeCompensation: 0.05 },
+  ender3: { name: 'Creality Ender-3', bedX: 220, bedY: 220, bedZ: 250, holeCompensation: 0.05 },
+  crealityK1: { name: 'Creality K1', bedX: 220, bedY: 220, bedZ: 250, holeCompensation: 0.05 },
+  custom: { name: 'Custom', bedX: 220, bedY: 220, bedZ: 250, holeCompensation: 0.05 },
 } as const;
 export type PrinterPreset = keyof typeof PRINTER_PRESETS;
 const PRINTER_KEYS = Object.keys(PRINTER_PRESETS) as [PrinterPreset, ...PrinterPreset[]];
@@ -1159,12 +1394,19 @@ export const PrintSchema = z
       step: 0.05,
       tip: ['ضخامت دیواره در حالت پوسته؛ مضربی از پهنای خط.', 'Shell wall; snapped to multiples of line width.'],
     }),
-    innerSurface: enm(['smoothLiner', 'follow'] as const, 'smoothLiner', {
+    innerSurface: enm(INNER_SURFACES, 'smoothLiner', {
       fa: 'سطح داخلی',
       en: 'Inner surface',
       phase: 2,
-      tip: ['داخل صاف (بدون بافت) یا هم‌شکل با بیرون.', 'Smooth liner (no textures) or follow the outside.'],
-      options: { smoothLiner: t('صاف', 'Smooth liner'), follow: t('هم‌شکل بیرون', 'Follow outside') },
+      tip: [
+        'داخل صاف (بدون بافت)، هم‌شکل با بیرون، یا حفرهٔ استوانه‌ای دقیق برای لولهٔ شیشه/استیل.',
+        'Smooth liner (no textures), follow the outside, or an exact cylindrical bore for a glass/steel tube.',
+      ],
+      options: {
+        smoothLiner: t('صاف', 'Smooth liner'),
+        follow: t('هم‌شکل بیرون', 'Follow outside'),
+        bore: t('حفرهٔ لوله', 'Tube bore'),
+      },
     }),
     useCase: enm(USE_CASES, 'dryDecor', {
       fa: 'کاربرد',
@@ -1209,6 +1451,17 @@ export const PrintSchema = z
           unit: 'mm',
           step: 1,
           tip: ['فقط پرینتر سفارشی.', 'Custom printer only.'],
+        }),
+        holeCompensation: num(-0.2, 0.5, 0.05, {
+          fa: 'جبران سوراخ',
+          en: 'Hole compensation',
+          phase: 2,
+          unit: 'mm',
+          step: 0.01,
+          tip: [
+            'سوراخ‌ها کوچک‌تر چاپ می‌شوند؛ این مقدار به شعاع حفره اضافه می‌شود. با حلقهٔ تست کالیبره کنید.',
+            'Printed holes come out small; added to the bore radius per side. Calibrate with the fit test ring.',
+          ],
         }),
       })
       .prefault({}),
@@ -1363,6 +1616,7 @@ export const VaseParamsSchema = z
     effects: z.array(EffectSchema).max(MAX_EFFECTS).default([]),
     rim: RimSchema,
     base: BaseSchema,
+    insert: InsertSchema,
     print: PrintSchema,
     random: RandomSchema,
     render: RenderSchema,
