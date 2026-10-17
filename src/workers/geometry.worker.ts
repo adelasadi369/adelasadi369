@@ -2,7 +2,7 @@ import * as Comlink from 'comlink';
 import { buildMesh, type VaseMesh } from '../core/geometry/mesh';
 import type { Quality } from '../core/geometry/grid';
 import { exportDesign } from '../core/export';
-import { randomize } from '../core/params/random';
+import { mutate, randomize } from '../core/params/random';
 import { normalizeParams } from '../core/params/normalize';
 import { analyze } from '../core/printability';
 import { autoFix } from '../core/printability/autofix';
@@ -85,6 +85,27 @@ const api: GeometryApi = {
   async exportDesign(params, format) {
     const f = await exportDesign(params, format);
     return Comlink.transfer(f, [f.data.buffer as ArrayBuffer]);
+  },
+
+  variations(params, seed) {
+    const out = [];
+    for (let k = 0; k < 6; k++) {
+      // alternate gentle (±15 %) and bolder (±30 %) mutations, each with fresh effect seeds
+      let v = mutate(params, k % 2 ? 0.3 : 0.15, (seed + 7919 * (k + 1)) >>> 0);
+      v = { ...v, effects: v.effects.map((e) => ('seed' in e ? { ...e, seed: (e.seed + 1013 * (k + 1)) >>> 0 } : e)) };
+      const r = analyze(buildMesh(v, 'low'), v, { manifold: false });
+      if (r.score < 90 || r.issues.some((i) => i.severity === 'error')) v = autoFix(v).params;
+      out.push(v);
+    }
+    return Promise.resolve(out);
+  },
+
+  fixForAi(params) {
+    const r = analyze(buildMesh(params, 'low'), params, { manifold: false });
+    if (r.score >= 90 && !r.issues.some((i) => i.severity === 'error'))
+      return Promise.resolve({ params, changed: 0, score: r.score });
+    const f = autoFix(params);
+    return Promise.resolve({ params: f.params, changed: f.diff.length, score: f.after });
   },
 
   thumbnail(params) {

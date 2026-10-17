@@ -34,4 +34,8 @@ export interface GeometryApi {
   surprise(seed: number, base: VaseParams): Promise<VaseParams>;
   exportDesign(params: VaseParams, format: ExportFormat): Promise<ExportFile>;
   thumbnail(params: VaseParams): Promise<MeshPayload>;
+  /** 6 printable seed/mutation variants of a design (auto-fixed when needed). */
+  variations(params: VaseParams, seed: number): Promise<VaseParams[]>;
+  /** Validate + auto-fix AI output before it becomes the current design. */
+  fixForAi(params: VaseParams): Promise<{ params: VaseParams; changed: number; score: number }>;
 }

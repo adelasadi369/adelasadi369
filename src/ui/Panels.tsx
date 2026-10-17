@@ -3,6 +3,7 @@ import type { VaseParams } from '../core/params/schema';
 import { useStore, type TabId } from '../state/store';
 import { Group, ParamControl } from './controls/ParamControl';
 import { isShown } from './controls/visibility';
+import { AiPanel } from './AiPanel';
 import { EffectStack } from './EffectStack';
 import { useT } from './hooks';
 import { PolarEditor } from './PolarEditor';
@@ -239,15 +240,6 @@ function PrintPanel() {
       />
       <ParamGroup title={t('group.render')} paths={['render.previewQuality', 'render.exportQuality']} />
     </>
-  );
-}
-
-function AiPanel() {
-  return (
-    <div className="p-6 text-sm leading-7 text-muted">
-      <div className="mb-3 text-3xl">✦</div>
-      {useT()('ai.soon')}
-    </div>
   );
 }
 

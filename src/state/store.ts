@@ -4,7 +4,9 @@ import { normalizeParams } from '../core/params/normalize';
 import { diffParams, setPath, type ParamDiff } from '../core/params/paths';
 import { mutate, randomize } from '../core/params/random';
 import { decodeShare, encodeShare } from '../core/params/share';
-import { DEFAULT_PARAMS, type Effect, type VaseParams } from '../core/params/schema';
+import { DEFAULT_PARAMS, type Effect, type I18nText, type VaseParams } from '../core/params/schema';
+import { applyImageAnalysis, applyProposal, applyRefine, applySilhouette } from '../ai/apply';
+import { aiDesign, aiImage, aiRefine } from '../ai/client';
 import type { ParamChange } from '../core/printability/types';
 import type { Lang } from '../i18n';
 import { PRESETS } from '../presets';
@@ -44,6 +46,7 @@ interface Store {
   fix: FixState;
   toast: string | null;
   exporting: boolean;
+  ai: AiState;
 
   setParam(path: string, value: unknown, opts?: { transient?: boolean }): void;
   endDrag(): void;
@@ -68,6 +71,32 @@ interface Store {
   setTab(t: TabId): void;
   setViewer(v: Partial<ViewerState>): void;
   showToast(msg: string | null): void;
+  aiDesign(prompt: string): Promise<void>;
+  aiRefine(message: string): Promise<void>;
+  aiImage(
+    base64: string,
+    mediaType: string,
+    note: string,
+    silhouette: { t: number; r: number }[] | null,
+  ): Promise<void>;
+  applySilhouette(points: { t: number; r: number }[], heightToWidth: number): void;
+  makeVariations(): Promise<void>;
+  pickVariation(i: number): void;
+}
+
+export interface AiChatEntry {
+  role: 'user' | 'assistant';
+  text: string;
+  summary?: I18nText;
+}
+
+export interface AiState {
+  busy: null | 'design' | 'refine' | 'image' | 'variations';
+  error: I18nText | null;
+  chat: AiChatEntry[];
+  /** Interpretation of the last AI change. */
+  last: { summary: I18nText; rejected: string[]; fixed: number; score: number } | null;
+  variations: VaseParams[];
 }
 
 const HISTORY = 200;
@@ -109,6 +138,15 @@ export const useStore = create<Store>((set, get) => {
     }
   };
 
+  const setAi = (patch: Partial<AiState>) => set({ ai: { ...get().ai, ...patch } });
+  /** AI output → validated/clamped params → auto-fix in the worker → one undoable history entry. */
+  const finishAi = async (params: VaseParams, summary: I18nText, rejected: string[], chat: AiChatEntry[]) => {
+    const prev = get().params;
+    const fixed = await previewWorker.fixForAi(params);
+    commit(fixed.params, prev);
+    setAi({ busy: null, error: null, chat, last: { summary, rejected, fixed: fixed.changed, score: fixed.score } });
+  };
+
   return {
     params: initialParams(),
     past: [],
@@ -123,6 +161,7 @@ export const useStore = create<Store>((set, get) => {
     fix: { status: 'idle', diff: [], before: 0, after: 0, prev: null },
     toast: null,
     exporting: false,
+    ai: { busy: null, error: null, chat: [], last: null, variations: [] },
 
     setParam(path, value, opts) {
       const { params, dragBase } = get();
@@ -236,6 +275,50 @@ export const useStore = create<Store>((set, get) => {
     setTab: (tab) => set({ tab }),
     setViewer: (v) => set({ viewer: { ...get().viewer, ...v } }),
     showToast: (toast) => set({ toast }),
+
+    async aiDesign(prompt) {
+      const lang = get().lang;
+      setAi({ busy: 'design', error: null });
+      const r = await aiDesign(prompt, lang);
+      if (!r.ok) return setAi({ busy: null, error: r.error.message });
+      const applied = applyProposal(r.data, PRESETS);
+      await finishAi(applied.params, r.data.summary, applied.rejected, [
+        { role: 'user', text: prompt },
+        { role: 'assistant', text: r.data.summary.en, summary: r.data.summary },
+      ]);
+    },
+    async aiRefine(message) {
+      const { params, ai } = get();
+      setAi({ busy: 'refine', error: null });
+      const history = ai.chat.slice(-10).map((c) => ({ role: c.role, text: c.text }));
+      const r = await aiRefine(params, message, history);
+      if (!r.ok) return setAi({ busy: null, error: r.error.message });
+      const applied = applyRefine(get().params, r.data);
+      await finishAi(applied.params, r.data.summary, applied.rejected, [
+        ...get().ai.chat,
+        { role: 'user', text: message },
+        { role: 'assistant', text: r.data.summary.en, summary: r.data.summary },
+      ]);
+    },
+    async aiImage(base64, mediaType, note, silhouette) {
+      setAi({ busy: 'image', error: null });
+      const r = await aiImage(base64, mediaType, note, silhouette);
+      if (!r.ok) return setAi({ busy: null, error: r.error.message });
+      await finishAi(applyImageAnalysis(r.data, get().params), r.data.summary, [], get().ai.chat);
+    },
+    applySilhouette(points, hw) {
+      commit(applySilhouette(points, hw, get().params));
+    },
+    async makeVariations() {
+      setAi({ busy: 'variations', error: null });
+      const p = get().params;
+      const variations = await previewWorker.variations(p, (p.random.seed * 31 + Date.now()) >>> 0);
+      setAi({ busy: null, variations });
+    },
+    pickVariation(i) {
+      const v = get().ai.variations[i];
+      if (v) commit(v);
+    },
   };
 });
 
