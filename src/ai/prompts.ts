@@ -51,7 +51,9 @@ const RULES = `PRINTABILITY RULES (the app enforces them, but aim to satisfy the
 - Footprint must fit the bed (default 256 mm); height ≤ printer Z.
 - Base diameter ≥ 0.35 × height for stability.
 - Prefer outputMode "solidVase" (spiral vase mode) unless the request needs a shell: ruffle, slanted rim, concave base, drainage hole and the "follow" inner surface require "shell".
-- Fresh flowers: prefer PETG. Outdoor planters need a drainage hole.`;
+- Fresh flowers: prefer PETG. Outdoor planters need a drainage hole.
+- Never change insert.* or print.printer.holeCompensation unless the user explicitly asks about the tube, insert, bore, fit or calibration: they describe a real glass/steel tube and a calibrated printer.
+- Tube bore (print.innerSurface "bore", shell only): R_bore = insert.od/2 + insert.clearance + insert.odTolerance/2 + holeCompensation. The outer radius must stay ≥ R_bore + insert.coreWall at every height, so keep every diameter ≥ insert.od + 2 × insert.coreWall + a few mm.`;
 
 export function designSystemPrompt(presets: Preset[]): string {
   return `You are the design engine of VaseForge, a parametric vase generator for FDM 3D printing.

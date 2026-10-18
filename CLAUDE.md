@@ -30,21 +30,23 @@ Today there is one path: `buildMesh(params, quality)` in `src/core/geometry/mesh
 Every slice is a star-shaped polar function `r(θ)` about its slice centre `C(t)`, built on a
 twist-aligned grid, so topology is fixed (genus 0) and the manifold check is cached per topology.
 Output modes: `solidVase`, `shell`, `doubleWallVase`. **Never break the star-shaped invariant for these modes.**
+Shell mode's `print.innerSurface: 'bore'` (S1) is an exact tube bore inside the same grid builder (GEOMETRY.md §7b).
 
 ## Architecture summary
 
 ```
 src/core/          pure TS — no DOM, no three, no react/zustand (enforced by eslint)
-  params/          schema.ts (zod + paramMeta, SCHEMA_VERSION, DEFAULT_PARAMS), clamp, normalize, share, paths
+  params/          schema.ts (zod + paramMeta, SCHEMA_VERSION, DEFAULT_PARAMS), migrate, clamp, normalize, share, paths
+  insert/          computeBore, boreProfile (chamfers, grooves, ribs), boreRay, calibrateHoleCompensation
   geometry/        profile · sections · twist · effects/* · field (compileField) · grid · mesh (buildMesh)
-  printability/    checks, overhang, sanity (manifold, signed volume), stats, autofix, index (analyze/score)
+  printability/    checks, bore, overhang, sanity (manifold, signed volume), stats, autofix, index (analyze/score)
   export/          stl · obj · threeMF · zip · weld · slicerSettings
   random/          mulberry32, simplex 2D/3D
   jsonpatch/       RFC 6902 apply + validate
 src/workers/       geometry.worker.ts: regen(params, quality) → transferable buffers + report; export runs in a 2nd instance
 src/state/         zustand store (params, locks, history/undo, result, ui prefs), RegenScheduler (latest-wins)
 src/ui/            panels, editors, viewer (heatmap, clipping, dimensions), TopBar, PrintCheck, AiPanel
-src/persist/       IndexedDB designs; share links are lz-string diffs vs DEFAULT_PARAMS
+src/persist/       IndexedDB designs + calibrated printer profiles; share links are lz-string diffs vs DEFAULT_PARAMS
 src/ai/            prompts (system prompt generated from paramMeta), schema, client, apply
 src/presets/       14 generated preset JSON files + index (built by scripts/build-presets.ts)
 server/            AI proxy: /api/ai/params | refine | image | health
@@ -60,7 +62,7 @@ Key flows:
 - **Printability:** `analyze()` → `{ score, issues[], stats, vertexOverhang }`. Issues carry severity,
   height range, fa/en message and a declarative `fixAction`. Any error caps the score at 69.
   Auto-fix is ablation-based on a low-res grid and lands as one undoable history entry.
-- **Exports:** binary STL, OBJ, 3MF (hand-written zip, `CompressionStream`), JSON, ZIP bundle.
+- **Exports:** binary STL, OBJ, 3MF (hand-written zip, `CompressionStream`), JSON, ZIP bundle, Fit Test Ring STL.
 
 `src/core/params/schema.ts` is large (~1400 lines). Grep it for the block you need instead of reading it whole.
 
@@ -91,6 +93,16 @@ Phases (one branch `sleeve/sN` and one PR each):
 | S4    | Viewer insert/material previews, AI sleeve rules, multi-bore batch export, perf, docs update.                                       |
 
 Do only the phase you were asked for.
+
+**Status:** S0 and S1 are done. S1 notes:
+
+- Schema v2: `insert` block, `print.printer.holeCompensation` (also in `PRINTER_PRESETS`), `innerSurface: 'bore'`,
+  plus the new `insert.bottomChamfer` (elephant's foot). `migrate.ts` is the first step of `normalizeParams`.
+- Bore liner: exact `R_bore` along slice rays (bend-safe), bottom open/lip/floor/drain, entry + bottom chamfers,
+  O-ring grooves and grip ribs. Ribs fit the grid model cleanly, so they shipped in S1 (not deferred to S2).
+- `VaseMesh.bore` carries what the `bore` checks need; the Fit Test Ring is `buildFitTestRing` in `mesh.ts`.
+- Calibrated hole compensation lives in params (geometry stays params-only) and in the IndexedDB `printers` store.
+- Not yet: insert mass in stability, insert render preview and a hard AI filter on `insert.*` (S4).
 
 ## Commands
 

@@ -137,6 +137,14 @@ New blocks, each with ranges in zod and labels/tooltips (fa/en), units, steps an
   - `topEdge`: §4.8;
   - `mesh`: voxel sizes, smoothing, decimation;
   - `selfSupporting`.
+- **As implemented in S1** (`src/core/params/schema.ts`, block `insert`; `SCHEMA_VERSION` 2):
+  - `type` glass|steel|custom (default glass), `od` 10–150 (50), `odTolerance` 0–2 (0.3), `fit` press|snug|slip (slip; picking a fit copies its clearance), `clearance` 0–1 (0.25), `length`, `protrusion`, `coreWall` 1.2–4 (2).
+  - `bottom` open|lip|floor|drain (open) with `lipWidth`, `lipThickness`, `floorThickness`, `drainDiameter`.
+  - `entryChamfer` 0–2 (0.8) and **new** `bottomChamfer` 0–1.5 (0.6, open/lip only): offsets first-layer elephant's foot, which makes the bore tight at the base.
+  - `ribs.{count 0–8 (0), width, interference 0–0.3, heightFraction %}`: ribs start above the bottom chamfer.
+  - `grooves.{count 0–2 (0), width, depth, z1, z2}`: groove centres in % of height, 45° flanks.
+  - `print.printer.holeCompensation` −0.2–0.5 (0.05), also a field of every `PRINTER_PRESETS` entry.
+  - The shell liner switch is `print.innerSurface: 'bore'` (no separate `liner` key).
 - **Visibility:**
   - Vase-only controls are hidden in sleeve mode via `visibility.ts`: rim lip/round rim, ruffle/slant, concave base, drainage, double wall, saucer, spiral G-code.
   - Sleeve controls are hidden in vase modes, except `insert` when the shell liner is `bore` (§6).
