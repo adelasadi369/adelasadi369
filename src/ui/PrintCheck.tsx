@@ -125,6 +125,9 @@ export function PrintCheck() {
   const stats: [string, string][] = [
     [t('stats.height'), `${num(s.height, 1)} ${t('unit.mm')}`],
     [t('stats.maxDiameter'), `${num(s.maxDiameter, 1)} ${t('unit.mm')}`],
+    ...(s.boreDiameter !== undefined
+      ? ([[t('stats.bore'), `${num(s.boreDiameter, 2, true)} ${t('unit.mm')}`]] as [string, string][])
+      : []),
     [t('stats.capacity'), `${num(s.capacityMl)} ${t('unit.ml')}`],
     [t('stats.weight'), `${num(s.weightG)} ${t('unit.g')}`],
     [t('stats.time'), `${num(s.printMinutes)} ${t('unit.min')}`],

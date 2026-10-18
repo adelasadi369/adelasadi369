@@ -92,6 +92,7 @@ function Bed() {
 function Dimensions({ mesh }: { mesh: MeshPayload | null }) {
   const num = useNum();
   const t = useT();
+  const boreD = useStore((s) => s.result?.report.stats.boreDiameter);
   const { maxR, zAtMax } = useMemo(() => extent(mesh), [mesh]);
   if (!mesh) return null;
   const h = mesh.height;
@@ -149,6 +150,28 @@ function Dimensions({ mesh }: { mesh: MeshPayload | null }) {
           Ø {num(2 * maxR, 1)} {t('unit.mm')}
         </div>
       </Html>
+      {boreD !== undefined && (
+        <>
+          <Line
+            points={Array.from(
+              { length: 97 },
+              (_, i) =>
+                [Math.cos((i / 48) * Math.PI) * (boreD / 2), h + 0.5, Math.sin((i / 48) * Math.PI) * (boreD / 2)] as [
+                  number,
+                  number,
+                  number,
+                ],
+            )}
+            color="#2f6f8f"
+            lineWidth={1.5}
+          />
+          <Html position={[0, h + 6, 0]} center zIndexRange={[10, 0]}>
+            <div className={label}>
+              {t('insert.bore')} {num(boreD, 2, true)} {t('unit.mm')}
+            </div>
+          </Html>
+        </>
+      )}
     </group>
   );
 }
