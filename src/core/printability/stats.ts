@@ -48,5 +48,6 @@ export function computeStats(b: BuildResult, p: VaseParams, sx: number, sy: numb
     surfaceCm2: outerArea / 100,
     triangles: mesh.triangleCount,
     stlBytes: 84 + 50 * mesh.triangleCount,
+    ...(mesh.bore && { boreDiameter: 2 * mesh.bore.radius }),
   };
 }

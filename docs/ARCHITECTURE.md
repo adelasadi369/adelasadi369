@@ -118,9 +118,10 @@ in the export worker in ≤ 2 s.
 - **Undo/redo** is implemented in-store, with no extra dependency.
   Auto-fix and AI patches each create exactly one history entry, so "undo
   auto-fix" is a normal undo.
-- **IndexedDB:** a small hand-written wrapper (no dependency) with stores
-  `designs` (params, thumbnail PNG blob, timestamps) and `assets`
-  (displacement images, P3).
+- **IndexedDB:** a small hand-written wrapper (no dependency, DB version 2) with stores
+  `designs` (params, thumbnail PNG blob, timestamps), `printers` (calibrated
+  `holeCompensation` per printer preset; picking a printer or a preset applies it) and
+  `assets` (displacement images, P3).
 - **Share link:** `#v1=` + `lz-string.compressToEncodedURIComponent(JSON(diff(params, DEFAULT_PARAMS)))`.
   Decoding runs `migrate → clamp → parse`. Unknown keys are dropped and the
   version is checked.
@@ -131,6 +132,10 @@ in the export worker in ≤ 2 s.
 raw JSON ─► migrate(version) ─► clamp(schema ranges, enums→default) ─► VaseParamsSchema.parse
           ─► normalise (sort points, fix neck>belly, assign effect ids, snap wall to lineWidth)
 ```
+
+`migrate.ts` runs one step per schema version (`SCHEMA_VERSION` 2: v1 → v2 adds the `insert` block and
+`print.printer.holeCompensation`); it is the first thing `normalizeParams` does, so presets, links, saved
+designs and AI output all migrate. Share tokens carry their version and decode onto the current defaults.
 
 `clamp.ts` walks the zod schema (`ZodDefault → ZodNumber.minValue/maxValue`),
 so ranges are defined in exactly one place. The `paramMeta` registry feeds
@@ -149,6 +154,10 @@ the UI (labels, tooltips, units, steps, Basic/Advanced, phase gating) and
 - Score = 100 − Σ penalties. Errors cost 15–40 each, warnings 3–10, info 0.
   Overhang penalties scale with the area fraction above the limit. Any
   `error` caps the score at 69.
+- Bore liner checks (`printability/bore.ts`, check id `bore`): `bore-wall` (error, r_outer < R_bore +
+  coreWall, fix scales the diameters), `bore-axis` (bend leaves the bore), `bore-ok` / `bore-accuracy`
+  (measured from bore vertices + facet sag vs ±0.05 mm), `insert-press-glass`, `insert-short`.
+  `stats.boreDiameter` feeds the stats panel and the dimension overlay.
 - Auto-fix (§3 of GEOMETRY.md) is iterative and runs on a low-res grid
   (128×100), then re-verifies at preview resolution and returns a param diff.
 
@@ -163,6 +172,8 @@ the UI (labels, tooltips, units, steps, Basic/Advanced, phase gating) and
   That needs no dependency and is required, because ultra meshes are about
   100 MB of XML uncompressed.
 - **Params JSON** and a **ZIP bundle** for multi-body output.
+- **Fit Test Ring** (`format: 'fitRing'`): binary STL of the bottom 10 mm of the bore
+  (`buildFitTestRing`), named `fit-ring_D<target Ø>_hc<holeCompensation>.stl`.
 - **Spiral G-code** (P3) is sampled straight from `r(θ, z)`, not the mesh.
 
 ## 9. AI module (Phase 2, implemented)

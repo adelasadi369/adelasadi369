@@ -13,13 +13,13 @@ export function translate(lang: Lang, key: MsgKey): string {
 const nf = { fa: new Intl.NumberFormat('fa-IR'), en: new Intl.NumberFormat('en-US') };
 const nfd: Record<string, Intl.NumberFormat> = {};
 
-/** Locale number formatting (Persian digits in fa). */
-export function formatNumber(lang: Lang, x: number, digits = 0): string {
+/** Locale number formatting (Persian digits in fa). `fixed` keeps trailing zeros (50.90, not 50.9). */
+export function formatNumber(lang: Lang, x: number, digits = 0, fixed = false): string {
   if (digits === 0) return nf[lang].format(Math.round(x));
-  const k = `${lang}${digits}`;
+  const k = `${lang}${digits}${fixed ? 'f' : ''}`;
   nfd[k] ??= new Intl.NumberFormat(lang === 'fa' ? 'fa-IR' : 'en-US', {
     maximumFractionDigits: digits,
-    minimumFractionDigits: 0,
+    minimumFractionDigits: fixed ? digits : 0,
   });
   return nfd[k].format(x);
 }

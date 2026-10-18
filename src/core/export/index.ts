@@ -1,4 +1,5 @@
-import { buildMesh } from '../geometry/mesh';
+import { buildFitTestRing, buildMesh } from '../geometry/mesh';
+import { computeBore } from '../insert';
 import type { Quality } from '../geometry/grid';
 import type { VaseParams } from '../params/schema';
 import { writeOBJ } from './obj';
@@ -7,7 +8,7 @@ import { write3MF } from './threeMF';
 import { weld } from './weld';
 import { writeZip } from './zip';
 
-export type ExportFormat = 'stl' | 'obj' | '3mf' | 'json';
+export type ExportFormat = 'stl' | 'obj' | '3mf' | 'json' | 'fitRing';
 
 export interface ExportFile {
   name: string;
@@ -33,6 +34,11 @@ export async function exportDesign(
       mime: 'application/json',
       data: new TextEncoder().encode(JSON.stringify(params, null, 2)),
     };
+  }
+  if (format === 'fitRing') {
+    const ring = weld(buildFitTestRing(params, quality));
+    const name = fitRingName(params);
+    return { name: `${name}.stl`, mime: 'model/stl', data: new Uint8Array(writeSTL(ring, `VaseForge ${name}`)) };
   }
   const built = buildMesh(params, quality);
   const w = weld(built.mesh);
@@ -72,4 +78,11 @@ function placeBeside(vase: Float32Array, saucer: ReturnType<typeof weld>) {
   const positions = saucer.positions.slice();
   for (let i = 0; i < positions.length; i += 3) positions[i] += dx;
   return { ...saucer, positions };
+}
+
+/** e.g. fit-ring_D50.80_hc0.05: target bore Ø and the hole compensation the ring was printed with. */
+export function fitRingName(params: VaseParams): string {
+  const b = computeBore(params.insert, params.print.printer);
+  const hc = b.holeCompensation.toFixed(3).replace(/(\.\d\d\d*?)0+$/, '$1');
+  return `fit-ring_D${b.targetDiameter.toFixed(2)}_hc${hc}`;
 }

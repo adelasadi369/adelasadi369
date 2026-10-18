@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { clampToSchema } from '../src/core/params/clamp';
 import { normalizeParams } from '../src/core/params/normalize';
 import { diffParams, getPath, setPath } from '../src/core/params/paths';
-import { DEFAULT_PARAMS, VaseParamsSchema, paramsJsonSchema } from '../src/core/params/schema';
+import { migrateParams } from '../src/core/params/migrate';
+import { DEFAULT_PARAMS, SCHEMA_VERSION, VaseParamsSchema, paramsJsonSchema } from '../src/core/params/schema';
 
 describe('schema', () => {
   it('fills every default from {}', () => {
@@ -118,5 +119,46 @@ describe('share links', () => {
       expect(decodeShare(token)).toEqual(p.params);
     }
     expect(decodeShare('garbage')).toBeNull();
+  });
+});
+
+describe('schema v2 migration (insert block)', () => {
+  it('upgrades a v1 document: version, insert defaults and printer hole compensation', () => {
+    const v1 = { ...structuredClone(PRESETS[0].params), version: 1 } as Record<string, unknown>;
+    delete v1.insert;
+    delete (v1.print as { printer: Record<string, unknown> }).printer.holeCompensation;
+    const raw = migrateParams(v1) as typeof v1;
+    expect(raw.version).toBe(2);
+    expect((raw.print as { printer: { holeCompensation: number } }).printer.holeCompensation).toBe(0.05);
+    const p = normalizeParams(v1);
+    expect(p.version).toBe(SCHEMA_VERSION);
+    expect(p.insert).toEqual(DEFAULT_PARAMS.insert);
+    expect({ ...p, insert: undefined, version: 0 }).toEqual({ ...PRESETS[0].params, insert: undefined, version: 0 });
+  });
+
+  it('does not mutate its input and keeps explicit values', () => {
+    const v1 = { version: 1, print: { printer: { preset: 'ender3', holeCompensation: 0.12 } } };
+    const copy = structuredClone(v1);
+    expect(normalizeParams(v1).print.printer.holeCompensation).toBe(0.12);
+    expect(v1).toEqual(copy);
+  });
+
+  it('insert defaults match the S1 brief', () => {
+    const i = DEFAULT_PARAMS.insert;
+    expect([i.type, i.fit, i.odTolerance, i.ribs.count, i.grooves.count, i.bottom]).toEqual([
+      'glass',
+      'slip',
+      0.3,
+      0,
+      0,
+      'open',
+    ]);
+    expect(i.bottomChamfer).toBe(0.6);
+    expect(DEFAULT_PARAMS.print.innerSurface).toBe('smoothLiner');
+  });
+
+  it('decodes a v1 share token onto v2 defaults', () => {
+    const token = encodeShare(PRESETS[1].params).replace(/^\d+\./, '1.');
+    expect(decodeShare(token)).toEqual(PRESETS[1].params);
   });
 });

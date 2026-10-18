@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ExportFormat } from '../core/export';
+import { isBoreLiner } from '../core/insert';
 import { saveDesign } from '../persist/db';
 import { useStore } from '../state/store';
 import { useT } from './hooks';
@@ -37,6 +38,7 @@ function ExportMenu() {
   const t = useT();
   const exportAs = useStore((s) => s.exportAs);
   const exporting = useStore((s) => s.exporting);
+  const bore = useStore((s) => isBoreLiner(s.params));
   const [open, setOpen] = useState(false);
   const items: [ExportFormat, Parameters<typeof t>[0]][] = [
     ['stl', 'export.stl'],
@@ -44,6 +46,7 @@ function ExportMenu() {
     ['obj', 'export.obj'],
     ['json', 'export.json'],
   ];
+  if (bore) items.push(['fitRing', 'export.fitRing']);
   return (
     <div className="relative">
       <Btn primary onClick={() => setOpen(!open)} disabled={exporting}>

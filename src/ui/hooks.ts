@@ -15,7 +15,7 @@ export function useTxt() {
 
 export function useNum() {
   const lang = useStore((s) => s.lang);
-  return useCallback((x: number, digits = 0) => formatNumber(lang, x, digits), [lang]);
+  return useCallback((x: number, digits = 0, fixed = false) => formatNumber(lang, x, digits, fixed), [lang]);
 }
 
 /** Current UI phase: parameters/options from later phases stay hidden. */

@@ -75,6 +75,7 @@ const api: GeometryApi = {
     const start = normalizeParams({
       ...preset,
       print: base.print,
+      insert: base.insert,
       render: { ...preset.render },
       random: { seed, locks: [] },
     });

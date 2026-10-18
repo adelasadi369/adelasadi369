@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "name": "Low-Poly Facet",
   "dimensions": {
     "height": 170,
@@ -193,6 +193,36 @@
       "rim": 2
     }
   },
+  "insert": {
+    "type": "glass",
+    "od": 50,
+    "odTolerance": 0.3,
+    "fit": "slip",
+    "clearance": 0.25,
+    "length": 200,
+    "protrusion": 0,
+    "coreWall": 2,
+    "bottom": "open",
+    "lipWidth": 2.5,
+    "lipThickness": 1.6,
+    "floorThickness": 1.6,
+    "drainDiameter": 8,
+    "entryChamfer": 0.8,
+    "bottomChamfer": 0.6,
+    "ribs": {
+      "count": 0,
+      "width": 1.6,
+      "interference": 0.15,
+      "heightFraction": 50
+    },
+    "grooves": {
+      "count": 0,
+      "width": 2.5,
+      "depth": 1,
+      "z1": 30,
+      "z2": 70
+    }
+  },
   "print": {
     "outputMode": "solidVase",
     "wallThickness": 2.1,
@@ -202,7 +232,8 @@
       "preset": "bambuA1",
       "bedX": 220,
       "bedY": 220,
-      "bedZ": 250
+      "bedZ": 250,
+      "holeCompensation": 0.05
     },
     "nozzle": 0.4,
     "lineWidth": 0.7,

@@ -255,12 +255,47 @@ follow:      r_in = exact sampled erosion of the outer solid by a ball of radius
 inner floor at z = bottomThickness (+ foot height);  r_in ≥ 2 mm, otherwise error "too narrow for shell".
 ```
 
+### 7b. Tube bore liner (`innerSurface: 'bore'`, shell only; `src/core/insert/`)
+
+The bore is a vertical cylinder about the base centre (the origin), sized for a real glass/steel tube.
+`R_bore` is derived, never stored:
+
+```
+R_target = od/2 + clearance + odTolerance/2          (clearance defaults: press 0.10, snug 0.18, slip 0.25)
+R_bore   = R_target + print.printer.holeCompensation  (printer-specific, calibrated with the Fit Test Ring)
+z_b      = 0 (open) | lipThickness (lip) | floorThickness (floor, drain)
+
+R(φ, z) = R_bore
+        + (z_b + c_b − z)⁺                 on [z_b, z_b + c_b]   bottom chamfer, open/lip only (elephant's foot)
+        + (z − (z_top − c_e))⁺             on [z_top − c_e, z_top] entry chamfer, per-column top (ruffle/slant)
+        + depth · min(1, d/flank)          O-ring groove, d = width/2 − |z − z_c| > 0, flank = min(depth, width/2) (45°)
+        − v(z) · i · ½(1 + cos(π·δ/a))     grip rib k: δ = φ − 2πk/n, |δ| < a = width/(2R_bore);
+                                           v ramps 0→1 over 1 mm at both ends of [z_b + c_b, z_b + h·(z_top − z_b)]
+```
+
+- **Placement.** The grid stays twist-aligned: vertex `(i, j)` lies on the ray from the slice centre `C(t)` at
+  angle `θ_i + Twist(t)`. The bore vertex is the ray's hit with the profile about the axis:
+  `s = −C·u + sqrt((C·u)² − |C|² + R²)`, iterated twice so `R` is evaluated at the hit's own world angle `φ`.
+  With `C = 0` (no bend) the bore is exact by construction. Each slice stays star-shaped about `C(t)` as long as
+  `|C(t)| < R` (otherwise error `bore-axis`).
+- **Bottom.** open → annulus at z = 0 from the bore ring to the outer ring; lip → floor annulus at `z_b` to a hole
+  of radius `R_bore − lipWidth`, hole wall, bottom annulus; drain → same with `drainDiameter/2`; floor → fans.
+  The lip/drain hole is clamped to stay 1 mm inside the floor ring. Concave base and the rim lip cut are off.
+- **Resolution.** `Nθ ≥ π / acos(1 − 0.01/R_bore)` (chord sag ≤ 0.01 mm, so the tube touches facets within the
+  ±0.05 mm budget) and `Nθ ≥ 6·2πR_bore/ribWidth`; `Nθ` is a multiple of the rib count so ribs centre on columns
+  when there is no twist. Rows snap to chamfer, groove and rib-ramp edges.
+- **Checks.** `bore-wall`: horizontal wall `r_outer − r_bore` along each ray `< coreWall` → error, fix scales all
+  diameters by `max((r_bore + coreWall)/r_outer)·1.01`. `bore-ok` / `bore-accuracy`: max |vertex radius − R(φ,z)|
+  and the widest facet's sag, against ±0.05 mm.
+- **Fit Test Ring.** The bottom 10 mm of the same profile from z = 0 (bottom type, bottom chamfer, ribs, grooves in
+  range) inside a plain tube of radius `max R + coreWall`. Calibration: `c_new = c_old + (Ø_target − Ø_measured)/2`.
+
 ## 8. Mesh assembly
 
 | mode           | surfaces                                                                                                                                                                                                                                                                                                                     | closed       |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
 | solidVase      | outer grid (periodic θ) + bottom fan at C(0) + top fan at C(1)                                                                                                                                                                                                                                                               | yes, genus 0 |
-| shell          | outer + inner grids + rim ring (flat or round) + outer bottom fan/annulus + inner floor fan/annulus (+ hole cylinder)                                                                                                                                                                                                        | yes          |
+| shell          | outer + inner grids + rim ring (flat or round) + outer bottom fan/annulus + inner floor fan/annulus (+ hole cylinder); the bore liner (§7b) uses the same surfaces                                                                                                                                                           | yes          |
 | doubleWallVase | shell body whose wall is cut by a slit at θ_s of width 0.0001 mm (columns at θ_s ± 0.00005/r) from the floor to the rim. Two slit faces connect outer and inner. Below the floor the seam is closed by a 0.0001 mm strip. Each layer is then a single C-shaped contour, which the slicer prints as two walls in spiral mode. | yes          |
 
 Winding is CCW seen from outside, and signed volume > 0 is asserted. Quads

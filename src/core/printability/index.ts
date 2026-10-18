@@ -11,6 +11,7 @@ import {
   adviceForUseCase,
   wallIssues,
 } from './checks';
+import { boreIssues } from './bore';
 import { analyzeOverhang } from './overhang';
 import { computeStats } from './stats';
 import type { Issue, Report } from './types';
@@ -38,6 +39,7 @@ export function analyze(b: BuildResult, p: VaseParams, opts: { manifold?: boolea
     ...bounds.issues,
     ...modeIssues(p),
     ...stabilityIssues(b, p),
+    ...boreIssues(b, p),
     ...sanity.issues,
     ...adviceForUseCase(p),
   ].sort((a, c) => ORDER[a.severity] - ORDER[c.severity]);

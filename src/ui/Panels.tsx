@@ -4,6 +4,7 @@ import { useStore, type TabId } from '../state/store';
 import { Group, ParamControl } from './controls/ParamControl';
 import { isShown } from './controls/visibility';
 import { AiPanel } from './AiPanel';
+import { BoreReadout, CalibrationModal } from './Calibration';
 import { EffectStack } from './EffectStack';
 import { useT } from './hooks';
 import { PolarEditor } from './PolarEditor';
@@ -15,6 +16,11 @@ const NO_BELLY = ['straight', 'taper', 'concave', 'hourglass', 'flaredTrumpet'];
 const NO_NECK = ['straight', 'taper', 'convex', 'teardrop', 'sphere', 'custom'];
 const shell: Rule = (p) => p.print.outputMode !== 'solidVase';
 const fullShell: Rule = (p) => p.print.outputMode === 'shell';
+const bore: Rule = (p) => fullShell(p) && p.print.innerSurface === 'bore';
+const bottomIs =
+  (...kinds: VaseParams['insert']['bottom'][]): Rule =>
+  (p) =>
+    bore(p) && kinds.includes(p.insert.bottom);
 
 const VISIBLE: Record<string, Rule> = {
   'dimensions.topDiameter': (p) => !['straight', 'custom'].includes(p.profile.preset),
@@ -32,25 +38,67 @@ const VISIBLE: Record<string, Rule> = {
   'twist.lobes.swirl': (p) => p.twist.lobes.count > 0,
   'twist.bend.direction': (p) => p.twist.bend.offset !== 0,
   'rim.flareZone': (p) => p.rim.flare !== 0,
-  'rim.lipThickness': shell,
+  'rim.lipThickness': (p) => shell(p) && !bore(p),
   'rim.round': shell,
-  'base.bottomThickness': () => true,
+  'base.bottomThickness': (p) => !bore(p),
   'base.footRing.inset': (p) => p.base.footRing.height > 0,
-  'print.wallThickness': shell,
+  'print.wallThickness': (p) => shell(p) && !bore(p),
   'print.innerSurface': (p) => p.print.outputMode === 'shell',
   'rim.ruffle.count': fullShell,
   'rim.ruffle.depth': (p) => fullShell(p) && p.rim.ruffle.count > 0,
   'rim.slant.height': fullShell,
   'rim.slant.angle': (p) => fullShell(p) && p.rim.slant.height > 0,
-  'base.concave': fullShell,
-  'base.drainageHole': fullShell,
+  'base.concave': (p) => fullShell(p) && !bore(p),
+  'base.drainageHole': (p) => fullShell(p) && !bore(p),
   'base.saucer.gap': (p) => p.base.saucer.enabled,
   'base.saucer.height': (p) => p.base.saucer.enabled,
   'base.saucer.rim': (p) => p.base.saucer.enabled,
   'print.printer.bedX': (p) => p.print.printer.preset === 'custom',
   'print.printer.bedY': (p) => p.print.printer.preset === 'custom',
   'print.printer.bedZ': (p) => p.print.printer.preset === 'custom',
+  'print.printer.holeCompensation': bore,
+  'insert.lipWidth': bottomIs('lip'),
+  'insert.lipThickness': bottomIs('lip'),
+  'insert.floorThickness': bottomIs('floor', 'drain'),
+  'insert.drainDiameter': bottomIs('drain'),
+  'insert.bottomChamfer': bottomIs('open', 'lip'),
+  'insert.ribs.width': (p) => bore(p) && p.insert.ribs.count > 0,
+  'insert.ribs.interference': (p) => bore(p) && p.insert.ribs.count > 0,
+  'insert.ribs.heightFraction': (p) => bore(p) && p.insert.ribs.count > 0,
+  'insert.grooves.width': (p) => bore(p) && p.insert.grooves.count > 0,
+  'insert.grooves.depth': (p) => bore(p) && p.insert.grooves.count > 0,
+  'insert.grooves.z1': (p) => bore(p) && p.insert.grooves.count > 0,
+  'insert.grooves.z2': (p) => bore(p) && p.insert.grooves.count > 1,
 };
+
+/** Every insert control is bore-only unless a rule above narrows it further. */
+const INSERT_PATHS = [
+  'insert.type',
+  'insert.od',
+  'insert.odTolerance',
+  'insert.fit',
+  'insert.clearance',
+  'insert.coreWall',
+  'insert.length',
+  'insert.protrusion',
+  'insert.bottom',
+  'insert.lipWidth',
+  'insert.lipThickness',
+  'insert.floorThickness',
+  'insert.drainDiameter',
+  'insert.bottomChamfer',
+  'insert.entryChamfer',
+  'insert.ribs.count',
+  'insert.ribs.width',
+  'insert.ribs.interference',
+  'insert.ribs.heightFraction',
+  'insert.grooves.count',
+  'insert.grooves.width',
+  'insert.grooves.depth',
+  'insert.grooves.z1',
+  'insert.grooves.z2',
+];
+for (const path of INSERT_PATHS) VISIBLE[path] ??= bore;
 
 /** Basic-mode controls that are always shown regardless of their schema level. */
 const BASIC_EXTRA = new Set([
@@ -216,6 +264,39 @@ function RimBasePanel() {
   );
 }
 
+function CalibrateButton() {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-1 rounded-lg border border-line bg-card px-3 py-1.5 text-xs hover:border-accent"
+      >
+        ⌀ {t('insert.calibrate')}
+      </button>
+      {open && <CalibrationModal onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+/** Shell bore liner: tube insert, bore readout, OD measuring hint, calibration. */
+function InsertGroup() {
+  const t = useT();
+  const on = useStore((s) => bore(s.params));
+  if (!on) return null;
+  return (
+    <Group title={t('group.insert')}>
+      <BoreReadout />
+      <Params paths={['insert.type', 'insert.od']} />
+      <p className="-mt-0.5 mb-1 text-[11px] leading-4 text-muted">{t('insert.odHint')}</p>
+      <Params paths={INSERT_PATHS.slice(2)} />
+      <CalibrateButton />
+    </Group>
+  );
+}
+
 function PrintPanel() {
   const t = useT();
   return (
@@ -224,6 +305,7 @@ function PrintPanel() {
         title={t('group.output')}
         paths={['print.outputMode', 'print.wallThickness', 'print.innerSurface', 'print.useCase', 'print.material']}
       />
+      <InsertGroup />
       <ParamGroup
         title={t('group.printer')}
         paths={[
@@ -231,6 +313,7 @@ function PrintPanel() {
           'print.printer.bedX',
           'print.printer.bedY',
           'print.printer.bedZ',
+          'print.printer.holeCompensation',
           'print.nozzle',
           'print.lineWidth',
           'print.layerHeight',

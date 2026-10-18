@@ -4,7 +4,16 @@ import { normalizeParams } from '../core/params/normalize';
 import { diffParams, setPath, type ParamDiff } from '../core/params/paths';
 import { mutate, randomize } from '../core/params/random';
 import { decodeShare, encodeShare } from '../core/params/share';
-import { DEFAULT_PARAMS, type Effect, type I18nText, type VaseParams } from '../core/params/schema';
+import { FIT_CLEARANCE } from '../core/insert';
+import {
+  DEFAULT_PARAMS,
+  PRINTER_PRESETS,
+  type Effect,
+  type I18nText,
+  type PrinterPreset,
+  type VaseParams,
+} from '../core/params/schema';
+import { listPrinterProfiles, savePrinterProfile } from '../persist/db';
 import { applyImageAnalysis, applyProposal, applyRefine, applySilhouette } from '../ai/apply';
 import { aiDesign, aiImage, aiRefine } from '../ai/client';
 import type { ParamChange } from '../core/printability/types';
@@ -47,6 +56,8 @@ interface Store {
   toast: string | null;
   exporting: boolean;
   ai: AiState;
+  /** Calibrated hole compensation per printer preset (IndexedDB), overriding PRINTER_PRESETS. */
+  printerProfiles: Partial<Record<PrinterPreset, number>>;
 
   setParam(path: string, value: unknown, opts?: { transient?: boolean }): void;
   endDrag(): void;
@@ -82,6 +93,8 @@ interface Store {
   applySilhouette(points: { t: number; r: number }[], heightToWidth: number): void;
   makeVariations(): Promise<void>;
   pickVariation(i: number): void;
+  /** Save a calibrated hole compensation: one history entry + the active printer's profile. */
+  calibrate(holeCompensation: number): Promise<void>;
 }
 
 export interface AiChatEntry {
@@ -111,14 +124,11 @@ function loadPrefs(): { lang: Lang; level: 'basic' | 'advanced' } {
   }
 }
 
-function initialParams(): VaseParams {
+function sharedParams(): VaseParams | null {
   const m = /[#&]d=([^&]+)/.exec(location.hash);
-  if (m) {
-    const p = decodeShare(decodeURIComponent(m[1]));
-    if (p) return p;
-  }
-  return PRESETS[0]?.params ?? DEFAULT_PARAMS;
+  return m ? decodeShare(decodeURIComponent(m[1])) : null;
 }
+const shared = sharedParams();
 
 const prefs = loadPrefs();
 
@@ -138,6 +148,12 @@ export const useStore = create<Store>((set, get) => {
     }
   };
 
+  /** New designs (presets) use the active printer's calibrated hole compensation. */
+  const withProfile = (p: VaseParams): VaseParams => {
+    const hc = get().printerProfiles[p.print.printer.preset];
+    return hc === undefined ? p : setPath(p, 'print.printer.holeCompensation', hc);
+  };
+
   const setAi = (patch: Partial<AiState>) => set({ ai: { ...get().ai, ...patch } });
   /** AI output → validated/clamped params → auto-fix in the worker → one undoable history entry. */
   const finishAi = async (params: VaseParams, summary: I18nText, rejected: string[], chat: AiChatEntry[]) => {
@@ -148,7 +164,7 @@ export const useStore = create<Store>((set, get) => {
   };
 
   return {
-    params: initialParams(),
+    params: shared ?? PRESETS[0]?.params ?? DEFAULT_PARAMS,
     past: [],
     future: [],
     dragBase: null,
@@ -162,10 +178,20 @@ export const useStore = create<Store>((set, get) => {
     toast: null,
     exporting: false,
     ai: { busy: null, error: null, chat: [], last: null, variations: [] },
+    printerProfiles: {},
 
     setParam(path, value, opts) {
       const { params, dragBase } = get();
-      const next = normalizeParams(setPath(params, path, value));
+      let raw = setPath(params, path, value);
+      // picking a fit copies its default clearance; picking a printer loads its (calibrated) hole compensation
+      if (path === 'insert.fit')
+        raw = setPath(raw, 'insert.clearance', FIT_CLEARANCE[value as keyof typeof FIT_CLEARANCE]);
+      if (path === 'print.printer.preset') {
+        const preset = value as PrinterPreset;
+        const hc = get().printerProfiles[preset] ?? PRINTER_PRESETS[preset]?.holeCompensation;
+        if (hc !== undefined) raw = setPath(raw, 'print.printer.holeCompensation', hc);
+      }
+      const next = normalizeParams(raw);
       if (opts?.transient) set({ params: next, dragBase: dragBase ?? params });
       else commit(next, dragBase ?? params);
     },
@@ -194,7 +220,7 @@ export const useStore = create<Store>((set, get) => {
     },
     loadPreset(id) {
       const p = PRESETS.find((x) => x.id === id);
-      if (p) commit(structuredClone(p.params));
+      if (p) commit(withProfile(structuredClone(p.params)));
     },
     randomize() {
       commit(randomize(get().params));
@@ -319,8 +345,32 @@ export const useStore = create<Store>((set, get) => {
       const v = get().ai.variations[i];
       if (v) commit(v);
     },
+    async calibrate(holeCompensation) {
+      const p = get().params;
+      const id = p.print.printer.preset;
+      commit(normalizeParams(setPath(p, 'print.printer.holeCompensation', holeCompensation)));
+      set({ printerProfiles: { ...get().printerProfiles, [id]: holeCompensation } });
+      try {
+        await savePrinterProfile({ id, holeCompensation, updatedAt: Date.now() });
+      } catch {
+        /* IndexedDB unavailable: the value still lives in the design */
+      }
+    },
   };
 });
+
+// ---- calibrated printer profiles: loaded once; the start-up preset picks them up (shared links keep theirs)
+void listPrinterProfiles().then(
+  (list) => {
+    const printerProfiles = Object.fromEntries(list.map((x) => [x.id, x.holeCompensation]));
+    useStore.setState({ printerProfiles });
+    const s = useStore.getState();
+    const hc = printerProfiles[s.params.print.printer.preset];
+    if (!shared && !s.past.length && hc !== undefined)
+      s.replace(setPath(s.params, 'print.printer.holeCompensation', hc), false);
+  },
+  () => {},
+);
 
 // ---- regeneration: every params change → worker (low quality while dragging)
 const scheduler = new RegenScheduler(

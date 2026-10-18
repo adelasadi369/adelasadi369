@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { handle } from '../server/ai';
 import { applyImageAnalysis, applyProposal, applyRefine } from '../src/ai/apply';
+import { designSystemPrompt, refineSystemPrompt } from '../src/ai/prompts';
 import { VaseParamsSchema } from '../src/core/params/schema';
 import { PRESETS } from '../src/presets';
 
@@ -138,5 +139,14 @@ describe('applying AI output', () => {
     expect(p.section.bottom.starPoints).toBe(8);
     expect(p.effects[0]).toMatchObject({ type: 'ribs', count: 32, style: 'grooved' });
     expect(p.render.color).toBe('#a0522d');
+  });
+});
+
+describe('AI prompt and the tube insert', () => {
+  it('lists the insert params and forbids changing them unasked', () => {
+    const sys = designSystemPrompt(PRESETS);
+    expect(sys).toContain('insert.od | number 10..150 mm');
+    expect(sys).toContain('print.printer.holeCompensation');
+    expect(refineSystemPrompt()).toMatch(/Never change insert\.\*/);
   });
 });
