@@ -150,5 +150,6 @@
   "kind.vase": "Vase",
   "kind.sleeve": "Sleeve",
   "group.sleeveMesh": "Sleeve mesh",
-  "export.cancel": "Cancel"
+  "export.cancel": "Cancel",
+  "viewer.voxel": "voxel"
 }

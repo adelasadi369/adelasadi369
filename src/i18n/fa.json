@@ -150,5 +150,6 @@
   "kind.vase": "گلدان",
   "kind.sleeve": "غلاف",
   "group.sleeveMesh": "مش غلاف",
-  "export.cancel": "لغو"
+  "export.cancel": "لغو",
+  "viewer.voxel": "وکسل"
 }

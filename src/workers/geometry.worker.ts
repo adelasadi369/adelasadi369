@@ -40,9 +40,9 @@ const api: GeometryApi = {
       // sleeve topology is not fixed: the full validity check runs on every regen (no topology cache)
       const build = buildDesign(params, quality);
       const { vertexOverhang, ...report } = analyze(build, params);
-      const s = (build.mesh as { sleeve?: { log: string[] } }).sleeve;
+      const s = (build.mesh as { sleeve?: { log: string[]; voxel: number } }).sleeve;
       if (s?.log.length) console.info('[sleeve]', ...s.log);
-      const mesh = payload(build.mesh, vertexOverhang, quality, performance.now() - t0);
+      const mesh = { ...payload(build.mesh, vertexOverhang, quality, performance.now() - t0), voxel: s?.voxel };
       return Promise.resolve(Comlink.transfer({ mesh, report }, transferables(mesh)));
     }
     const build = buildMesh(params, quality);

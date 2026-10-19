@@ -17,6 +17,8 @@ export interface MeshPayload {
   nZ: number;
   quality: Quality;
   ms: number;
+  /** Sleeve meshes: marching-cubes voxel (mm); nTheta / nZ are 0. */
+  voxel?: number;
 }
 
 export type ReportPayload = Omit<Report, 'vertexOverhang'>;

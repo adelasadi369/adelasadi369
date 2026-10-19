@@ -48,7 +48,7 @@ function extent(mesh: MeshPayload | null) {
 function Vase({ mesh }: { mesh: MeshPayload | null }) {
   const params = useStore((s) => s.params);
   const viewer = useStore((s) => s.viewer);
-  const { gl } = useThree();
+  const { gl, invalidate } = useThree();
   const heat = viewer.heatmap;
   const geo = useGeometry(mesh, heat, params.print.maxOverhang);
   const uniforms = useMemo<LayerUniforms>(() => ({ uLayerH: { value: 0.24 }, uLayers: { value: 0 } }), []);
@@ -69,6 +69,8 @@ function Vase({ mesh }: { mesh: MeshPayload | null }) {
     material.clippingPlanes = clip === null ? [] : [new THREE.Plane(new THREE.Vector3(0, -1, 0), clip * height)];
     material.needsUpdate = true;
   }, [uniforms, material, gl, heat, color, layerHeight, layers, clip, height]);
+  // on-demand rendering: the effects above mutate three objects directly, so ask for a frame after every render
+  useEffect(() => invalidate());
   return <mesh geometry={geo} material={material} rotation={Z_UP} castShadow receiveShadow />;
 }
 
@@ -178,7 +180,7 @@ function Dimensions({ mesh }: { mesh: MeshPayload | null }) {
 
 function CameraRig({ height }: { height: number }) {
   const controls = useRef<OrbitImpl>(null);
-  const { camera } = useThree();
+  const { camera, invalidate } = useThree();
   const last = useRef(0);
   useEffect(() => {
     if (Math.abs(last.current - height) < 25) return;
@@ -187,7 +189,8 @@ function CameraRig({ height }: { height: number }) {
     camera.position.set(d * 0.55, height * 0.75, d * 0.8);
     controls.current?.target.set(0, height * 0.45, 0);
     controls.current?.update();
-  }, [camera, height]);
+    invalidate();
+  }, [camera, height, invalidate]);
   return <OrbitControls ref={controls} makeDefault enableDamping maxPolarAngle={Math.PI * 0.55} />;
 }
 
@@ -264,6 +267,7 @@ export function Viewer() {
   return (
     <div className="relative h-full w-full bg-gradient-to-b from-[#f3efe9] to-[#e4ddd2]">
       <Canvas
+        frameloop="demand"
         shadows="percentage"
         dpr={[1, 2]}
         camera={{ fov: 32, near: 1, far: 5000, position: [300, 200, 400] }}
@@ -292,7 +296,11 @@ export function Viewer() {
       </div>
       {mesh && (
         <div className="pointer-events-none absolute bottom-3 rounded-full bg-white/80 px-3 py-1 text-[11px] text-muted shadow-sm ltr:left-3 rtl:right-3">
-          {num(mesh.triangleCount)} △ · {num(mesh.nTheta)}×{num(mesh.nZ)} · {t('viewer.regen')} {num(mesh.ms, 0)} ms
+          {num(mesh.triangleCount)} △ ·{' '}
+          {mesh.voxel !== undefined
+            ? `${t('viewer.voxel')} ${num(mesh.voxel, 1)} ${t('unit.mm')}`
+            : `${num(mesh.nTheta)}×${num(mesh.nZ)}`}{' '}
+          · {t('viewer.regen')} {num(mesh.ms, 0)} ms
         </div>
       )}
     </div>
