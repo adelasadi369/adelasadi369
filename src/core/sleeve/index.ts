@@ -59,6 +59,8 @@ export interface SleeveOptions {
   signal?: { aborted: boolean };
   /** Test hook: force the lattice offset index. */
   offsetIndex?: number;
+  /** Test hook: treat the first lattice as invalid to exercise the retry. */
+  failFirst?: boolean;
 }
 
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
@@ -81,7 +83,7 @@ export function buildSleeveMesh(params: VaseParams, voxel: number, opts: SleeveO
   const first = opts.offsetIndex ?? 0;
   let built = mesh(params, sdf, voxel, OFFSETS[first], opts);
   let retried = false;
-  if (!built.validity.ok && opts.offsetIndex === undefined) {
+  if ((!built.validity.ok || opts.failFirst) && opts.offsetIndex === undefined) {
     log.push(
       `mesh validity failed at lattice offset ${OFFSETS[0]} (bad edges ${built.validity.badEdges}, bad vertices ${built.validity.badVertices}, bodies ${built.validity.bodies}); retried at offset ${OFFSETS[1]}`,
     );

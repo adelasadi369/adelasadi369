@@ -27,6 +27,14 @@ describe('sleeve engine', () => {
     }
   });
 
+  it('a failed first lattice is retried once on the shifted lattice and logged', () => {
+    const b = buildSleeveMesh(sleeveParams(PRESETS[4].params), DRAG_VOXEL, { failFirst: true });
+    expect(b.mesh.sleeve.retried).toBe(true);
+    expect(b.mesh.sleeve.log.join(' ')).toMatch(/retried at offset 0\.3/);
+    expectSoundSleeve(b);
+    expect(analyze(b, sleeveParams(PRESETS[4].params)).issues.some((i) => i.id === 'sleeve-retry')).toBe(true);
+  });
+
   it('the shifted retry lattice also builds a valid body', () => {
     expectSoundSleeve(buildSleeveMesh(sleeveParams(PRESETS[4].params), DRAG_VOXEL, { offsetIndex: 1 }));
   });
