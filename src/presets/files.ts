@@ -13,6 +13,7 @@ import stoneGlitch from './stone-glitch.json';
 import hammeredUrn from './hammered-urn.json';
 import steppedSquare from './stepped-square.json';
 import planterClassic from './planter-classic.json';
+import sleeveStarter from './sleeve-starter.json';
 
 export const PRESET_FILES: Record<string, unknown> = {
   'japandi-ribbed': japandiRibbed,
@@ -29,4 +30,5 @@ export const PRESET_FILES: Record<string, unknown> = {
   'hammered-urn': hammeredUrn,
   'stepped-square': steppedSquare,
   'planter-classic': planterClassic,
+  'sleeve-starter': sleeveStarter,
 };

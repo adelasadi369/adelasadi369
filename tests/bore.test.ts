@@ -7,7 +7,7 @@ import type { VaseParams, VaseParamsInput } from '../src/core/params/schema';
 import { analyze, evaluate } from '../src/core/printability';
 import { checkManifold, signedVolume } from '../src/core/printability/sanity';
 import { setPath } from '../src/core/params/paths';
-import { PRESETS } from '../src/presets';
+import { VASE_PRESETS } from '../src/presets';
 import { slice } from './helpers';
 
 const boreParams = (base: VaseParamsInput | VaseParams, insert: object = {}): VaseParams =>
@@ -66,7 +66,7 @@ describe('shell bore liner', () => {
   });
 
   it('every preset with a bore liner is manifold, outward and has two star-shaped contours per slice', () => {
-    for (const preset of PRESETS) {
+    for (const preset of VASE_PRESETS) {
       const p = boreParams(preset.params, { od: 36 });
       const b = buildMesh(p, 'low');
       expectSound(b);
@@ -129,7 +129,7 @@ describe('shell bore liner', () => {
 
 describe('bore printability', () => {
   it('every preset with a bore passes the accuracy check at preview quality', () => {
-    for (const preset of PRESETS) {
+    for (const preset of VASE_PRESETS) {
       const p = boreParams(preset.params, { od: 36 });
       const { report } = evaluate(p, p.render.previewQuality);
       const ids = report.issues.map((i) => i.id);

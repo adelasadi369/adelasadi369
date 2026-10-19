@@ -11,6 +11,9 @@ import type { FixAction, Issue, ParamChange, Report, Stats } from './types';
 
 const t = (fa: string, en: string): I18nText => ({ fa, en });
 const f1 = (x: number) => x.toFixed(1);
+
+/** Half-width of the teardrop-tip zone: the meshed tip is rounded by about 1.5 voxels or the edge rounding + 1.5 mm. */
+export const tipZone = (voxel: number, k: number) => Math.max(1.5 * voxel, k + 1.5);
 const f2 = (x: number) => x.toFixed(2);
 const ORDER = { error: 0, warn: 1, info: 2 } as const;
 /** Bore contact below this share warns (the tube is held by too little wall). */
@@ -173,7 +176,13 @@ export function analyzeSleeve(b: SleeveBuild, p: VaseParams): Report {
   const { mesh } = b;
   const s = mesh.sleeve;
   const maxDeg = p.print.maxOverhang;
-  const oh = analyzeOverhang(mesh, maxDeg);
+  // the first voxel above the bed is the base seam; teardrop tips are short bridges (see tipZone)
+  const hm = b.sdf.holes;
+  const dTip = tipZone(s.voxel, hm?.k ?? 0);
+  const oh = analyzeOverhang(mesh, maxDeg, {
+    bedSkip: s.voxel,
+    soft: hm ? (x, y, z) => hm.tip(Math.atan2(y, x), z, dTip) : undefined,
+  });
   // the bed is not an overhang
   for (const v of s.baseVertices) oh.vertex[v] = -1;
   const issues: Issue[] = [];

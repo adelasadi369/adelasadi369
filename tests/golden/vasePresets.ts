@@ -1,5 +1,5 @@
 import { buildMesh } from '../../src/core/geometry/mesh';
-import { PRESETS } from '../../src/presets';
+import { VASE_PRESETS } from '../../src/presets';
 import { hashBuffer } from '../helpers';
 
 export interface VaseGoldenEntry {
@@ -24,7 +24,7 @@ export const GOLDEN_DESCRIPTION =
 /** Build every preset exactly as the viewer does on release (its own output mode, render.previewQuality). */
 export function computeVaseGolden(): VaseGolden {
   const presets: Record<string, VaseGoldenEntry> = {};
-  for (const preset of PRESETS) {
+  for (const preset of VASE_PRESETS) {
     const quality = preset.params.render.previewQuality;
     const { mesh } = buildMesh(preset.params, quality);
     presets[preset.id] = {

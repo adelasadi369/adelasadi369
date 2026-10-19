@@ -5,14 +5,14 @@ import { normalizeParams } from '../src/core/params/normalize';
 import { randomize } from '../src/core/params/random';
 import { signedVolume } from '../src/core/printability/sanity';
 import { buildSleeveMesh, DRAG_VOXEL } from '../src/core/sleeve';
-import { PRESETS } from '../src/presets';
+import { PRESETS, VASE_PRESETS } from '../src/presets';
 import { expectSoundSleeve, sleeveParams } from './sleeveHelpers';
 
 const SLOW = 120_000;
 
 /** Seeded random designs (same generator as the Randomize button) turned into sleeves. */
 const randomSleeve = (seed: number) => {
-  const base = PRESETS[seed % PRESETS.length].params;
+  const base = VASE_PRESETS[seed % VASE_PRESETS.length].params;
   return sleeveParams(randomize({ ...base, random: { ...base.random, seed, locks: [] } }, seed));
 };
 

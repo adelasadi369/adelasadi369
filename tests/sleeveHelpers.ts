@@ -2,6 +2,7 @@ import { expect } from 'vitest';
 import { normalizeParams } from '../src/core/params/normalize';
 import type { VaseParams, VaseParamsInput } from '../src/core/params/schema';
 import { checkManifold, signedVolume } from '../src/core/printability/sanity';
+import { tipZone } from '../src/core/printability/sleeve';
 import type { SleeveBuild } from '../src/core/sleeve';
 
 export const sleeveParams = (base: VaseParamsInput | VaseParams = {}, insert: object = {}): VaseParams =>
@@ -47,27 +48,14 @@ export function rayCoverage(b: SleeveBuild): number {
 
 /**
  * Hole roofs from face normals: downward faces within 2 mm of a hole edge (g on the hole map), off the bore. Faces
- * in a tip zone (the hole, or the material ∨ between two merged roofs, narrower than 2·dTip at that height) are left
- * out: a rounded tip has a tiny flat patch by construction. Returns the area share steeper than maxOverhang + 3°.
+ * in a teardrop-tip zone (HoleMap.tip, the same rule the overhang check uses) are left out: a meshed tip is rounded. Returns the area share steeper than maxOverhang + 3°.
  */
 export function roofOverhang(b: SleeveBuild, p: VaseParams): { badFraction: number; area: number } {
   const { mesh, sdf } = b;
   const hm = sdf.holes!;
   const P = mesh.positions;
   const I = mesh.indices;
-  const rOut = Math.max(sdf.skin.reach, sdf.Rc);
-  const dTip = Math.max(1.5 * mesh.sleeve.voxel, hm.k + 1.5);
-  const tip = (phi: number, z: number) => {
-    const nx = hm.nx;
-    const i = Math.round(((((phi / (2 * Math.PI)) % 1) + 1) % 1) * nx) % nx;
-    const row = Math.min(hm.nz - 1, Math.max(0, Math.round(z / hm.dz))) * nx;
-    const o = hm.open[row + i];
-    let a = 0;
-    let c = 0;
-    while (a < nx && hm.open[row + ((i - a - 1 + nx) % nx)] === o) a++;
-    while (c < nx && hm.open[row + ((i + c + 1) % nx)] === o) c++;
-    return (a + c + 1) * hm.dphi * rOut < 2 * dTip;
-  };
+  const dTip = tipZone(mesh.sleeve.voxel, hm.k);
   let area = 0;
   let bad = 0;
   for (let t = 0; t < mesh.surfaces[0].triCount; t++) {
@@ -79,7 +67,7 @@ export function roofOverhang(b: SleeveBuild, p: VaseParams): { badFraction: numb
     if (!L || nz >= 0) continue;
     const x = (P[a] + P[c] + P[d]) / 3, y = (P[a + 1] + P[c + 1] + P[d + 1]) / 3, z = (P[a + 2] + P[c + 2] + P[d + 2]) / 3; // prettier-ignore
     const phi = Math.atan2(y, x);
-    if (Math.hypot(x, y) < sdf.R + 0.3 || Math.abs(hm.at(phi, z)) > 2 || tip(phi, z)) continue;
+    if (Math.hypot(x, y) < sdf.R + 0.3 || Math.abs(hm.at(phi, z)) > 2 || hm.tip(phi, z, dTip)) continue;
     const A = L / 2;
     area += A;
     if ((Math.asin(-nz / L) * 180) / Math.PI > p.print.maxOverhang + 3) bad += A;

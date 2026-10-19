@@ -45,6 +45,11 @@ export interface HoleMap extends Grid2 {
   stats: HoleStats;
   /** Signed distance to the holes at axis angle φ and height z (bilinear, periodic in φ). */
   at(phi: number, z: number): number;
+  /**
+   * Teardrop-tip zone: within 2 mm of a hole edge, where the hole (a roof apex) or the material between two merged
+   * roofs (a ∨ tip) is narrower than 2·d at this height, measured at r_out. A rounded tip has a short flat patch there.
+   */
+  tip(phi: number, z: number, d: number): boolean;
 }
 
 export interface HoleInputs {
@@ -489,6 +494,18 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
     return g0 + (g1 - g0) * fv;
   };
   const holes = label(g2, S, true).count;
+  const tip = (phi: number, z: number, d: number) => {
+    if (Math.abs(at(phi, z)) > 2) return false;
+    let u = Math.round(phi / dphi) % nx;
+    if (u < 0) u += nx;
+    const row = Math.min(nz - 1, Math.max(0, Math.round(z / dz))) * nx;
+    const o = S[row + u];
+    let a = 0;
+    let c = 0;
+    while (a < nx && S[row + ((u - a - 1 + nx) % nx)] === o) a++;
+    while (c < nx && S[row + ((u + c + 1) % nx)] === o) c++;
+    return (a + c + 1) * dphi * rOut < 2 * d;
+  };
   return {
     nx,
     nz,
@@ -500,6 +517,7 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
     open: S,
     g,
     at,
+    tip,
     stats: {
       coverage,
       target,
