@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 
-export const SCHEMA_VERSION = 2 as const;
+export const SCHEMA_VERSION = 3 as const;
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -1347,10 +1347,71 @@ export const InsertSchema = z
   .prefault({});
 
 // ---------------------------------------------------------------------------
+// G3) Sleeve (outputMode 'sleeve'): SDF of the vase skin + core tube − exact bore, meshed by marching cubes.
+//     See docs/sleeve-integration.md §2–§4. Fingers, drips, holes and top edge arrive in later phases.
+// ---------------------------------------------------------------------------
+
+export const SleeveSchema = z
+  .object({
+    coreBlend: num(0, 8, 2, {
+      fa: 'نرمی اتصال هسته',
+      en: 'Core blend',
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: [
+        'شعاع اتصال نرم بدنه به لولهٔ هسته (دیوارهٔ دور حفره). ۰ = لبهٔ تیز.',
+        'Smooth-union radius between the skin and the core tube around the bore. 0 = sharp.',
+      ],
+    }),
+    mesh: z
+      .object({
+        previewVoxel: num(0.6, 2, 1, {
+          fa: 'وکسل پیش‌نمایش',
+          en: 'Preview voxel',
+          phase: 2,
+          unit: 'mm',
+          step: 0.1,
+          tip: [
+            'اندازهٔ سلول مش در نمایشگر (بعد از رها کردن اسلایدر). کوچک‌تر = دقیق‌تر و کندتر.',
+            'Mesh cell size in the viewer after a slider is released. Smaller = finer and slower.',
+          ],
+        }),
+        exportVoxel: num(0.3, 0.6, 0.5, {
+          fa: 'وکسل خروجی',
+          en: 'Export voxel',
+          basic: true,
+          phase: 2,
+          unit: 'mm',
+          step: 0.05,
+          tip: [
+            'اندازهٔ سلول مش فایل خروجی (۰٫۳ تا ۰٫۶). کوچک‌تر = فایل بزرگ‌تر.',
+            'Mesh cell size of the exported file (0.3–0.6). Smaller = bigger file.',
+          ],
+        }),
+        smoothing: int(0, 10, 3, {
+          fa: 'هموارسازی',
+          en: 'Smoothing',
+          phase: 2,
+          step: 1,
+          tip: [
+            'تعداد دورهای هموارسازی تاوبین؛ حفره و کف ثابت می‌مانند.',
+            'Taubin smoothing passes; the bore and the base never move.',
+          ],
+        }),
+      })
+      .prefault({}),
+  })
+  .prefault({});
+
+// ---------------------------------------------------------------------------
 // H) Output & print
 // ---------------------------------------------------------------------------
 
-export const OUTPUT_MODES = ['solidVase', 'shell', 'doubleWallVase'] as const;
+export const OUTPUT_MODES = ['solidVase', 'shell', 'doubleWallVase', 'sleeve'] as const;
+/** Output modes built by the grid builder (buildMesh); 'sleeve' has its own SDF + marching-cubes path. */
+export const VASE_MODES = ['solidVase', 'shell', 'doubleWallVase'] as const;
+export type VaseMode = (typeof VASE_MODES)[number];
 export const USE_CASES = ['dryDecor', 'freshFlowers', 'indoorPlanter', 'outdoorPlanter'] as const;
 export const MATERIALS = ['PLA', 'silkPLA', 'PETG', 'ASA', 'TPU'] as const;
 export const INNER_SURFACES = ['smoothLiner', 'follow', 'bore'] as const;
@@ -1385,6 +1446,7 @@ export const PrintSchema = z
         solidVase: t('توپر (حالت گلدان)', 'Solid (vase mode)'),
         shell: t('پوسته (چاپ معمولی)', 'Shell (normal print)'),
         doubleWallVase: t('دوجداره (حالت گلدان)', 'Double wall (vase mode)'),
+        sleeve: t('غلاف (دور لوله)', 'Sleeve (around a tube)'),
       },
     }),
     wallThickness: num(1.2, 4, 2.1, {
@@ -1617,6 +1679,7 @@ export const VaseParamsSchema = z
     rim: RimSchema,
     base: BaseSchema,
     insert: InsertSchema,
+    sleeve: SleeveSchema,
     print: PrintSchema,
     random: RandomSchema,
     render: RenderSchema,

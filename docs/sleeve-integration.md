@@ -145,6 +145,12 @@ New blocks, each with ranges in zod and labels/tooltips (fa/en), units, steps an
   - `grooves.{count 0–2 (0), width, depth, z1, z2}`: groove centres in % of height, 45° flanks.
   - `print.printer.holeCompensation` −0.2–0.5 (0.05), also a field of every `PRINTER_PRESETS` entry.
   - The shell liner switch is `print.innerSurface: 'bore'` (no separate `liner` key).
+- **As implemented in S2a** (`SCHEMA_VERSION` 3): `print.outputMode: 'sleeve'` (chosen with the top-bar
+  Vase | Sleeve switch; the last vase mode is a UI pref) and a top-level `sleeve` block:
+  - `coreBlend` 0–8 mm (2): smooth-union radius between the skin and the core tube (the `k_blend` of §3);
+  - `mesh.previewVoxel` 0.6–2 mm (1.0), `mesh.exportVoxel` 0.3–0.6 mm (0.5), `mesh.smoothing` 0–10 Taubin passes (3).
+  - The drag voxel is fixed at 2 mm. Decimation is deferred to S4; fingers, drips, holes, top edge and
+    self-supporting come with S2b/S3.
 - **Visibility:**
   - Vase-only controls are hidden in sleeve mode via `visibility.ts`: rim lip/round rim, ruffle/slant, concave base, drainage, double wall, saucer, spiral G-code.
   - Sleeve controls are hidden in vase modes, except `insert` when the shell liner is `bore` (§6).

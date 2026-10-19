@@ -2,10 +2,12 @@
 
 ## 1. Guiding invariant
 
-> **The AI and the UI only ever produce _parameters_. Geometry is always
-> produced by one deterministic function `buildMesh(params, quality)`.**
+> **The AI and the UI only ever produce _parameters_. Geometry comes from
+> deterministic build functions, one per mesh path:** `buildMesh(params, quality)`
+> (grid path: `solidVase`, `shell`, `doubleWallVase`) and `buildSleeveMesh(params, voxel)`
+> (SDF + marching cubes: `sleeve`, GEOMETRY.md §13). `buildDesign` picks the path.
 
-Every horizontal slice is a polar function `r(θ)` around its own slice
+In the grid path every horizontal slice is a polar function `r(θ)` around its own slice
 centre. That gives exactly one simple, closed, star-shaped contour per layer,
 so self-intersection can't happen by construction. Spiral-vase-mode
 compatibility is guaranteed for `solidVase`, and the printability engine only
@@ -158,6 +160,9 @@ the UI (labels, tooltips, units, steps, Basic/Advanced, phase gating) and
   coreWall, fix scales the diameters), `bore-axis` (bend leaves the bore), `bore-ok` / `bore-accuracy`
   (measured from bore vertices + facet sag vs ±0.05 mm), `insert-press-glass`, `insert-short`.
   `stats.boreDiameter` feeds the stats panel and the dimension overlay.
+- Sleeves (`printability/sleeve.ts`, via `analyze()`): mesh validity runs in full on every regen and export
+  (sleeve topology is not fixed, so nothing is cached), plus islands, bore accuracy between ribs, min wall from
+  the SDF, overhang without the bed, bounds and the reused bore checks. Sleeve auto-fix arrives in S3.
 - Auto-fix (§3 of GEOMETRY.md) is iterative and runs on a low-res grid
   (128×100), then re-verifies at preview resolution and returns a param diff.
 
@@ -172,6 +177,9 @@ the UI (labels, tooltips, units, steps, Basic/Advanced, phase gating) and
   That needs no dependency and is required, because ultra meshes are about
   100 MB of XML uncompressed.
 - **Params JSON** and a **ZIP bundle** for multi-body output.
+- **Sleeves** export the SDF mesh at `sleeve.mesh.exportVoxel` (0.3–0.6 mm) in the export worker; progress
+  comes back through a Comlink callback and Cancel terminates the export worker (a new one spawns on demand).
+  3MF metadata uses the sleeve slicer profile (no spiral, 2–3 walls, tree supports on the build plate only).
 - **Fit Test Ring** (`format: 'fitRing'`): binary STL of the bottom 10 mm of the bore
   (`buildFitTestRing`), named `fit-ring_D<target Ø>_hc<holeCompensation>.stl`.
 - **Spiral G-code** (P3) is sampled straight from `r(θ, z)`, not the mesh.

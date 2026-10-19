@@ -8,7 +8,10 @@ import { useNum, useT, useTxt } from '../hooks';
 import { isShown } from './visibility';
 
 /** Enum options hidden until their phase ships. */
-const LATER_OPTIONS: Record<string, string[]> = {};
+const LATER_OPTIONS: Record<string, string[]> = {
+  // sleeve is chosen with the top-bar Vase | Sleeve switch
+  outputMode: ['sleeve'],
+};
 
 export function InfoTip({ text }: { text: string }) {
   return (

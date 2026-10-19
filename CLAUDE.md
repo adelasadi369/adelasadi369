@@ -26,7 +26,8 @@ Read these before non-trivial work:
 
 > UI and AI produce **params** only. Geometry comes from deterministic build functions, one per mesh path.
 
-Today there is one path: `buildMesh(params, quality)` in `src/core/geometry/mesh.ts`.
+Two paths, picked by `buildDesign` (`printability/index.ts`): `buildMesh(params, quality)` in
+`src/core/geometry/mesh.ts` (vase modes) and `buildSleeveMesh(params, voxel)` in `src/core/sleeve/` (sleeve mode).
 Every slice is a star-shaped polar function `r(θ)` about its slice centre `C(t)`, built on a
 twist-aligned grid, so topology is fixed (genus 0) and the manifold check is cached per topology.
 Output modes: `solidVase`, `shell`, `doubleWallVase`. **Never break the star-shaped invariant for these modes.**
@@ -38,8 +39,11 @@ Shell mode's `print.innerSurface: 'bore'` (S1) is an exact tube bore inside the 
 src/core/          pure TS — no DOM, no three, no react/zustand (enforced by eslint)
   params/          schema.ts (zod + paramMeta, SCHEMA_VERSION, DEFAULT_PARAMS), migrate, clamp, normalize, share, paths
   insert/          computeBore, boreProfile (chamfers, grooves, ribs), boreRay, calibrateHoleCompensation
+  sdf/             smin / smax / cylinder
+  sleeve/          skin map (cached), composed SDF (field.ts), buildSleeveMesh (lattice, snapping, retry)
+  mc/              generated MC table, slab extractor with 2-level narrow band, Taubin, islands, O(T) validity
   geometry/        profile · sections · twist · effects/* · field (compileField) · grid · mesh (buildMesh)
-  printability/    checks, bore, overhang, sanity (manifold, signed volume), stats, autofix, index (analyze/score)
+  printability/    checks, bore, sleeve, overhang, sanity, stats, score, autofix, index (analyze/buildDesign)
   export/          stl · obj · threeMF · zip · weld · slicerSettings
   random/          mulberry32, simplex 2D/3D
   jsonpatch/       RFC 6902 apply + validate
@@ -94,7 +98,23 @@ Phases (one branch `sleeve/sN` and one PR each):
 
 Do only the phase you were asked for.
 
-**Status:** S0 and S1 are done. S1 notes:
+**Status:** S0, S1 and S2a are done. S2b (top-edge peaks, organic-noise holes + teardrops) is next.
+
+S2a notes:
+
+- Schema v3: `outputMode: 'sleeve'` + `sleeve.{coreBlend, mesh.{previewVoxel, exportVoxel, smoothing}}`.
+- Sleeve SDF = skin map of the vase field (Lipschitz-corrected) → smin core tube → top at H → flat base → exact
+  S1 bore last (floor bottoms have no opening term). GEOMETRY.md §13 has every formula.
+- Marching cubes: the case table is generated (face rules + face-safe fan apex); never hand-edit it. Lattice is
+  offset by half a voxel on all axes; a failed validity check retries once on a 0.3-voxel offset and logs it.
+- Sleeve meshes keep the `VaseMesh` contract (`mode: 'sleeve'`, one `outer` + a `bottom` bed range, identity
+  `canonical`) plus `mesh.sleeve` (bore/base vertex ids, islands, validity, timings).
+- Measured (Chromium, warm): drag 2 mm 65–175 ms; release 1 mm 400–630 ms + 35–65 ms analysis (target 300 ms,
+  missed; parallel slab workers in S4 is the planned fix); export 0.5 mm 2.5–2.9 s build, ≈ 5 s end to end.
+- The viewer renders on demand (`frameloop="demand"`); call `invalidate()` after imperative three.js updates.
+- Slow sleeve tests live in `tests/sleeve.slow.test.ts` and run in CI with `npm test`.
+
+S1 notes:
 
 - Schema v2: `insert` block, `print.printer.holeCompensation` (also in `PRINTER_PRESETS`), `innerSurface: 'bore'`,
   plus the new `insert.bottomChamfer` (elephant's foot). `migrate.ts` is the first step of `normalizeParams`.

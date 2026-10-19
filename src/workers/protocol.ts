@@ -17,6 +17,8 @@ export interface MeshPayload {
   nZ: number;
   quality: Quality;
   ms: number;
+  /** Sleeve meshes: marching-cubes voxel (mm); nTheta / nZ are 0. */
+  voxel?: number;
 }
 
 export type ReportPayload = Omit<Report, 'vertexOverhang'>;
@@ -32,7 +34,8 @@ export interface GeometryApi {
   regen(params: VaseParams, quality: Quality): Promise<RegenResult>;
   autoFix(params: VaseParams): Promise<Omit<AutoFixResult, 'report'> & { report: ReportPayload }>;
   surprise(seed: number, base: VaseParams): Promise<VaseParams>;
-  exportDesign(params: VaseParams, format: ExportFormat): Promise<ExportFile>;
+  /** onProgress (0..1) is a Comlink proxy; sleeve exports report marching-cubes progress through it. */
+  exportDesign(params: VaseParams, format: ExportFormat, onProgress?: (fraction: number) => void): Promise<ExportFile>;
   thumbnail(params: VaseParams): Promise<MeshPayload>;
   /** 6 printable seed/mutation variants of a design (auto-fixed when needed). */
   variations(params: VaseParams, seed: number): Promise<VaseParams[]>;

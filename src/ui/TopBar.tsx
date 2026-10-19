@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ExportFormat } from '../core/export';
-import { isBoreLiner } from '../core/insert';
+import { usesBore } from '../core/insert';
 import { saveDesign } from '../persist/db';
 import { useStore } from '../state/store';
 import { useT } from './hooks';
@@ -38,7 +38,9 @@ function ExportMenu() {
   const t = useT();
   const exportAs = useStore((s) => s.exportAs);
   const exporting = useStore((s) => s.exporting);
-  const bore = useStore((s) => isBoreLiner(s.params));
+  const bore = useStore((s) => usesBore(s.params));
+  const progress = useStore((s) => s.exportProgress);
+  const cancel = useStore((s) => s.cancelExport);
   const [open, setOpen] = useState(false);
   const items: [ExportFormat, Parameters<typeof t>[0]][] = [
     ['stl', 'export.stl'],
@@ -49,9 +51,23 @@ function ExportMenu() {
   if (bore) items.push(['fitRing', 'export.fitRing']);
   return (
     <div className="relative">
-      <Btn primary onClick={() => setOpen(!open)} disabled={exporting}>
-        {exporting ? t('export.busy') : `⤓ ${t('btn.export')}`}
-      </Btn>
+      {exporting ? (
+        <div className="flex items-center gap-2 rounded-lg bg-ink px-2.5 py-1.5 text-[13px] text-white">
+          <span>{t('export.busy')}</span>
+          {progress !== null && (
+            <span className="h-1.5 w-20 overflow-hidden rounded-full bg-white/25" aria-label="progress">
+              <span className="block h-full bg-white" style={{ width: `${Math.round(progress * 100)}%` }} />
+            </span>
+          )}
+          <button type="button" onClick={cancel} className="text-white/80 underline hover:text-white">
+            {t('export.cancel')}
+          </button>
+        </div>
+      ) : (
+        <Btn primary onClick={() => setOpen(!open)}>
+          {`⤓ ${t('btn.export')}`}
+        </Btn>
+      )}
       {open && (
         <div className="absolute top-10 z-40 w-56 overflow-hidden rounded-xl border border-line bg-card shadow-xl ltr:right-0 rtl:left-0">
           {items.map(([f, k]) => (
@@ -69,6 +85,32 @@ function ExportMenu() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Vase | Sleeve: sleeve is its own output mode; going back restores the last vase output mode. */
+function KindSwitch() {
+  const t = useT();
+  const sleeve = useStore((s) => s.params.print.outputMode === 'sleeve');
+  const setKind = useStore((s) => s.setKind);
+  return (
+    <div className="flex shrink-0 rounded-lg border border-line p-0.5 text-xs" role="radiogroup">
+      {(['vase', 'sleeve'] as const).map((k) => {
+        const on = (k === 'sleeve') === sleeve;
+        return (
+          <button
+            key={k}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => setKind(k)}
+            className={`rounded-md px-2.5 py-1 ${on ? 'bg-accent text-white' : 'text-muted hover:text-ink'}`}
+          >
+            {t(`kind.${k}`)}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -106,6 +148,7 @@ export function TopBar() {
         onChange={(e) => s.replace({ ...s.params, name: e.target.value }, false)}
       />
       <div className="mx-1 h-6 w-px bg-line" />
+      <KindSwitch />
       <Btn onClick={() => setModal('presets')}>▦ {t('btn.presets')}</Btn>
       <div className="scroll-thin flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
         <Btn onClick={s.randomize} title={t('btn.randomize')}>

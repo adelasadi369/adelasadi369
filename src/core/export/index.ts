@@ -1,4 +1,5 @@
-import { buildFitTestRing, buildMesh } from '../geometry/mesh';
+import { buildFitTestRing, buildMesh, type BuildResult } from '../geometry/mesh';
+import { buildSleeveMesh, type SleeveOptions } from '../sleeve';
 import { computeBore } from '../insert';
 import type { Quality } from '../geometry/grid';
 import type { VaseParams } from '../params/schema';
@@ -26,6 +27,7 @@ export async function exportDesign(
   params: VaseParams,
   format: ExportFormat,
   quality: Quality = params.render.exportQuality,
+  opts: SleeveOptions = {},
 ): Promise<ExportFile> {
   const base = slug(params.name);
   if (format === 'json') {
@@ -40,7 +42,11 @@ export async function exportDesign(
     const name = fitRingName(params);
     return { name: `${name}.stl`, mime: 'model/stl', data: new Uint8Array(writeSTL(ring, `VaseForge ${name}`)) };
   }
-  const built = buildMesh(params, quality);
+  // sleeves mesh at sleeve.mesh.exportVoxel (0.3–0.6 mm) with progress; vases at the export quality
+  const built: Pick<BuildResult, 'mesh' | 'saucer'> =
+    params.print.outputMode === 'sleeve'
+      ? { mesh: buildSleeveMesh(params, params.sleeve.mesh.exportVoxel, opts).mesh }
+      : buildMesh(params, quality);
   const w = weld(built.mesh);
   const saucer = built.saucer ? weld(built.saucer) : null;
   const single = (m: typeof w, name: string) =>

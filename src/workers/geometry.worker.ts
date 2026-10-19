@@ -4,7 +4,7 @@ import type { Quality } from '../core/geometry/grid';
 import { exportDesign } from '../core/export';
 import { mutate, randomize } from '../core/params/random';
 import { normalizeParams } from '../core/params/normalize';
-import { analyze } from '../core/printability';
+import { analyze, buildDesign } from '../core/printability';
 import { autoFix } from '../core/printability/autofix';
 import { analyzeOverhang } from '../core/printability/overhang';
 import { PRESETS } from '../presets';
@@ -36,6 +36,15 @@ const transferables = (p: MeshPayload) => [p.positions.buffer, p.normals.buffer,
 const api: GeometryApi = {
   regen(params, quality) {
     const t0 = performance.now();
+    if (params.print.outputMode === 'sleeve') {
+      // sleeve topology is not fixed: the full validity check runs on every regen (no topology cache)
+      const build = buildDesign(params, quality);
+      const { vertexOverhang, ...report } = analyze(build, params);
+      const s = (build.mesh as { sleeve?: { log: string[]; voxel: number } }).sleeve;
+      if (s?.log.length) console.info('[sleeve]', ...s.log);
+      const mesh = { ...payload(build.mesh, vertexOverhang, quality, performance.now() - t0), voxel: s?.voxel };
+      return Promise.resolve(Comlink.transfer({ mesh, report }, transferables(mesh)));
+    }
     const build = buildMesh(params, quality);
     const key = topoKey(build.mesh);
     let manifold = manifoldCache.get(key);
@@ -64,6 +73,11 @@ const api: GeometryApi = {
   },
 
   autoFix(params) {
+    if (params.print.outputMode === 'sleeve') {
+      // sleeve auto-fix arrives in S3: report the design unchanged
+      const { vertexOverhang: _v, ...report } = analyze(buildDesign(params, 'low'), params);
+      return Promise.resolve({ params, diff: [], before: report.score, after: report.score, iterations: 0, report });
+    }
     const r = autoFix(params);
     const { vertexOverhang: _v, ...report } = r.report;
     return Promise.resolve({ ...r, report });
@@ -83,8 +97,8 @@ const api: GeometryApi = {
     return Promise.resolve({ ...r.params, name: '' });
   },
 
-  async exportDesign(params, format) {
-    const f = await exportDesign(params, format);
+  async exportDesign(params, format, onProgress) {
+    const f = await exportDesign(params, format, undefined, { onProgress });
     return Comlink.transfer(f, [f.data.buffer as ArrayBuffer]);
   },
 
@@ -94,23 +108,24 @@ const api: GeometryApi = {
       // alternate gentle (±15 %) and bolder (±30 %) mutations, each with fresh effect seeds
       let v = mutate(params, k % 2 ? 0.3 : 0.15, (seed + 7919 * (k + 1)) >>> 0);
       v = { ...v, effects: v.effects.map((e) => ('seed' in e ? { ...e, seed: (e.seed + 1013 * (k + 1)) >>> 0 } : e)) };
-      const r = analyze(buildMesh(v, 'low'), v, { manifold: false });
-      if (r.score < 90 || r.issues.some((i) => i.severity === 'error')) v = autoFix(v).params;
+      const r = analyze(buildDesign(v, 'low'), v, { manifold: false });
+      if ((v.print.outputMode !== 'sleeve' && r.score < 90) || r.issues.some((i) => i.severity === 'error'))
+        v = autoFix(v).params;
       out.push(v);
     }
     return Promise.resolve(out);
   },
 
   fixForAi(params) {
-    const r = analyze(buildMesh(params, 'low'), params, { manifold: false });
-    if (r.score >= 90 && !r.issues.some((i) => i.severity === 'error'))
+    const r = analyze(buildDesign(params, 'low'), params, { manifold: false });
+    if (params.print.outputMode === 'sleeve' || (r.score >= 90 && !r.issues.some((i) => i.severity === 'error')))
       return Promise.resolve({ params, changed: 0, score: r.score });
     const f = autoFix(params);
     return Promise.resolve({ params: f.params, changed: f.diff.length, score: f.after });
   },
 
   thumbnail(params) {
-    const build = buildMesh(params, 'low');
+    const build = buildDesign(params, 'low');
     const oh = analyzeOverhang(build.mesh, params.print.maxOverhang).vertex;
     const mesh = payload(build.mesh, oh, 'low', 0);
     return Promise.resolve(Comlink.transfer(mesh, transferables(mesh)));

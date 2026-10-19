@@ -1,3 +1,4 @@
+import * as Comlink from 'comlink';
 import { create } from 'zustand';
 import type { ExportFormat } from '../core/export';
 import { normalizeParams } from '../core/params/normalize';
@@ -11,7 +12,9 @@ import {
   type Effect,
   type I18nText,
   type PrinterPreset,
+  type VaseMode,
   type VaseParams,
+  VASE_MODES,
 } from '../core/params/schema';
 import { listPrinterProfiles, savePrinterProfile } from '../persist/db';
 import { applyImageAnalysis, applyProposal, applyRefine, applySilhouette } from '../ai/apply';
@@ -20,7 +23,7 @@ import type { ParamChange } from '../core/printability/types';
 import type { Lang } from '../i18n';
 import { PRESETS } from '../presets';
 import type { RegenResult } from '../workers/protocol';
-import { getExportWorker, previewWorker, RegenScheduler } from './engine';
+import { getExportWorker, previewWorker, RegenScheduler, terminateExportWorker } from './engine';
 
 export type TabId = 'shape' | 'section' | 'twist' | 'surface' | 'rimBase' | 'print' | 'ai';
 export const TABS: TabId[] = ['shape', 'section', 'twist', 'surface', 'rimBase', 'print', 'ai'];
@@ -55,6 +58,9 @@ interface Store {
   fix: FixState;
   toast: string | null;
   exporting: boolean;
+  /** Export progress 0..1 (sleeve meshing), null when not reported. */
+  exportProgress: number | null;
+  cancelExport(): void;
   ai: AiState;
   /** Calibrated hole compensation per printer preset (IndexedDB), overriding PRINTER_PRESETS. */
   printerProfiles: Partial<Record<PrinterPreset, number>>;
@@ -79,6 +85,9 @@ interface Store {
   shareLink(): Promise<void>;
   setLang(l: Lang): void;
   setLevel(l: 'basic' | 'advanced'): void;
+  /** Last vase output mode, restored by the top-bar Vase | Sleeve switch (UI pref). */
+  lastVaseMode: VaseMode;
+  setKind(kind: 'vase' | 'sleeve'): void;
   setTab(t: TabId): void;
   setViewer(v: Partial<ViewerState>): void;
   showToast(msg: string | null): void;
@@ -115,12 +124,18 @@ export interface AiState {
 const HISTORY = 200;
 const PREFS = 'vaseforge:prefs';
 
-function loadPrefs(): { lang: Lang; level: 'basic' | 'advanced' } {
+const isVaseMode = (m: unknown): m is VaseMode => (VASE_MODES as readonly unknown[]).includes(m);
+
+function loadPrefs(): { lang: Lang; level: 'basic' | 'advanced'; lastVaseMode: VaseMode } {
   try {
     const p = JSON.parse(localStorage.getItem(PREFS) ?? '{}');
-    return { lang: p.lang === 'en' ? 'en' : 'fa', level: p.level === 'advanced' ? 'advanced' : 'basic' };
+    return {
+      lang: p.lang === 'en' ? 'en' : 'fa',
+      level: p.level === 'advanced' ? 'advanced' : 'basic',
+      lastVaseMode: isVaseMode(p.lastVaseMode) ? p.lastVaseMode : 'solidVase',
+    };
   } catch {
-    return { lang: 'fa', level: 'basic' };
+    return { lang: 'fa', level: 'basic', lastVaseMode: 'solidVase' };
   }
 }
 
@@ -131,6 +146,8 @@ function sharedParams(): VaseParams | null {
 const shared = sharedParams();
 
 const prefs = loadPrefs();
+/** Identity of the running export; replaced on cancel so late results are dropped. */
+let exportToken: object = {};
 
 export const useStore = create<Store>((set, get) => {
   const push = (prev: VaseParams) => {
@@ -142,7 +159,8 @@ export const useStore = create<Store>((set, get) => {
     set({ params: next, past: push(prev), future: [], dragBase: null, fix: { ...get().fix, status: 'idle' } });
   const savePrefs = () => {
     try {
-      localStorage.setItem(PREFS, JSON.stringify({ lang: get().lang, level: get().level }));
+      const { lang, level, lastVaseMode } = get();
+      localStorage.setItem(PREFS, JSON.stringify({ lang, level, lastVaseMode }));
     } catch {
       /* private mode */
     }
@@ -177,6 +195,7 @@ export const useStore = create<Store>((set, get) => {
     fix: { status: 'idle', diff: [], before: 0, after: 0, prev: null },
     toast: null,
     exporting: false,
+    exportProgress: null,
     ai: { busy: null, error: null, chat: [], last: null, variations: [] },
     printerProfiles: {},
 
@@ -268,18 +287,34 @@ export const useStore = create<Store>((set, get) => {
       set({ params: { ...p, random: { ...p.random, locks } } });
     },
     async exportAs(format) {
-      set({ exporting: true });
+      set({ exporting: true, exportProgress: null });
+      const token = (exportToken = {});
       try {
-        const f = await getExportWorker().exportDesign(get().params, format);
+        const f = await getExportWorker().exportDesign(
+          get().params,
+          format,
+          Comlink.proxy((p: number) => {
+            if (exportToken === token) set({ exportProgress: p });
+          }),
+        );
+        if (exportToken !== token) return;
         const url = URL.createObjectURL(new Blob([f.data as BlobPart], { type: f.mime }));
         const a = document.createElement('a');
         a.href = url;
         a.download = f.name;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      } catch (e) {
+        // a cancelled export rejects when its worker is terminated
+        if (exportToken === token) throw e;
       } finally {
-        set({ exporting: false });
+        if (exportToken === token) set({ exporting: false, exportProgress: null });
       }
+    },
+    cancelExport() {
+      exportToken = {};
+      terminateExportWorker();
+      set({ exporting: false, exportProgress: null });
     },
     async shareLink() {
       const url = `${location.origin}${location.pathname}#d=${encodeShare(get().params)}`;
@@ -297,6 +332,15 @@ export const useStore = create<Store>((set, get) => {
     setLevel(level) {
       set({ level });
       savePrefs();
+    },
+    lastVaseMode: prefs.lastVaseMode,
+    setKind(kind) {
+      const mode = get().params.print.outputMode;
+      if (kind === 'sleeve' && mode !== 'sleeve') {
+        set({ lastVaseMode: mode });
+        savePrefs();
+        get().setParam('print.outputMode', 'sleeve');
+      } else if (kind === 'vase' && mode === 'sleeve') get().setParam('print.outputMode', get().lastVaseMode);
     },
     setTab: (tab) => set({ tab }),
     setViewer: (v) => set({ viewer: { ...get().viewer, ...v } }),
