@@ -150,6 +150,12 @@
   "calib.saved": "Hole compensation saved (Ctrl+Z to undo)",
   "kind.vase": "Vase",
   "kind.sleeve": "Sleeve",
+  "group.sleeve": "Sleeve",
+  "group.sleeveHoles": "Holes",
+  "group.sleeveTopEdge": "Top edge",
+  "sleeve.teardropPreview": "Teardrop tops",
+  "sleeve.teardropBefore": "Before",
+  "sleeve.teardropAfter": "After",
   "group.sleeveMesh": "Sleeve mesh",
   "export.cancel": "Cancel",
   "viewer.voxel": "voxel"

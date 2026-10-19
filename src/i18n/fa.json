@@ -150,6 +150,12 @@
   "calib.saved": "جبران سوراخ ذخیره شد (Ctrl+Z برای بازگشت)",
   "kind.vase": "گلدان",
   "kind.sleeve": "غلاف",
+  "group.sleeve": "غلاف",
+  "group.sleeveHoles": "سوراخ‌ها",
+  "group.sleeveTopEdge": "لبهٔ بالا",
+  "sleeve.teardropPreview": "سقف قطره‌ای",
+  "sleeve.teardropBefore": "قبل",
+  "sleeve.teardropAfter": "بعد",
   "group.sleeveMesh": "مش غلاف",
   "export.cancel": "لغو",
   "viewer.voxel": "وکسل"
