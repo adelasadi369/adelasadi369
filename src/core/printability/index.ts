@@ -13,21 +13,21 @@ import {
 } from './checks';
 import { boreIssues } from './bore';
 import { analyzeOverhang } from './overhang';
+import { scoreOf } from './score';
+import { analyzeSleeve } from './sleeve';
+import { buildSleeveMesh, sleeveVoxel, type SleeveBuild } from '../sleeve';
 import { computeStats } from './stats';
-import type { Issue, Report } from './types';
+import type { Report } from './types';
 
 export * from './types';
 
 const ORDER = { error: 0, warn: 1, info: 2 } as const;
 
-export function scoreOf(issues: Issue[]): number {
-  let s = 100;
-  for (const i of issues) s -= i.penalty;
-  if (issues.some((i) => i.severity === 'error')) s = Math.min(s, 69);
-  return Math.max(0, Math.round(s));
-}
+export { scoreOf };
 
-export function analyze(b: BuildResult, p: VaseParams, opts: { manifold?: boolean } = {}): Report {
+/** Printability report; sleeves (SDF path) go to analyzeSleeve, every vase mode to the grid checks below. */
+export function analyze(b: BuildResult | SleeveBuild, p: VaseParams, opts: { manifold?: boolean } = {}): Report {
+  if ('sdf' in b) return analyzeSleeve(b, p);
   const maxDeg = p.print.maxOverhang;
   const oh = analyzeOverhang(b.mesh, maxDeg);
   const bounds = boundsIssues(b, p);
@@ -54,6 +54,11 @@ export function analyze(b: BuildResult, p: VaseParams, opts: { manifold?: boolea
 }
 
 export function evaluate(p: VaseParams, quality: Quality = 'medium') {
-  const build = buildMesh(p, quality);
+  const build = buildDesign(p, quality);
   return { build, report: analyze(build, p) };
+}
+
+/** The deterministic build for any output mode: grid path for vases, SDF + marching cubes for sleeves. */
+export function buildDesign(p: VaseParams, quality: Quality): BuildResult | SleeveBuild {
+  return p.print.outputMode === 'sleeve' ? buildSleeveMesh(p, sleeveVoxel(p, quality)) : buildMesh(p, quality);
 }

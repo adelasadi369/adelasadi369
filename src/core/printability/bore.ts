@@ -1,5 +1,5 @@
-import type { BuildResult } from '../geometry/mesh';
-import { BORE_TOLERANCE, boreProfile, computeBore, FIT_CLEARANCE, isBoreLiner } from '../insert';
+import type { VaseMesh } from '../geometry/mesh';
+import { BORE_TOLERANCE, boreProfile, computeBore, FIT_CLEARANCE, usesBore } from '../insert';
 import { paramInfo } from '../params/meta';
 import { getPath } from '../params/paths';
 import type { I18nText, VaseParams } from '../params/schema';
@@ -20,7 +20,12 @@ const DIAMETERS = [
  * Measured bore deviation from the mesh: every bore-wall vertex against the profile radius for its world angle and
  * height, plus the chord sag of the widest facet per ring (the tube touches the facets, not the vertices).
  */
-export function measureBore(b: BuildResult, p: VaseParams): { deviation: number; sag: number } {
+export interface BoreMeasure {
+  deviation: number;
+  sag: number;
+}
+
+export function measureBore(b: { mesh: VaseMesh }, p: VaseParams): BoreMeasure {
   const { mesh } = b;
   const s = surfaceOf(mesh, 'inner');
   if (!s || !mesh.bore) return { deviation: Infinity, sag: Infinity };
@@ -48,10 +53,14 @@ export function measureBore(b: BuildResult, p: VaseParams): { deviation: number;
   return { deviation, sag };
 }
 
-/** Bore liner checks: core wall, axis, accuracy, fit and tube length. */
-export function boreIssues(b: BuildResult, p: VaseParams): Issue[] {
+/** Bore checks for the shell bore liner and sleeves: core wall, axis, accuracy, fit and tube length. */
+export function boreIssues(
+  b: { mesh: VaseMesh },
+  p: VaseParams,
+  measure: (b: { mesh: VaseMesh }, p: VaseParams) => BoreMeasure = measureBore,
+): Issue[] {
   const issues: Issue[] = [];
-  if (p.print.innerSurface === 'bore' && p.print.outputMode !== 'shell') {
+  if (p.print.innerSurface === 'bore' && p.print.outputMode !== 'shell' && p.print.outputMode !== 'sleeve') {
     issues.push({
       id: 'bore-mode',
       check: 'bore',
@@ -66,7 +75,7 @@ export function boreIssues(b: BuildResult, p: VaseParams): Issue[] {
     });
   }
   const info = b.mesh.bore;
-  if (!isBoreLiner(p) || !info) return issues;
+  if (!usesBore(p) || !info) return issues;
   const H = b.mesh.height || p.dimensions.height;
   const ins = p.insert;
   const bore = computeBore(ins, p.print.printer);
@@ -112,7 +121,7 @@ export function boreIssues(b: BuildResult, p: VaseParams): Issue[] {
     });
   }
 
-  const m = measureBore(b, p);
+  const m = measure(b, p);
   const dev = Math.max(m.deviation, m.sag);
   if (dev > BORE_TOLERANCE) {
     issues.push({

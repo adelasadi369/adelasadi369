@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildSleeveMesh, DRAG_VOXEL } from '../src/core/sleeve';
+import { BORE_TOLERANCE, computeBore } from '../src/core/insert';
+import { analyze, evaluate } from '../src/core/printability';
+import { measureSleeveBore } from '../src/core/printability/sleeve';
+import { buildSleeveMesh, DRAG_VOXEL, type SleeveBuild } from '../src/core/sleeve';
 import { PRESETS } from '../src/presets';
 import { hashBuffer, slice } from './helpers';
 import { expectSoundSleeve, sleeveParams } from './sleeveHelpers';
@@ -51,5 +54,67 @@ describe('sleeve engine', () => {
       for (const v of b.mesh.sleeve.holeVertices) expect(Math.hypot(P[v * 3], P[v * 3 + 1])).toBeCloseTo(r, 4);
       expect(slice(b.mesh, 0.8).loops.length).toBe(2);
     }
+  });
+});
+
+describe('sleeve bore accuracy (measured between ribs)', () => {
+  it.each([
+    [1, 0],
+    [1, 4],
+    [0.5, 0],
+    [0.5, 4],
+  ])('voxel %s mm, %s grip ribs: within ±0.05 mm', (voxel, ribs) => {
+    const p = sleeveParams(PRESETS[0].params, { ribs: { count: ribs, interference: 0.2, width: 2 } });
+    const b = buildSleeveMesh(p, voxel);
+    expectSoundSleeve(b);
+    const m = measureSleeveBore(b);
+    expect(m.samples).toBeGreaterThan(1000);
+    expect(m.deviation).toBeLessThanOrEqual(BORE_TOLERANCE);
+    expect(m.sag).toBeLessThanOrEqual(BORE_TOLERANCE);
+    // and through the report: bore-ok, no accuracy error
+    const ids = analyze(b, p).issues.map((i) => i.id);
+    expect(ids).toContain('bore-ok');
+    expect(ids).not.toContain('bore-accuracy');
+  });
+
+  it('ribs reach into the bore by their interference', () => {
+    const p = sleeveParams(PRESETS[0].params, { ribs: { count: 4, interference: 0.2, width: 2 } });
+    const b = buildSleeveMesh(p, 0.5);
+    const P = b.mesh.positions;
+    let deepest = Infinity;
+    for (const v of b.mesh.sleeve.boreVertices) deepest = Math.min(deepest, Math.hypot(P[v * 3], P[v * 3 + 1]));
+    expect(b.sdf.R - deepest).toBeGreaterThan(0.15);
+    expect(b.sdf.R - deepest).toBeLessThanOrEqual(0.2 + 1e-4);
+  });
+});
+
+describe('sleeve report', () => {
+  it('reports bore Ø, volume and no capacity; overhang skips the bed', () => {
+    const p = sleeveParams(PRESETS[6].params);
+    const { build, report } = evaluate(p, 'low');
+    expect(report.manifold).toBe(true);
+    expect(report.stats.boreDiameter).toBeCloseTo(2 * computeBore(p.insert, p.print.printer).radius, 9);
+    expect(report.stats.capacityMl).toBe(0);
+    expect(report.stats.materialCm3).toBeGreaterThan(10);
+    for (const v of (build as SleeveBuild).mesh.sleeve.baseVertices) expect(report.vertexOverhang[v]).toBe(-1);
+    expect(report.issues.some((i) => i.id === 'bore-mode')).toBe(false);
+  });
+
+  it('reuses the press-fit and short-tube checks', () => {
+    const p = sleeveParams({ dimensions: { height: 200 } }, { fit: 'press', clearance: 0.1, length: 150 });
+    const ids = evaluate(p, 'low').report.issues.map((i) => i.id);
+    expect(ids).toEqual(expect.arrayContaining(['insert-press-glass', 'insert-short']));
+  });
+
+  it('warns about a wall thinner than two lines (core tube alone at coreWall 1.2)', () => {
+    // in S2a the skin is solid to the axis, so the only thin wall is the core tube when the skin is inside it
+    const p = sleeveParams(
+      { dimensions: { baseDiameter: 40, topDiameter: 40, maxDiameter: 40 }, profile: { preset: 'straight' } },
+      { od: 50, coreWall: 1.2 },
+    );
+    const w = evaluate(p, 'low').report.issues.find((i) => i.id === 'sleeve-wall');
+    expect(w?.severity).toBe('warn');
+    const ok = sleeveParams(PRESETS[0].params);
+    expect(evaluate(ok, 'low').report.issues.some((i) => i.id === 'sleeve-wall')).toBe(false);
   });
 });

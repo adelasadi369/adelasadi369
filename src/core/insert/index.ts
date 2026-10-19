@@ -48,6 +48,8 @@ export function computeBore(insert: Insert, printer: Pick<Printer, 'holeCompensa
 }
 
 export const isBoreLiner = (p: VaseParams) => p.print.outputMode === 'shell' && p.print.innerSurface === 'bore';
+/** Designs built around a tube insert: the shell bore liner and every sleeve. */
+export const usesBore = (p: VaseParams) => isBoreLiner(p) || p.print.outputMode === 'sleeve';
 
 /** Height where the bore wall starts: 0 for an open bottom, else the top of the lip / floor. */
 export function boreBottom(insert: Insert): number {
