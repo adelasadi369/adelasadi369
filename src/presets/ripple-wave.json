@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "name": "Ripple Wave",
   "dimensions": {
     "height": 180,
@@ -226,7 +226,7 @@
   "sleeve": {
     "coreBlend": 2,
     "mesh": {
-      "previewVoxel": 1,
+      "previewVoxel": 1.5,
       "exportVoxel": 0.5,
       "smoothing": 3
     }

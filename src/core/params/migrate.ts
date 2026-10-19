@@ -16,6 +16,12 @@ const MIGRATIONS: Record<number, (p: Raw) => void> = {
   },
   // v2 → v3: outputMode 'sleeve' and the `sleeve` block (filled by its defaults); nothing to rewrite.
   2: () => {},
+  // v3 → v4: sleeve holes + top edge (filled by their defaults); the preview voxel default moved 1.0 → 1.5 mm,
+  // so a stored old default follows it.
+  3: (p) => {
+    const mesh = isObj(p.sleeve) && isObj(p.sleeve.mesh) ? p.sleeve.mesh : null;
+    if (mesh && mesh.previewVoxel === 1) mesh.previewVoxel = 1.5;
+  },
 };
 
 /**

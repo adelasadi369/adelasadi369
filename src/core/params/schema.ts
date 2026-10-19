@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 
-export const SCHEMA_VERSION = 3 as const;
+export const SCHEMA_VERSION = 4 as const;
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -1366,7 +1366,7 @@ export const SleeveSchema = z
     }),
     mesh: z
       .object({
-        previewVoxel: num(0.6, 2, 1, {
+        previewVoxel: num(0.6, 2, 1.5, {
           fa: 'وکسل پیش‌نمایش',
           en: 'Preview voxel',
           phase: 2,

@@ -168,7 +168,7 @@ describe('schema v3 migration (sleeve mode)', () => {
     const v2 = { ...structuredClone(PRESETS[2].params), version: 2 } as Record<string, unknown>;
     delete v2.sleeve;
     const p = normalizeParams(v2);
-    expect(p.version).toBe(3);
+    expect(p.version).toBe(SCHEMA_VERSION);
     expect(p.sleeve).toEqual(DEFAULT_PARAMS.sleeve);
     expect(p.print.outputMode).toBe(PRESETS[2].params.print.outputMode);
   });
@@ -176,7 +176,18 @@ describe('schema v3 migration (sleeve mode)', () => {
   it('accepts the sleeve output mode and its mesh defaults', () => {
     const p = normalizeParams({ print: { outputMode: 'sleeve' } });
     expect(p.print.outputMode).toBe('sleeve');
-    expect(p.sleeve.mesh).toEqual({ previewVoxel: 1, exportVoxel: 0.5, smoothing: 3 });
+    expect(p.sleeve.mesh).toEqual({ previewVoxel: 1.5, exportVoxel: 0.5, smoothing: 3 });
     expect(normalizeParams({ sleeve: { mesh: { exportVoxel: 0.1 } } }).sleeve.mesh.exportVoxel).toBe(0.3);
+  });
+});
+
+describe('schema v4 migration (sleeve holes + top edge)', () => {
+  it('moves the old preview-voxel default and fills the new blocks', () => {
+    const v3 = { version: 3, print: { outputMode: 'sleeve' }, sleeve: { coreBlend: 3, mesh: { previewVoxel: 1 } } };
+    const p = normalizeParams(v3);
+    expect(p.version).toBe(SCHEMA_VERSION);
+    expect(p.sleeve.coreBlend).toBe(3);
+    expect(p.sleeve.mesh.previewVoxel).toBe(1.5);
+    expect(normalizeParams({ ...v3, sleeve: { mesh: { previewVoxel: 0.8 } } }).sleeve.mesh.previewVoxel).toBe(0.8);
   });
 });
