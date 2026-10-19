@@ -6,6 +6,10 @@
  * (the fixed rule for ambiguous faces). The rule only looks at the face's own corners, so two cubes sharing a face
  * always agree and the extracted surface has no cracks. The segments chain into loops (each crossing edge is an
  * exit on one of its faces and an entry on the other), and each loop becomes a triangle fan.
+ *
+ * A fan diagonal must never lie in a cube face: on an ambiguous face the neighbouring cube may draw the same
+ * diagonal and the edge would be used four times. Each loop is therefore fanned from an apex none of whose
+ * diagonals lies in a face; every one of the 256 cases has such an apex (checked when the table is built).
  */
 
 /** The 12 cube edges as corner pairs: 4 along x, 4 along y, 4 along z. */
@@ -62,6 +66,27 @@ const FACES: number[][] = (() => {
 export const TRI_TABLE: Int8Array[] = [];
 export const TRI_COUNT = new Uint8Array(256);
 
+/** True when edges a and b lie in a common cube face. */
+function shareFace(a: number, b: number): boolean {
+  const [a0, a1] = EDGES[a];
+  const [b0, b1] = EDGES[b];
+  return FACES.some((f) => f.includes(a0) && f.includes(a1) && f.includes(b0) && f.includes(b1));
+}
+
+function fan(loop: number[]): number[] {
+  const n = loop.length;
+  if (n === 3) return [loop[0], loop[2], loop[1]];
+  for (let a = 0; a < n; a++) {
+    let ok = true;
+    for (let k = 2; k < n - 1 && ok; k++) if (shareFace(loop[a], loop[(a + k) % n])) ok = false;
+    if (!ok) continue;
+    const tris: number[] = [];
+    for (let k = 1; k + 1 < n; k++) tris.push(loop[a], loop[(a + k + 1) % n], loop[(a + k) % n]);
+    return tris;
+  }
+  throw new Error(`marching cubes: no face-safe fan apex for loop ${loop.join(',')}`);
+}
+
 for (let cs = 0; cs < 256; cs++) {
   const inside = (c: number) => ((cs >> c) & 1) === 1;
   const next = new Int8Array(12).fill(-1);
@@ -86,7 +111,7 @@ for (let cs = 0; cs < 256; cs++) {
       seen[k] = 1;
       loop.push(k);
     }
-    for (let k = 1; k + 1 < loop.length; k++) tris.push(loop[0], loop[k + 1], loop[k]);
+    tris.push(...fan(loop));
   }
   TRI_TABLE.push(Int8Array.from(tris));
   TRI_COUNT[cs] = tris.length / 3;

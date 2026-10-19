@@ -106,3 +106,21 @@ describe('fast edge-manifold check', () => {
     expect(edgeManifold(flipped).flippedEdges).toBe(3);
   });
 });
+
+describe('ambiguous faces (regression: random seed 14 at 2 mm)', () => {
+  it('no triangle edge lies across a cube face, so neighbours never share a diagonal', () => {
+    // 300 random sign patterns on a 3×3×3-cell block (closed by a positive shell): ambiguous faces everywhere
+    const lat: Lattice = { x0: 0.5, y0: 0.5, z0: 0.5, h: 1, nx: 5, ny: 5, nz: 5 };
+    for (let seed = 0; seed < 300; seed++) {
+      let s = seed * 9973 + 1;
+      const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647) * 2 - 1;
+      const vals = Array.from({ length: 125 }, rnd);
+      const at = (x: number, y: number, z: number) => {
+        const i = Math.round(x - 0.5), j = Math.round(y - 0.5), k = Math.round(z - 0.5); // prettier-ignore
+        const edge = i === 0 || j === 0 || k === 0 || i === 4 || j === 4 || k === 4;
+        return edge ? 1 : vals[(k * 5 + j) * 5 + i];
+      };
+      sound(extract(field(at, lat), lat, { band: 0 }));
+    }
+  });
+});
