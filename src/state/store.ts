@@ -1,3 +1,4 @@
+import * as Comlink from 'comlink';
 import { create } from 'zustand';
 import type { ExportFormat } from '../core/export';
 import { normalizeParams } from '../core/params/normalize';
@@ -22,7 +23,7 @@ import type { ParamChange } from '../core/printability/types';
 import type { Lang } from '../i18n';
 import { PRESETS } from '../presets';
 import type { RegenResult } from '../workers/protocol';
-import { getExportWorker, previewWorker, RegenScheduler } from './engine';
+import { getExportWorker, previewWorker, RegenScheduler, terminateExportWorker } from './engine';
 
 export type TabId = 'shape' | 'section' | 'twist' | 'surface' | 'rimBase' | 'print' | 'ai';
 export const TABS: TabId[] = ['shape', 'section', 'twist', 'surface', 'rimBase', 'print', 'ai'];
@@ -57,6 +58,9 @@ interface Store {
   fix: FixState;
   toast: string | null;
   exporting: boolean;
+  /** Export progress 0..1 (sleeve meshing), null when not reported. */
+  exportProgress: number | null;
+  cancelExport(): void;
   ai: AiState;
   /** Calibrated hole compensation per printer preset (IndexedDB), overriding PRINTER_PRESETS. */
   printerProfiles: Partial<Record<PrinterPreset, number>>;
@@ -142,6 +146,8 @@ function sharedParams(): VaseParams | null {
 const shared = sharedParams();
 
 const prefs = loadPrefs();
+/** Identity of the running export; replaced on cancel so late results are dropped. */
+let exportToken: object = {};
 
 export const useStore = create<Store>((set, get) => {
   const push = (prev: VaseParams) => {
@@ -189,6 +195,7 @@ export const useStore = create<Store>((set, get) => {
     fix: { status: 'idle', diff: [], before: 0, after: 0, prev: null },
     toast: null,
     exporting: false,
+    exportProgress: null,
     ai: { busy: null, error: null, chat: [], last: null, variations: [] },
     printerProfiles: {},
 
@@ -280,18 +287,34 @@ export const useStore = create<Store>((set, get) => {
       set({ params: { ...p, random: { ...p.random, locks } } });
     },
     async exportAs(format) {
-      set({ exporting: true });
+      set({ exporting: true, exportProgress: null });
+      const token = (exportToken = {});
       try {
-        const f = await getExportWorker().exportDesign(get().params, format);
+        const f = await getExportWorker().exportDesign(
+          get().params,
+          format,
+          Comlink.proxy((p: number) => {
+            if (exportToken === token) set({ exportProgress: p });
+          }),
+        );
+        if (exportToken !== token) return;
         const url = URL.createObjectURL(new Blob([f.data as BlobPart], { type: f.mime }));
         const a = document.createElement('a');
         a.href = url;
         a.download = f.name;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      } catch (e) {
+        // a cancelled export rejects when its worker is terminated
+        if (exportToken === token) throw e;
       } finally {
-        set({ exporting: false });
+        if (exportToken === token) set({ exporting: false, exportProgress: null });
       }
+    },
+    cancelExport() {
+      exportToken = {};
+      terminateExportWorker();
+      set({ exporting: false, exportProgress: null });
     },
     async shareLink() {
       const url = `${location.origin}${location.pathname}#d=${encodeShare(get().params)}`;

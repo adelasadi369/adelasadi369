@@ -5,7 +5,7 @@ import type { VaseParams } from '../params/schema';
 export function recommendedSettings(p: VaseParams): Record<string, string | number> {
   const m = MATERIAL_DATA[p.print.material];
   const { nozzle, lineWidth, layerHeight, outputMode } = p.print;
-  const vase = outputMode !== 'shell';
+  const vase = outputMode !== 'shell' && outputMode !== 'sleeve';
   const bottomLayers = Math.max(3, Math.ceil(Math.max(p.base.bottomThickness, 0.8) / layerHeight));
   const s: Record<string, string | number> = {
     mode: outputMode,
@@ -26,6 +26,18 @@ export function recommendedSettings(p: VaseParams): Record<string, string | numb
       bottom_shell_layers: bottomLayers,
       sparse_infill_density: '0%',
       outer_wall_line_width: lineWidth,
+    });
+  } else if (outputMode === 'sleeve') {
+    // organic sleeve: real walls, supports only from the plate (never inside the bore), no vase mode
+    Object.assign(s, {
+      spiral_mode: 0,
+      wall_loops: lineWidth >= 0.8 ? 2 : 3,
+      top_shell_layers: 4,
+      bottom_shell_layers: bottomLayers,
+      sparse_infill_density: '15%',
+      enable_support: 1,
+      support_type: 'tree(auto)',
+      support_on_build_plate_only: 1,
     });
   } else {
     Object.assign(s, {

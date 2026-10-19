@@ -119,16 +119,18 @@ export function PrintCheck() {
   const report = useStore((s) => s.result?.report);
   const fix = useStore((s) => s.fix);
   const autoFix = useStore((s) => s.autoFix);
+  const sleeve = useStore((s) => s.params.print.outputMode === 'sleeve');
   if (!report) return <div className="p-4 text-sm text-muted">…</div>;
   const s = report.stats;
-  const hasProblems = report.issues.some((i) => i.severity !== 'info');
+  // sleeve auto-fix arrives in S3
+  const hasProblems = !sleeve && report.issues.some((i) => i.severity !== 'info');
   const stats: [string, string][] = [
     [t('stats.height'), `${num(s.height, 1)} ${t('unit.mm')}`],
     [t('stats.maxDiameter'), `${num(s.maxDiameter, 1)} ${t('unit.mm')}`],
     ...(s.boreDiameter !== undefined
       ? ([[t('stats.bore'), `${num(s.boreDiameter, 2, true)} ${t('unit.mm')}`]] as [string, string][])
       : []),
-    [t('stats.capacity'), `${num(s.capacityMl)} ${t('unit.ml')}`],
+    ...(sleeve ? [] : ([[t('stats.capacity'), `${num(s.capacityMl)} ${t('unit.ml')}`]] as [string, string][])),
     [t('stats.weight'), `${num(s.weightG)} ${t('unit.g')}`],
     [t('stats.time'), `${num(s.printMinutes)} ${t('unit.min')}`],
     [t('stats.area'), `${num(s.surfaceCm2)} ${t('unit.cm2')}`],

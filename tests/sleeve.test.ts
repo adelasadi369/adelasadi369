@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { exportDesign } from '../src/core/export';
+import { recommendedSettings } from '../src/core/export/slicerSettings';
 import { BORE_TOLERANCE, computeBore } from '../src/core/insert';
+import { normalizeParams } from '../src/core/params/normalize';
 import { analyze, evaluate } from '../src/core/printability';
 import { measureSleeveBore } from '../src/core/printability/sleeve';
 import { buildSleeveMesh, DRAG_VOXEL, type SleeveBuild } from '../src/core/sleeve';
@@ -116,5 +119,37 @@ describe('sleeve report', () => {
     expect(w?.severity).toBe('warn');
     const ok = sleeveParams(PRESETS[0].params);
     expect(evaluate(ok, 'low').report.issues.some((i) => i.id === 'sleeve-wall')).toBe(false);
+  });
+});
+
+describe('sleeve exports', () => {
+  it('STL at the export voxel with progress; aborts on request', async () => {
+    const p = sleeveParams(PRESETS[3].params);
+    const q = normalizeParams({ ...p, sleeve: { ...p.sleeve, mesh: { ...p.sleeve.mesh, exportVoxel: 0.6 } } });
+    const seen: number[] = [];
+    const f = await exportDesign(q, 'stl', undefined, { onProgress: (x) => seen.push(x) });
+    expect(f.name.endsWith('.stl')).toBe(true);
+    const tris = new DataView(f.data.buffer, f.data.byteOffset).getUint32(80, true);
+    expect(f.data.byteLength).toBe(84 + 50 * tris);
+    expect(tris).toBe(buildSleeveMesh(q, 0.6).mesh.triangleCount);
+    expect(seen.length).toBeGreaterThan(10);
+    expect(seen.at(-1)).toBe(1);
+    const signal = { aborted: false };
+    const run = exportDesign(q, 'stl', undefined, {
+      signal,
+      onProgress: (x) => {
+        if (x > 0.3) signal.aborted = true;
+      },
+    });
+    await expect(run).rejects.toThrow('aborted');
+  });
+
+  it('Fit Test Ring works in sleeve mode; 3MF carries the sleeve slicer profile', async () => {
+    const p = sleeveParams({}, { od: 50, clearance: 0.1, odTolerance: 0.3 });
+    const ring = await exportDesign(p, 'fitRing', 'low');
+    expect(ring.name).toBe('fit-ring_D50.50_hc0.05.stl');
+    const s = recommendedSettings(p);
+    expect(s).toMatchObject({ spiral_mode: 0, wall_loops: 3, support_on_build_plate_only: 1, mode: 'sleeve' });
+    expect(String(s.support_type)).toContain('tree');
   });
 });

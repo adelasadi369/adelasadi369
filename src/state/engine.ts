@@ -3,15 +3,20 @@ import type { Quality } from '../core/geometry/grid';
 import type { VaseParams } from '../core/params/schema';
 import type { GeometryApi, RegenResult } from '../workers/protocol';
 
-function spawn(): Comlink.Remote<GeometryApi> {
-  const w = new Worker(new URL('../workers/geometry.worker.ts', import.meta.url), { type: 'module' });
-  return Comlink.wrap<GeometryApi>(w);
+function spawnWorker() {
+  const worker = new Worker(new URL('../workers/geometry.worker.ts', import.meta.url), { type: 'module' });
+  return { worker, api: Comlink.wrap<GeometryApi>(worker) };
 }
 
 /** Preview worker (regen, autofix) and a separate export worker so exports never block the preview. */
-export const previewWorker = spawn();
-let exportWorker: Comlink.Remote<GeometryApi> | null = null;
-export const getExportWorker = () => (exportWorker ??= spawn());
+export const previewWorker = spawnWorker().api;
+let exportWorker: ReturnType<typeof spawnWorker> | null = null;
+export const getExportWorker = () => (exportWorker ??= spawnWorker()).api;
+/** Cancel a running export: the export worker is terminated and a fresh one spawns on the next export. */
+export function terminateExportWorker() {
+  exportWorker?.worker.terminate();
+  exportWorker = null;
+}
 
 /**
  * Latest-wins scheduler: at most one regen in flight and one pending; newer requests overwrite

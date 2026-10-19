@@ -149,5 +149,6 @@
   "calib.saved": "Hole compensation saved (Ctrl+Z to undo)",
   "kind.vase": "Vase",
   "kind.sleeve": "Sleeve",
-  "group.sleeveMesh": "Sleeve mesh"
+  "group.sleeveMesh": "Sleeve mesh",
+  "export.cancel": "Cancel"
 }

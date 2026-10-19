@@ -14,6 +14,10 @@ import { createSleeveField, type SleeveField } from './field';
 
 /** Voxel while a slider is dragged (docs/sleeve-integration.md §4). */
 export const DRAG_VOXEL = 2;
+/** Voxel for a preview quality: the drag voxel while dragging ('low'), else sleeve.mesh.previewVoxel. */
+export const sleeveVoxel = (p: VaseParams, quality: string) =>
+  quality === 'low' ? DRAG_VOXEL : p.sleeve.mesh.previewVoxel;
+
 /** Sub-voxel lattice offsets: the default, then the deterministic retry. Never 0 (no sample on the axis). */
 const OFFSETS = [0.5, 0.3];
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ExportFormat } from '../core/export';
-import { isBoreLiner } from '../core/insert';
+import { usesBore } from '../core/insert';
 import { saveDesign } from '../persist/db';
 import { useStore } from '../state/store';
 import { useT } from './hooks';
@@ -38,7 +38,9 @@ function ExportMenu() {
   const t = useT();
   const exportAs = useStore((s) => s.exportAs);
   const exporting = useStore((s) => s.exporting);
-  const bore = useStore((s) => isBoreLiner(s.params));
+  const bore = useStore((s) => usesBore(s.params));
+  const progress = useStore((s) => s.exportProgress);
+  const cancel = useStore((s) => s.cancelExport);
   const [open, setOpen] = useState(false);
   const items: [ExportFormat, Parameters<typeof t>[0]][] = [
     ['stl', 'export.stl'],
@@ -49,9 +51,23 @@ function ExportMenu() {
   if (bore) items.push(['fitRing', 'export.fitRing']);
   return (
     <div className="relative">
-      <Btn primary onClick={() => setOpen(!open)} disabled={exporting}>
-        {exporting ? t('export.busy') : `⤓ ${t('btn.export')}`}
-      </Btn>
+      {exporting ? (
+        <div className="flex items-center gap-2 rounded-lg bg-ink px-2.5 py-1.5 text-[13px] text-white">
+          <span>{t('export.busy')}</span>
+          {progress !== null && (
+            <span className="h-1.5 w-20 overflow-hidden rounded-full bg-white/25" aria-label="progress">
+              <span className="block h-full bg-white" style={{ width: `${Math.round(progress * 100)}%` }} />
+            </span>
+          )}
+          <button type="button" onClick={cancel} className="text-white/80 underline hover:text-white">
+            {t('export.cancel')}
+          </button>
+        </div>
+      ) : (
+        <Btn primary onClick={() => setOpen(!open)}>
+          {`⤓ ${t('btn.export')}`}
+        </Btn>
+      )}
       {open && (
         <div className="absolute top-10 z-40 w-56 overflow-hidden rounded-xl border border-line bg-card shadow-xl ltr:right-0 rtl:left-0">
           {items.map(([f, k]) => (
