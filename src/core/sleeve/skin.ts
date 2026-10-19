@@ -27,6 +27,36 @@ export interface SkinMap {
   reach: number;
 }
 
+/**
+ * Mean and outermost skin radius about the axis, sampled on a fixed 256 × 64 grid so they do not depend on the
+ * voxel (the hole map is keyed on them and must be the same at every voxel). The outer radius gets a 2 % + 0.5 mm
+ * margin for peaks between samples; a larger r_out only makes teardrop roofs steeper.
+ */
+export function skinRadii(params: VaseParams): { mean: number; outer: number } {
+  const key = skinKey(params, -1);
+  if (radiiCache?.key === key) return radiiCache.radii;
+  const field = compileField(params);
+  const nT = 256;
+  const nZ = 64;
+  let sum = 0;
+  let outer = 0;
+  for (let j = 0; j < nZ; j++) {
+    const row = field.row((field.H * j) / (nZ - 1));
+    const off = Math.hypot(row.cx, row.cy);
+    for (let i = 0; i < nT; i++) {
+      let tw = (TAU * i) / nT - row.twist;
+      tw -= TAU * Math.floor(tw / TAU);
+      const r = Math.max(R_MIN, field.outerRaw(tw, Math.cos(tw), Math.sin(tw), row));
+      sum += r;
+      if (r + off > outer) outer = r + off;
+    }
+  }
+  const radii = { mean: sum / (nT * nZ), outer: outer * 1.02 + 0.5 };
+  radiiCache = { key, radii };
+  return radii;
+}
+let radiiCache: { key: string; radii: { mean: number; outer: number } } | null = null;
+
 const qualityFor = (voxel: number): Quality => (voxel >= 1.5 ? 'low' : voxel > 0.7 ? 'medium' : 'high');
 
 /** Everything compileField reads; the map is a pure function of these and the voxel. */

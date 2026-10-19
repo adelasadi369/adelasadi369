@@ -4,7 +4,7 @@ import type { Lattice, SampledField } from '../mc/extract';
 import type { VaseParams } from '../params/schema';
 import { smax, smin } from '../sdf';
 import { buildHoleMap, type HoleMap } from './holes';
-import { buildSkinMap, type SkinMap } from './skin';
+import { buildSkinMap, skinRadii, type SkinMap } from './skin';
 import { buildTopEdge, type TopEdge } from './topEdge';
 
 /**
@@ -49,10 +49,9 @@ export function createSleeveField(params: VaseParams, voxel: number): SleeveFiel
   const k = params.sleeve.coreBlend;
   const { nT, nZ, r: rMap, L: lMap, cx, cy } = skin;
   const top = buildTopEdge(params, H);
-  let rSum = 0;
-  for (let c = 0; c < rMap.length; c++) rSum += rMap[c];
-  const rOut = Math.max(skin.reach, Rc);
-  const holes = buildHoleMap(params, { H, R, zb, rRef: rSum / rMap.length, rOut, top });
+  // voxel-independent radii, so the cached hole map is the same at every voxel
+  const radii = skinRadii(params);
+  const holes = buildHoleMap(params, { H, R, zb, rRef: radii.mean, rOut: Math.max(radii.outer, Rc), top });
   const tScale = nT / TAU;
   const vScale = (nZ - 1) / H;
 

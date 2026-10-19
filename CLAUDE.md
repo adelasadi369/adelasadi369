@@ -112,7 +112,8 @@ S2b notes:
 - Coverage: bracketed threshold search, then a δ offset; every candidate ends teardrop → islands → bridges → finisher.
 - Sleeve overhang skips the bed seam (first voxel) and counts teardrop tips (`HoleMap.tip`) as yellow at most.
 - `VASE_PRESETS` / `SLEEVE_PRESETS`: golden test and vase-only loops use the 14 vase presets. `Issue.fixes` = extra fix buttons.
-- Measured (Node, warm): see the S2b PR. The hole map is the slow part (≈ 0.6–1.8 s per hole/skin change); S4.
+- Measured (Node, warm, sleeve-starter): drag 2 mm ≈ 260 ms; release 1.5 mm ≈ 500 ms + 130 ms analysis; export 0.5 mm
+  ≈ 4.6 s build. The hole map (voxel-independent, cached) costs ≈ 1.4 s per hole/skin change: the S4 perf target.
 
 S2a notes:
 
