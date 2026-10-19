@@ -189,5 +189,18 @@ describe('schema v4 migration (sleeve holes + top edge)', () => {
     expect(p.sleeve.coreBlend).toBe(3);
     expect(p.sleeve.mesh.previewVoxel).toBe(1.5);
     expect(normalizeParams({ ...v3, sleeve: { mesh: { previewVoxel: 0.8 } } }).sleeve.mesh.previewVoxel).toBe(0.8);
+    expect(p.sleeve.holes).toEqual(DEFAULT_PARAMS.sleeve.holes);
+    expect(p.sleeve.topEdge).toEqual(DEFAULT_PARAMS.sleeve.topEdge);
+  });
+
+  it('defaults keep S2a sleeves unchanged and clamp the new ranges', () => {
+    expect(DEFAULT_PARAMS.sleeve.holes.mode).toBe('none');
+    expect(DEFAULT_PARAMS.sleeve.holes.teardropTops).toBe(true);
+    expect(DEFAULT_PARAMS.sleeve.topEdge.peakCount).toBe(0);
+    expect(DEFAULT_PARAMS.sleeve.topEdge.minTubeCoverage).toBe(50);
+    const p = normalizeParams({ sleeve: { holes: { coverage: 90, minBridgeWidth: 0 }, topEdge: { peakCount: 40 } } });
+    expect(p.sleeve.holes.coverage).toBe(50);
+    expect(p.sleeve.holes.minBridgeWidth).toBe(2);
+    expect(p.sleeve.topEdge.peakCount).toBe(12);
   });
 });

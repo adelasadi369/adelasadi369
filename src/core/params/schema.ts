@@ -1348,11 +1348,182 @@ export const InsertSchema = z
 
 // ---------------------------------------------------------------------------
 // G3) Sleeve (outputMode 'sleeve'): SDF of the vase skin + core tube − exact bore, meshed by marching cubes.
-//     See docs/sleeve-integration.md §2–§4. Fingers, drips, holes and top edge arrive in later phases.
+//     See docs/sleeve-integration.md §2–§4. Holes and top edge since S2b; fingers and drips arrive in S3.
 // ---------------------------------------------------------------------------
+
+export const HOLE_MODES = ['none', 'organicNoise'] as const;
+
+const SleeveHolesSchema = z
+  .object({
+    mode: enm(HOLE_MODES, 'none', {
+      fa: 'نوع سوراخ‌ها',
+      en: 'Hole pattern',
+      basic: true,
+      phase: 2,
+      tip: [
+        'سوراخ‌هایی در غلاف که لولهٔ داخل را نشان می‌دهند. «نویز ارگانیک» = لکه‌های نرم و طبیعی.',
+        'Openings in the sleeve that show the tube inside. Organic noise = soft natural blobs.',
+      ],
+      options: { none: t('بدون سوراخ', 'None'), organicNoise: t('نویز ارگانیک', 'Organic noise') },
+    }),
+    coverage: num(0, 50, 15, {
+      fa: 'سهم سوراخ‌ها',
+      en: 'Hole coverage',
+      basic: true,
+      phase: 2,
+      unit: '%',
+      step: 1,
+      tip: [
+        'درصد سطح کناری غلاف (با نوارهای بدون سوراخ) که باز است. آستانه آن‌قدر تنظیم می‌شود تا به این عدد برسد.',
+        'Share of the side area that is open (keep-out bands included). The threshold is iterated to hit it.',
+      ],
+    }),
+    size: num(4, 40, 12, {
+      fa: 'اندازهٔ سوراخ',
+      en: 'Hole size',
+      basic: true,
+      phase: 2,
+      unit: 'mm',
+      step: 0.5,
+      tip: ['اندازهٔ میانگین سوراخ‌ها روی پوستهٔ بیرونی.', 'Typical hole size on the outer skin.'],
+    }),
+    sizeVariation: num(0, 100, 40, {
+      fa: 'تنوع اندازه',
+      en: 'Size variation',
+      phase: 2,
+      unit: '%',
+      step: 1,
+      tip: [
+        'بیشتر = سوراخ‌های بزرگ و کوچک کنار هم؛ ۰ = همه هم‌اندازه.',
+        'Higher = big and small holes side by side; 0 = all about the same size.',
+      ],
+    }),
+    verticalStretch: num(0.5, 4, 1.6, {
+      fa: 'کشیدگی عمودی',
+      en: 'Vertical stretch',
+      phase: 2,
+      unit: 'x',
+      step: 0.1,
+      tip: ['بیشتر از ۱ = سوراخ‌های بلند و باریک.', 'Above 1 = tall, narrow holes.'],
+    }),
+    angle: num(-60, 60, 0, {
+      fa: 'زاویهٔ سوراخ‌ها',
+      en: 'Hole angle',
+      phase: 2,
+      unit: 'deg',
+      step: 1,
+      tip: ['کج کردن سوراخ‌های کشیده برای حالت باد‌خورده.', 'Tilts stretched holes for a windswept look.'],
+    }),
+    edgeRoundness: num(0, 3, 1, {
+      fa: 'گردی لبهٔ سوراخ',
+      en: 'Edge roundness',
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: ['شعاع گرد کردن لبهٔ سوراخ‌ها. ۰ = لبهٔ تیز.', 'Radius that rounds the hole edges. 0 = sharp.'],
+    }),
+    minBridgeWidth: num(2, 15, 4.8, {
+      fa: 'کمینهٔ پل بین سوراخ‌ها',
+      en: 'Min bridge width',
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: [
+        'هیچ نوار مادهٔ بین دو سوراخ (یا سوراخ و لبهٔ بالا) نازک‌تر از این نمی‌شود؛ نزدیک‌ترها یکی می‌شوند. پیش‌فرض ۳ × دیوارهٔ کمینه.',
+        'No material bridge between holes (or a hole and the rim) gets thinner than this; closer holes merge. Default 3 × min wall.',
+      ],
+    }),
+    keepOutBottom: num(0, 60, 10, {
+      fa: 'نوار پایین بدون سوراخ',
+      en: 'Keep-out bottom',
+      phase: 2,
+      unit: 'mm',
+      step: 0.5,
+      tip: [
+        'ارتفاع نوار تو‌پر پایین برای استحکام کف. هرگز کمتر از کف حفره + پل نمی‌شود.',
+        'Solid band at the bottom for base strength. Never below the bore bottom + one bridge.',
+      ],
+    }),
+    keepOutTop: num(0, 60, 8, {
+      fa: 'نوار بالا بدون سوراخ',
+      en: 'Keep-out top',
+      phase: 2,
+      unit: 'mm',
+      step: 0.5,
+      tip: [
+        'زیر لبهٔ بالا سوراخ شروع نمی‌شود (از لبهٔ محلی اندازه‌گیری می‌شود).',
+        'No hole starts within this distance below the local rim.',
+      ],
+    }),
+    teardropTops: bool(true, {
+      fa: 'سقف قطره‌ای',
+      en: 'Teardrop tops',
+      basic: true,
+      phase: 2,
+      tip: [
+        'سقف هر سوراخ نوک‌تیز می‌شود تا بدون ساپورت چاپ شود (شیب ≤ زاویهٔ آویز مجاز).',
+        'Points the top of every hole so it prints without supports (slope ≤ max overhang).',
+      ],
+    }),
+  })
+  .prefault({});
+
+const SleeveTopEdgeSchema = z
+  .object({
+    peakCount: int(0, 12, 0, {
+      fa: 'تعداد قله‌های لبه',
+      en: 'Rim peaks',
+      basic: true,
+      phase: 2,
+      step: 1,
+      tip: ['تعداد قله‌های لبهٔ بالا. ۰ = لبهٔ صاف.', 'Number of peaks on the top edge. 0 = flat top.'],
+    }),
+    amplitude: num(0, 120, 20, {
+      fa: 'عمق دره‌های لبه',
+      en: 'Rim amplitude',
+      basic: true,
+      phase: 2,
+      unit: 'mm',
+      step: 0.5,
+      tip: ['فاصلهٔ قله تا دره در لبهٔ بالا.', 'Height difference between rim peaks and valleys.'],
+    }),
+    sharpness: num(0, 100, 50, {
+      fa: 'تیزی قله‌ها',
+      en: 'Peak sharpness',
+      phase: 2,
+      unit: '%',
+      step: 1,
+      tip: ['۰ = موج نرم؛ ۱۰۰ = قله‌های نوک‌تیز.', '0 = soft waves; 100 = pointed peaks.'],
+    }),
+    irregularity: num(0, 100, 30, {
+      fa: 'بی‌نظمی لبه',
+      en: 'Rim irregularity',
+      phase: 2,
+      unit: '%',
+      step: 1,
+      tip: [
+        'جابه‌جایی و تفاوت ارتفاع تصادفی قله‌ها (از بذر طرح).',
+        'Random shift and height variation of the peaks (from the design seed).',
+      ],
+    }),
+    minTubeCoverage: num(10, 400, 50, {
+      fa: 'کمینهٔ پوشش لوله',
+      en: 'Min tube coverage',
+      phase: 2,
+      unit: 'mm',
+      step: 1,
+      tip: [
+        'پایین‌ترین نقطهٔ لبه دست‌کم این ارتفاع از لوله را می‌پوشاند تا آن را نگه دارد (حداکثر = ارتفاع).',
+        'The lowest rim point still covers at least this height of the tube so it holds (capped at the height).',
+      ],
+    }),
+  })
+  .prefault({});
 
 export const SleeveSchema = z
   .object({
+    holes: SleeveHolesSchema,
+    topEdge: SleeveTopEdgeSchema,
     coreBlend: num(0, 8, 2, {
       fa: 'نرمی اتصال هسته',
       en: 'Core blend',
