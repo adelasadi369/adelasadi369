@@ -1,6 +1,6 @@
 import { DEG, TAU } from '../math';
 import type { VaseParams } from '../params/schema';
-import { createSimplex3, fbm3 } from '../random';
+import { createSimplex3 } from '../random';
 import { blur, edt, label, signedDistance, type Grid2 } from './grid2d';
 import type { TopEdge } from './topEdge';
 
@@ -147,7 +147,8 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
       const p = i * dphi - z * shear;
       const x = rRef * Math.cos(p) * f;
       const y = rRef * Math.sin(p) * f;
-      field[c] = fbm3(noise, x, y, zs, 2) + 0.8 * vari * noise(0.35 * x + 17.3, 0.35 * y - 4.1, 0.35 * zs + 9.7);
+      // one octave: a second one frays the hole outlines (S3: rounded ovals like the references)
+      field[c] = noise(x, y, zs) + 0.8 * vari * noise(0.35 * x + 17.3, 0.35 * y - 4.1, 0.35 * zs + 9.7);
     }
   }
   const sorted: number[] = [];
@@ -378,11 +379,21 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
     return { S, br, dropped };
   };
 
+  // ---- specks: threshold components narrower than 0.4 × size (a disc of that diameter, at r_ref) read as noise
+  const minCells = (Math.PI * (0.2 * hp.size) ** 2) / (dphi * rRef * dz);
+  const dropSpecks = (S: Uint8Array): Uint8Array => {
+    const { labels, area } = label(g2, S, true);
+    const out = S.slice();
+    for (let c = 0; c < n; c++) if (out[c] && area[labels[c]] < minCells) out[c] = 0;
+    return out;
+  };
+
   const run = (frac: number) => {
     const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor(frac * sorted.length)));
     const tau = frac <= 0 ? -Infinity : frac >= 1 ? Infinity : sorted[idx];
     let S: Uint8Array = new Uint8Array(n);
     for (let c = 0; c < n; c++) if (allowed[c] && field[c] < tau) S[c] = 1;
+    S = dropSpecks(S);
     let merged = 0;
     let dropped = 0;
     let islands = 0;

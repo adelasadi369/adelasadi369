@@ -10,7 +10,7 @@ import { buildTopEdge, type TopEdge } from './topEdge';
 /**
  * Sleeve SDF (docs/sleeve-integration.md §3; order fixed; fingers and drips arrive in S3):
  *   body = smin(skin, core tube R_bore + coreWall, coreBlend)
- *   body = smax(body, (z − Htop(φ)) / sqrt(1 + (Htop'/ρ)²), 1 mm)   top edge (sharp max(z − H) when flat)
+ *   body = smax(body, (z − Htop(φ)) / sqrt(1 + (Htop'/ρ)²), 2.5 mm)   top edge (z − H when flat)
  *   body = smax(body, −g_holes(φ, z), edgeRoundness)               openings with teardrop tops (holes.ts)
  *   body = max(body, −z)                         flat base, sharp
  *   body = max(body, −hole)                      exact bore, sharp, LAST
@@ -77,9 +77,8 @@ export function createSleeveField(params: VaseParams, voxel: number): SleeveFiel
     const l1 = lMap[b + i0] + (lMap[b + i1] - lMap[b + i0]) * fu;
     const skinD = (rhoC - (r0 + (r1 - r0) * fv)) * (l0 + (l1 - l0) * fv);
     let d = smin(skinD, rho - Rc, k);
-    if (top.flat) {
-      if (z - H > d) d = z - H;
-    } else {
+    if (top.flat) d = smax(d, z - H, top.k);
+    else {
       const s = top.slopeAt(phi) / Math.max(rho, 1e-6);
       d = smax(d, (z - top.at(phi)) / Math.sqrt(1 + s * s), top.k);
     }

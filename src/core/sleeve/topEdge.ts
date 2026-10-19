@@ -10,14 +10,14 @@ import { createSimplex3 } from '../random';
  * (seeded, periodic). `slope` is dHtop/dφ, for the distance correction 1 / sqrt(1 + (Htop'/ρ)²).
  */
 export interface TopEdge {
-  /** Flat top at H (no peaks): the S2a sharp cut. */
+  /** Flat top at H (no peaks). */
   flat: boolean;
   n: number;
   h: Float64Array;
   slope: Float64Array;
   min: number;
   max: number;
-  /** Rim blend radius of the smooth intersection (0 = sharp). */
+  /** Rim blend radius of the smooth intersection. */
   k: number;
   at(phi: number): number;
   /** dHtop/dφ (nearest table entry). */
@@ -25,7 +25,8 @@ export interface TopEdge {
 }
 
 const TABLE = 2048;
-const RIM_BLEND = 1;
+/** Rim rounding radius (S3: 1 → 2.5 mm, also on a flat top; a sharp cut reads boxy next to the references). */
+const RIM_BLEND = 2.5;
 
 export function buildTopEdge(params: VaseParams, H: number): TopEdge {
   const e = params.sleeve.topEdge;
@@ -70,5 +71,5 @@ export function buildTopEdge(params: VaseParams, H: number): TopEdge {
     return h[i0] + (h[(i0 + 1) % n] - h[i0]) * f;
   };
   const slopeAt = (phi: number) => slope[Math.round(wrap(phi)) % n];
-  return { flat, n, h, slope, min, max, k: flat ? 0 : RIM_BLEND, at, slopeAt };
+  return { flat, n, h, slope, min, max, k: RIM_BLEND, at, slopeAt };
 }

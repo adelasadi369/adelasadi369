@@ -68,7 +68,7 @@ export function compileEffect(e: Effect, ctx: EffectCtx, prev: PrevEval): Compil
         repetitions: Math.ceil((2 * Math.PI * ctx.refRadius) / featureMm),
         periodic: false,
         samplesPerRep: 4,
-        verticalCycles: (ctx.height / (e.scale * (e.style === 'silkFolds' ? e.stretch : 1))) * 0.5,
+        verticalCycles: (ctx.height / (e.scale * (e.style === 'softBulges' ? 1 : e.stretch))) * 0.5,
         depth: e.amount,
         inward: e.amount,
       };

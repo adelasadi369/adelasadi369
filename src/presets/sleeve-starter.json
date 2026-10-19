@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "name": "Sleeve Starter",
   "dimensions": {
     "height": 150,
@@ -161,6 +161,7 @@
       "amount": 3,
       "scale": 30,
       "stretch": 6,
+      "warp": 1,
       "seed": 11
     }
   ],
@@ -249,7 +250,7 @@
     "mesh": {
       "previewVoxel": 1.5,
       "exportVoxel": 0.5,
-      "smoothing": 3
+      "smoothing": 4
     }
   },
   "print": {

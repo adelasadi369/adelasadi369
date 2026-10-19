@@ -12,10 +12,10 @@ import { PRESET_SOURCES } from '../scripts/presets.src';
 import { slice } from './helpers';
 
 describe('presets', () => {
-  it('has the 14 trend presets and the sleeve starter, in sync with their sources', () => {
+  it('has the 14 trend presets and the sleeve presets, in sync with their sources', () => {
     expect(PRESETS.map((p) => p.id)).toEqual(PRESET_SOURCES.map((s) => s.id));
     expect(VASE_PRESETS).toHaveLength(14);
-    expect(SLEEVE_PRESETS.map((p) => p.id)).toEqual(['sleeve-starter']);
+    expect(SLEEVE_PRESETS.map((p) => p.id)).toEqual(['sleeve-starter', 'sleeve-molten', 'sleeve-silk-drape', 'sleeve-windswept']);
     for (const p of PRESETS) {
       const src = PRESET_SOURCES.find((s) => s.id === p.id)!;
       const regenerated = normalizeParams({ ...src.params, name: src.name.en });

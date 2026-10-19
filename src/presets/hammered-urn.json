@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "name": "Hammered Urn",
   "dimensions": {
     "height": 180,
@@ -233,7 +233,7 @@
       "sizeVariation": 40,
       "verticalStretch": 1.6,
       "angle": 0,
-      "edgeRoundness": 1,
+      "edgeRoundness": 1.5,
       "minBridgeWidth": 4.8,
       "keepOutBottom": 10,
       "keepOutTop": 8,
@@ -250,7 +250,7 @@
     "mesh": {
       "previewVoxel": 1.5,
       "exportVoxel": 0.5,
-      "smoothing": 3
+      "smoothing": 4
     }
   },
   "print": {

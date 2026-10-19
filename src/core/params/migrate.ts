@@ -22,6 +22,13 @@ const MIGRATIONS: Record<number, (p: Raw) => void> = {
     const mesh = isObj(p.sleeve) && isObj(p.sleeve.mesh) ? p.sleeve.mesh : null;
     if (mesh && mesh.previewVoxel === 1) mesh.previewVoxel = 1.5;
   },
+  // v4 → v5 (S3): fingers, drips, more hole modes, self-supporting, organic 'blobs' (filled by their defaults).
+  // Smoother sleeve defaults: smoothing 3 → 4 passes (more thins coarse ribs at the 2 mm drag voxel), hole edge roundness 1 → 1.5 mm; stored old defaults follow.
+  4: (p) => {
+    const sl = isObj(p.sleeve) ? p.sleeve : null;
+    if (sl && isObj(sl.mesh) && sl.mesh.smoothing === 3) sl.mesh.smoothing = 4;
+    if (sl && isObj(sl.holes) && sl.holes.edgeRoundness === 1) sl.holes.edgeRoundness = 1.5;
+  },
 };
 
 /**

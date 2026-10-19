@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 
-export const SCHEMA_VERSION = 4 as const;
+export const SCHEMA_VERSION = 5 as const;
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -742,11 +742,18 @@ export const NoiseSchema = z.object({
 export const OrganicSchema = z.object({
   type: z.literal('organic'),
   ...windowFields,
-  style: enm(['softBulges', 'silkFolds'] as const, 'softBulges', {
+  style: enm(['softBulges', 'silkFolds', 'blobs'] as const, 'softBulges', {
     fa: 'سبک',
     en: 'Style',
-    tip: ['برآمدگی نرم یا چین ابریشمی.', 'Soft bulges or silk folds.'],
-    options: { softBulges: t('برآمدگی نرم', 'Soft bulges'), silkFolds: t('چین ابریشمی', 'Silk folds') },
+    tip: [
+      'برآمدگی نرم، چین ابریشمی یا حباب‌های مذاب (نویز کم‌بسامد با پیچش دامنه، نامتقارن).',
+      'Soft bulges, silk folds or molten blobs (low-frequency domain-warped noise, asymmetric).',
+    ],
+    options: {
+      softBulges: t('برآمدگی نرم', 'Soft bulges'),
+      silkFolds: t('چین ابریشمی', 'Silk folds'),
+      blobs: t('حباب مذاب', 'Molten blobs'),
+    },
   }),
   amount: num(0, 10, 3, {
     fa: 'شدت',
@@ -762,6 +769,16 @@ export const OrganicSchema = z.object({
     unit: 'x',
     step: 0.1,
     tip: ['کشیدگی چین‌ها در ارتفاع.', 'Vertical elongation of folds.'],
+  }),
+  warp: num(0, 2, 1, {
+    fa: 'پیچش دامنه',
+    en: 'Domain warp',
+    unit: 'x',
+    step: 0.05,
+    tip: [
+      'فقط برای «حباب مذاب»: بیشتر = برآمدگی‌های کج و نامتقارن‌تر، مثل مواد مذاب.',
+      'Molten blobs only: higher = more skewed, asymmetric lumps, like molten material.',
+    ],
   }),
   seed: seed(),
 });
@@ -1414,7 +1431,7 @@ const SleeveHolesSchema = z
       step: 1,
       tip: ['کج کردن سوراخ‌های کشیده برای حالت باد‌خورده.', 'Tilts stretched holes for a windswept look.'],
     }),
-    edgeRoundness: num(0, 3, 1, {
+    edgeRoundness: num(0, 3, 1.5, {
       fa: 'گردی لبهٔ سوراخ',
       en: 'Edge roundness',
       phase: 2,
@@ -1560,7 +1577,7 @@ export const SleeveSchema = z
             'Mesh cell size of the exported file (0.3–0.6). Smaller = bigger file.',
           ],
         }),
-        smoothing: int(0, 10, 3, {
+        smoothing: int(0, 10, 4, {
           fa: 'هموارسازی',
           en: 'Smoothing',
           phase: 2,

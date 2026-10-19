@@ -115,7 +115,8 @@ describe('share links', () => {
   it('roundtrips every preset', () => {
     for (const p of PRESETS) {
       const token = encodeShare(p.params);
-      expect(token.length).toBeLessThan(800);
+      // sleeve presets carry several full effect objects; 1200 stays well under the ~2 kB safe URL length
+      expect(token.length).toBeLessThan(1200);
       expect(decodeShare(token)).toEqual(p.params);
     }
     expect(decodeShare('garbage')).toBeNull();
@@ -176,7 +177,7 @@ describe('schema v3 migration (sleeve mode)', () => {
   it('accepts the sleeve output mode and its mesh defaults', () => {
     const p = normalizeParams({ print: { outputMode: 'sleeve' } });
     expect(p.print.outputMode).toBe('sleeve');
-    expect(p.sleeve.mesh).toEqual({ previewVoxel: 1.5, exportVoxel: 0.5, smoothing: 3 });
+    expect(p.sleeve.mesh).toEqual({ previewVoxel: 1.5, exportVoxel: 0.5, smoothing: 4 });
     expect(normalizeParams({ sleeve: { mesh: { exportVoxel: 0.1 } } }).sleeve.mesh.exportVoxel).toBe(0.3);
   });
 });
