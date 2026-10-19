@@ -96,5 +96,12 @@
       "fa": "گلدان کلاسیک",
       "en": "Planter Classic"
     }
+  },
+  {
+    "id": "sleeve-starter",
+    "name": {
+      "fa": "غلاف آغازین",
+      "en": "Sleeve Starter"
+    }
   }
 ]

@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "name": "Twisted Hex",
   "dimensions": {
     "height": 180,
@@ -211,9 +211,29 @@
     }
   },
   "sleeve": {
+    "holes": {
+      "mode": "none",
+      "coverage": 15,
+      "size": 12,
+      "sizeVariation": 40,
+      "verticalStretch": 1.6,
+      "angle": 0,
+      "edgeRoundness": 1,
+      "minBridgeWidth": 4.8,
+      "keepOutBottom": 10,
+      "keepOutTop": 8,
+      "teardropTops": true
+    },
+    "topEdge": {
+      "peakCount": 0,
+      "amplitude": 20,
+      "sharpness": 50,
+      "irregularity": 30,
+      "minTubeCoverage": 50
+    },
     "coreBlend": 2,
     "mesh": {
-      "previewVoxel": 1,
+      "previewVoxel": 1.5,
       "exportVoxel": 0.5,
       "smoothing": 3
     }

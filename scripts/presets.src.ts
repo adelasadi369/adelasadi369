@@ -228,4 +228,43 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
       render: { color: '#cf8c6a', viewMaterial: 'matte' },
     },
   },
+  {
+    id: 'sleeve-starter',
+    name: { fa: 'غلاف آغازین', en: 'Sleeve Starter' },
+    params: {
+      dimensions: { height: 150, baseDiameter: 96, maxDiameter: 104, topDiameter: 86, bellyPosition: 30 },
+      profile: { preset: 'convex', strength: 35 },
+      twist: { total: 25, curve: 'easeInOut' },
+      effects: [
+        {
+          type: 'organic',
+          style: 'silkFolds',
+          amount: 3,
+          scale: 30,
+          stretch: 6,
+          seed: 11,
+          start: 0,
+          end: 100,
+          fade: 6,
+        },
+      ],
+      insert: { type: 'glass', od: 50, fit: 'slip' },
+      sleeve: {
+        holes: {
+          mode: 'organicNoise',
+          coverage: 15,
+          size: 14,
+          sizeVariation: 50,
+          verticalStretch: 1.8,
+          angle: 10,
+          edgeRoundness: 1.2,
+          teardropTops: true,
+        },
+        topEdge: { peakCount: 3, amplitude: 30, sharpness: 60, irregularity: 40, minTubeCoverage: 80 },
+      },
+      print: { outputMode: 'sleeve', material: 'silkPLA' },
+      render: { color: '#e8772e', viewMaterial: 'silk' },
+      random: { seed: 7 },
+    },
+  },
 ];

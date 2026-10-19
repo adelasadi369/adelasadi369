@@ -52,7 +52,7 @@ Repository layout (paths relative to the repo root; the spec's `/core`,
 
 ```
 src/core/{params,geometry,printability,export,random,jsonpatch}
-src/presets/*.json          14 trend presets (full param JSON) + index.ts
+src/presets/*.json          14 trend presets + sleeve-starter (full param JSON) + index.ts (VASE_/SLEEVE_PRESETS)
 src/ai/{prompts.ts,schema.ts,client.ts}
 src/workers/geometry.worker.ts
 src/ui/…  src/state/…  src/persist/…
@@ -161,8 +161,11 @@ the UI (labels, tooltips, units, steps, Basic/Advanced, phase gating) and
   (measured from bore vertices + facet sag vs ±0.05 mm), `insert-press-glass`, `insert-short`.
   `stats.boreDiameter` feeds the stats panel and the dimension overlay.
 - Sleeves (`printability/sleeve.ts`, via `analyze()`): mesh validity runs in full on every regen and export
-  (sleeve topology is not fixed, so nothing is cached), plus islands, bore accuracy between ribs, min wall from
-  the SDF, overhang without the bed, bounds and the reused bore checks. Sleeve auto-fix arrives in S3.
+  (sleeve topology is not fixed, so nothing is cached), plus islands, bore accuracy between ribs (hole edges
+  skipped), min wall from the SDF, overhang without the bed seam (teardrop tips count as short bridges), bounds,
+  the reused bore checks, and with holes `sleeve-bridges` and `sleeve-bore-contact` (`stats.boreContact`).
+  An issue may offer extra one-click fixes in `Issue.fixes` (PrintCheck shows one button each). Sleeve auto-fix
+  arrives in S3.
 - Auto-fix (§3 of GEOMETRY.md) is iterative and runs on a low-res grid
   (128×100), then re-verifies at preview resolution and returns a param diff.
 
@@ -232,5 +235,7 @@ Vitest, core only. Test files:
 - `params/schema.test.ts`: out-of-range values rejected, and clamp
   round-trips.
 - `presets.test.ts`: every preset is manifold, scores ≥ 90, and has no
-  error issues.
+  error issues; sleeve presets also pass the bore check at the preview voxel.
+- `sleeveHoles.test.ts` (+ hole sweeps in `sleeve.slow.test.ts`): EDT vs brute force, top edge, coverage from
+  radial rays (±3 points), bridges ≥ minBridgeWidth, roof overhang from normals, keep-outs, determinism, checks.
 - `perf.bench.ts`: preview regen < 50 ms (reported, not a hard CI gate).

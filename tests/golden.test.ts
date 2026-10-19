@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PRESETS } from '../src/presets';
+import { VASE_PRESETS } from '../src/presets';
 import golden from './golden/vase-presets.json';
 import { computeVaseGolden } from './golden/vasePresets';
 
@@ -8,11 +8,11 @@ import { computeVaseGolden } from './golden/vasePresets';
 describe('golden vase presets', () => {
   const actual = computeVaseGolden();
 
-  it('covers exactly the current presets', () => {
-    expect(Object.keys(golden.presets).sort()).toEqual(PRESETS.map((p) => p.id).sort());
+  it('covers exactly the current vase presets', () => {
+    expect(Object.keys(golden.presets).sort()).toEqual(VASE_PRESETS.map((p) => p.id).sort());
   });
 
-  for (const preset of PRESETS) {
+  for (const preset of VASE_PRESETS) {
     it(`${preset.id} matches its golden hash and counts`, () => {
       expect(actual.presets[preset.id]).toEqual(golden.presets[preset.id as keyof typeof golden.presets]);
     });

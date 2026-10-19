@@ -34,6 +34,8 @@ export interface ViewerState {
   dims: boolean;
   /** Clipping height as a fraction of height, or null when off. */
   clip: number | null;
+  /** Sleeve holes: preview the openings without teardrop tops ("before"); params and exports are untouched. */
+  teardropBefore: boolean;
 }
 
 export interface FixState {
@@ -191,7 +193,7 @@ export const useStore = create<Store>((set, get) => {
     lang: prefs.lang,
     level: prefs.level,
     tab: 'shape',
-    viewer: { heatmap: false, layers: false, dims: true, clip: null },
+    viewer: { heatmap: false, layers: false, dims: true, clip: null, teardropBefore: false },
     fix: { status: 'idle', diff: [], before: 0, after: 0, prev: null },
     toast: null,
     exporting: false,
@@ -423,11 +425,18 @@ const scheduler = new RegenScheduler(
 );
 
 function requestRegen() {
-  const { params, dragBase } = useStore.getState();
-  scheduler.request(params, dragBase ? 'low' : params.render.previewQuality);
+  const { params, dragBase, viewer } = useStore.getState();
+  const before = viewer.teardropBefore && params.print.outputMode === 'sleeve' && params.sleeve.holes.teardropTops;
+  const shown = before ? setPath(params, 'sleeve.holes.teardropTops', false) : params;
+  scheduler.request(shown, dragBase ? 'low' : params.render.previewQuality);
 }
 
 useStore.subscribe((s, prev) => {
-  if (s.params !== prev.params || (prev.dragBase && !s.dragBase)) requestRegen();
+  if (
+    s.params !== prev.params ||
+    (prev.dragBase && !s.dragBase) ||
+    s.viewer.teardropBefore !== prev.viewer.teardropBefore
+  )
+    requestRegen();
 });
 requestRegen();

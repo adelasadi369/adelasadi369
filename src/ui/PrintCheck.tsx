@@ -59,13 +59,18 @@ function IssueRow({ issue }: { issue: Issue }) {
         </div>
       </div>
       {issue.fix && (
-        <button
-          type="button"
-          onClick={() => (issue.fix!.kind === 'patch' ? applyChanges(issue.fix!.changes) : autoFix())}
-          className="mt-1.5 ms-4 rounded-md border border-accent/40 px-2 py-0.5 text-xs text-accent hover:bg-accent-soft"
-        >
-          {txt(issue.fix.label)}
-        </button>
+        <div className="mt-1.5 ms-4 flex flex-wrap gap-1.5">
+          {[issue.fix, ...(issue.fixes ?? [])].map((f, k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => (f.kind === 'patch' ? applyChanges(f.changes) : autoFix())}
+              className="rounded-md border border-accent/40 px-2 py-0.5 text-xs text-accent hover:bg-accent-soft"
+            >
+              {txt(f.label)}
+            </button>
+          ))}
+        </div>
       )}
     </li>
   );
@@ -129,6 +134,9 @@ export function PrintCheck() {
     [t('stats.maxDiameter'), `${num(s.maxDiameter, 1)} ${t('unit.mm')}`],
     ...(s.boreDiameter !== undefined
       ? ([[t('stats.bore'), `${num(s.boreDiameter, 2, true)} ${t('unit.mm')}`]] as [string, string][])
+      : []),
+    ...(s.boreContact !== undefined
+      ? ([[t('stats.boreContact'), `${num(s.boreContact * 100)}${t('unit.%')}`]] as [string, string][])
       : []),
     ...(sleeve ? [] : ([[t('stats.capacity'), `${num(s.capacityMl)} ${t('unit.ml')}`]] as [string, string][])),
     [t('stats.weight'), `${num(s.weightG)} ${t('unit.g')}`],

@@ -2,13 +2,16 @@ import { bottomHoleRadius, boreProfile, type BoreProfile } from '../insert';
 import { TAU } from '../math';
 import type { Lattice, SampledField } from '../mc/extract';
 import type { VaseParams } from '../params/schema';
-import { smin } from '../sdf';
-import { buildSkinMap, type SkinMap } from './skin';
+import { smax, smin } from '../sdf';
+import { buildHoleMap, type HoleMap } from './holes';
+import { buildSkinMap, skinRadii, type SkinMap } from './skin';
+import { buildTopEdge, type TopEdge } from './topEdge';
 
 /**
- * Sleeve SDF for S2a (docs/sleeve-integration.md §3; order fixed):
+ * Sleeve SDF (docs/sleeve-integration.md §3; order fixed; fingers and drips arrive in S3):
  *   body = smin(skin, core tube R_bore + coreWall, coreBlend)
- *   body = max(body, z − H)                      top: the skin's own top (peaks arrive in S2b)
+ *   body = smax(body, (z − Htop(φ)) / sqrt(1 + (Htop'/ρ)²), 1 mm)   top edge (sharp max(z − H) when flat)
+ *   body = smax(body, −g_holes(φ, z), edgeRoundness)               openings with teardrop tops (holes.ts)
  *   body = max(body, −z)                         flat base, sharp
  *   body = max(body, −hole)                      exact bore, sharp, LAST
  * hole = min( max(ρ − R(φ, z), z_b − z),  ρ − r_hole )  where R(φ, z) is the S1 bore profile (ribs, grooves, both
@@ -17,6 +20,8 @@ import { buildSkinMap, type SkinMap } from './skin';
 export interface SleeveField {
   skin: SkinMap;
   prof: BoreProfile;
+  top: TopEdge;
+  holes: HoleMap | null;
   H: number;
   /** Bore radius, core-tube radius, bore wall start, bottom opening radius (0 = none), blend radius. */
   R: number;
@@ -43,6 +48,10 @@ export function createSleeveField(params: VaseParams, voxel: number): SleeveFiel
   const hr = bottomHoleRadius(params.insert, R);
   const k = params.sleeve.coreBlend;
   const { nT, nZ, r: rMap, L: lMap, cx, cy } = skin;
+  const top = buildTopEdge(params, H);
+  // voxel-independent radii, so the cached hole map is the same at every voxel
+  const radii = skinRadii(params);
+  const holes = buildHoleMap(params, { H, R, zb, rRef: radii.mean, rOut: Math.max(radii.outer, Rc), top });
   const tScale = nT / TAU;
   const vScale = (nZ - 1) / H;
 
@@ -68,7 +77,13 @@ export function createSleeveField(params: VaseParams, voxel: number): SleeveFiel
     const l1 = lMap[b + i0] + (lMap[b + i1] - lMap[b + i0]) * fu;
     const skinD = (rhoC - (r0 + (r1 - r0) * fv)) * (l0 + (l1 - l0) * fv);
     let d = smin(skinD, rho - Rc, k);
-    if (z - H > d) d = z - H;
+    if (top.flat) {
+      if (z - H > d) d = z - H;
+    } else {
+      const s = top.slopeAt(phi) / Math.max(rho, 1e-6);
+      d = smax(d, (z - top.at(phi)) / Math.sqrt(1 + s * s), top.k);
+    }
+    if (holes) d = smax(d, -holes.at(phi, z), holes.k);
     if (-z > d) d = -z;
     const Rz = Math.abs(rho - R) < FEATURE_BAND ? prof.radiusAt(phi < 0 ? phi + TAU : phi, z, H) : R;
     let hole = rho - Rz;
@@ -124,5 +139,5 @@ export function createSleeveField(params: VaseParams, voxel: number): SleeveFiel
     };
   };
 
-  return { skin, prof, H, R, Rc, zb, hr, k, reach: Math.max(skin.reach, Rc) + k / 4, at, sampled };
+  return { skin, prof, top, holes, H, R, Rc, zb, hr, k, reach: Math.max(skin.reach, Rc) + k / 4, at, sampled };
 }

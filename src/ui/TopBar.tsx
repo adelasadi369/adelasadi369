@@ -39,15 +39,17 @@ function ExportMenu() {
   const exportAs = useStore((s) => s.exportAs);
   const exporting = useStore((s) => s.exporting);
   const bore = useStore((s) => usesBore(s.params));
+  const sleeve = useStore((s) => s.params.print.outputMode === 'sleeve');
   const progress = useStore((s) => s.exportProgress);
   const cancel = useStore((s) => s.cancelExport);
   const [open, setOpen] = useState(false);
-  const items: [ExportFormat, Parameters<typeof t>[0]][] = [
+  // sleeve meshes are large: 3MF (compressed, units in the file) is the default there
+  const mesh: [ExportFormat, Parameters<typeof t>[0]][] = [
     ['stl', 'export.stl'],
     ['3mf', 'export.3mf'],
-    ['obj', 'export.obj'],
-    ['json', 'export.json'],
   ];
+  if (sleeve) mesh.reverse();
+  const items: [ExportFormat, Parameters<typeof t>[0]][] = [...mesh, ['obj', 'export.obj'], ['json', 'export.json']];
   if (bore) items.push(['fitRing', 'export.fitRing']);
   return (
     <div className="relative">

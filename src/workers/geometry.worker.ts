@@ -7,7 +7,7 @@ import { normalizeParams } from '../core/params/normalize';
 import { analyze, buildDesign } from '../core/printability';
 import { autoFix } from '../core/printability/autofix';
 import { analyzeOverhang } from '../core/printability/overhang';
-import { PRESETS } from '../presets';
+import { VASE_PRESETS } from '../presets';
 import type { GeometryApi, MeshPayload } from './protocol';
 
 /** Manifold-ness only depends on the grid topology, so it is checked once per topology. */
@@ -85,7 +85,7 @@ const api: GeometryApi = {
 
   surprise(seed, base) {
     const rnd = (seed * 2654435761) >>> 0;
-    const preset = PRESETS[rnd % PRESETS.length].params;
+    const preset = VASE_PRESETS[rnd % VASE_PRESETS.length].params;
     const start = normalizeParams({
       ...preset,
       print: base.print,

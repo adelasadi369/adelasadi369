@@ -60,6 +60,8 @@ const VISIBLE: Record<string, Rule> = {
   'base.saucer.height': (p) => vase(p) && p.base.saucer.enabled,
   'base.saucer.rim': (p) => vase(p) && p.base.saucer.enabled,
   'sleeve.coreBlend': sleeve,
+  'sleeve.holes.mode': sleeve,
+  'sleeve.topEdge.peakCount': sleeve,
   'sleeve.mesh.previewVoxel': sleeve,
   'sleeve.mesh.exportVoxel': sleeve,
   'sleeve.mesh.smoothing': sleeve,
@@ -109,6 +111,30 @@ const INSERT_PATHS = [
   'insert.grooves.z2',
 ];
 for (const path of INSERT_PATHS) VISIBLE[path] ??= bore;
+
+/** Sleeve openings and top edge: hole controls need a hole pattern, rim controls need peaks. */
+const HOLE_PATHS = [
+  'sleeve.holes.mode',
+  'sleeve.holes.coverage',
+  'sleeve.holes.size',
+  'sleeve.holes.sizeVariation',
+  'sleeve.holes.verticalStretch',
+  'sleeve.holes.angle',
+  'sleeve.holes.edgeRoundness',
+  'sleeve.holes.minBridgeWidth',
+  'sleeve.holes.keepOutBottom',
+  'sleeve.holes.keepOutTop',
+  'sleeve.holes.teardropTops',
+];
+const TOP_EDGE_PATHS = [
+  'sleeve.topEdge.peakCount',
+  'sleeve.topEdge.amplitude',
+  'sleeve.topEdge.sharpness',
+  'sleeve.topEdge.irregularity',
+  'sleeve.topEdge.minTubeCoverage',
+];
+for (const path of HOLE_PATHS) VISIBLE[path] ??= (p) => sleeve(p) && p.sleeve.holes.mode !== 'none';
+for (const path of TOP_EDGE_PATHS) VISIBLE[path] ??= (p) => sleeve(p) && p.sleeve.topEdge.peakCount > 0;
 
 /** Basic-mode controls that are always shown regardless of their schema level. */
 const BASIC_EXTRA = new Set([
@@ -166,10 +192,54 @@ function ParamGroup({ title, paths }: { title: string; paths: string[] }) {
   );
 }
 
+/** Teardrop before/after: a preview-only switch (the viewer shows the holes without teardrop tops). */
+function TeardropToggle() {
+  const t = useT();
+  const on = useStore((s) => s.params.sleeve.holes.mode !== 'none' && s.params.sleeve.holes.teardropTops);
+  const before = useStore((s) => s.viewer.teardropBefore);
+  const setViewer = useStore((s) => s.setViewer);
+  if (!on) return null;
+  return (
+    <div className="my-1.5 flex items-center gap-2 text-xs">
+      <span className="text-muted">{t('sleeve.teardropPreview')}</span>
+      <div className="flex overflow-hidden rounded-md border border-line">
+        {([true, false] as const).map((b) => (
+          <button
+            key={String(b)}
+            type="button"
+            aria-pressed={before === b}
+            onClick={() => setViewer({ teardropBefore: b })}
+            className={`px-2 py-0.5 ${before === b ? 'bg-accent text-white' : 'hover:bg-paper'}`}
+          >
+            {t(b ? 'sleeve.teardropBefore' : 'sleeve.teardropAfter')}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Sleeve-only group: openings (holes) and the top edge. */
+function SleeveGroup() {
+  const t = useT();
+  const on = useStore((s) => sleeve(s.params));
+  if (!on) return null;
+  return (
+    <Group title={t('group.sleeve')}>
+      <h4 className="mt-1 text-[11px] font-semibold text-muted">{t('group.sleeveHoles')}</h4>
+      <Params paths={HOLE_PATHS} />
+      <TeardropToggle />
+      <h4 className="mt-2 text-[11px] font-semibold text-muted">{t('group.sleeveTopEdge')}</h4>
+      <Params paths={TOP_EDGE_PATHS} />
+    </Group>
+  );
+}
+
 function ShapePanel() {
   const t = useT();
   return (
     <>
+      <SleeveGroup />
       <Group title={t('group.profile')}>
         <Params paths={['profile.preset']} />
         <ProfileEditor />

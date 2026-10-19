@@ -4,14 +4,18 @@ import { normalizeParams } from '../src/core/params/normalize';
 import { VaseParamsSchema } from '../src/core/params/schema';
 import { evaluate } from '../src/core/printability';
 import { checkManifold, signedVolume } from '../src/core/printability/sanity';
-import { PRESETS } from '../src/presets';
+import { analyze } from '../src/core/printability';
+import { measureSleeveBore } from '../src/core/printability/sleeve';
+import { buildSleeveMesh } from '../src/core/sleeve';
+import { PRESETS, SLEEVE_PRESETS, VASE_PRESETS } from '../src/presets';
 import { PRESET_SOURCES } from '../scripts/presets.src';
 import { slice } from './helpers';
 
 describe('presets', () => {
-  it('has all 14 trend presets, in sync with their sources', () => {
+  it('has the 14 trend presets and the sleeve starter, in sync with their sources', () => {
     expect(PRESETS.map((p) => p.id)).toEqual(PRESET_SOURCES.map((s) => s.id));
-    expect(PRESETS).toHaveLength(14);
+    expect(VASE_PRESETS).toHaveLength(14);
+    expect(SLEEVE_PRESETS.map((p) => p.id)).toEqual(['sleeve-starter']);
     for (const p of PRESETS) {
       const src = PRESET_SOURCES.find((s) => s.id === p.id)!;
       const regenerated = normalizeParams({ ...src.params, name: src.name.en });
@@ -21,7 +25,7 @@ describe('presets', () => {
     }
   });
 
-  for (const preset of PRESETS) {
+  for (const preset of VASE_PRESETS) {
     describe(preset.id, () => {
       it('is manifold in solid and shell mode', () => {
         for (const outputMode of ['solidVase', 'shell'] as const) {
@@ -47,6 +51,22 @@ describe('presets', () => {
           expect(s.loops.length).toBe(1);
           expect(s.starShaped[0]).toBe(true);
         }
+      });
+    });
+  }
+
+  for (const preset of SLEEVE_PRESETS) {
+    describe(preset.id, () => {
+      it('is manifold, passes the bore check and scores ≥ 90 at the preview voxel', () => {
+        const p = preset.params;
+        const b = buildSleeveMesh(p, p.sleeve.mesh.previewVoxel);
+        expect(b.mesh.sleeve.validity.ok).toBe(true);
+        expect(checkManifold(b.mesh)).toMatchObject({ manifold: true });
+        expect(measureSleeveBore(b).deviation).toBeLessThanOrEqual(0.05);
+        const report = analyze(b, p);
+        expect(report.issues.map((i) => i.id)).toContain('bore-ok');
+        expect(report.issues.filter((i) => i.severity === 'error')).toEqual([]);
+        expect(report.score).toBeGreaterThanOrEqual(90);
       });
     });
   }

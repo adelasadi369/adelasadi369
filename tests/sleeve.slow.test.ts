@@ -5,14 +5,14 @@ import { normalizeParams } from '../src/core/params/normalize';
 import { randomize } from '../src/core/params/random';
 import { signedVolume } from '../src/core/printability/sanity';
 import { buildSleeveMesh, DRAG_VOXEL } from '../src/core/sleeve';
-import { PRESETS } from '../src/presets';
+import { PRESETS, VASE_PRESETS } from '../src/presets';
 import { expectSoundSleeve, sleeveParams } from './sleeveHelpers';
 
 const SLOW = 120_000;
 
 /** Seeded random designs (same generator as the Randomize button) turned into sleeves. */
 const randomSleeve = (seed: number) => {
-  const base = PRESETS[seed % PRESETS.length].params;
+  const base = VASE_PRESETS[seed % VASE_PRESETS.length].params;
   return sleeveParams(randomize({ ...base, random: { ...base.random, seed, locks: [] } }, seed));
 };
 
@@ -76,6 +76,51 @@ describe('cross-check with the S1 shell + bore liner', () => {
       const vs = signedVolume(buildSleeveMesh(sleeve, 1).mesh);
       const vb = signedVolume(buildMesh(shell, 'high').mesh);
       expect(Math.abs(vs / vb - 1)).toBeLessThan(0.03);
+    },
+    SLOW,
+  );
+});
+
+/** Random sleeves with organic holes (coverage 10–34 %) and 0–3 rim peaks, seeded. */
+const holedSleeve = (seed: number) => {
+  const p = randomSleeve(seed);
+  return normalizeParams({
+    ...p,
+    sleeve: {
+      ...p.sleeve,
+      holes: { ...p.sleeve.holes, mode: 'organicNoise', coverage: 10 + (seed % 4) * 8 },
+      topEdge: { ...p.sleeve.topEdge, peakCount: seed % 4, amplitude: 25 },
+    },
+  });
+};
+
+describe('sleeve holes: manifold across random seeds', () => {
+  it(
+    '10 seeds with holes at the drag voxel (2 mm)',
+    () => {
+      for (let seed = 201; seed <= 210; seed++) {
+        const b = buildSleeveMesh(holedSleeve(seed), DRAG_VOXEL);
+        expectSoundSleeve(b, `seed ${seed}`);
+        expect(b.mesh.sleeve.holes!.thinBridges, `seed ${seed}`).toBeNull();
+      }
+    },
+    SLOW,
+  );
+  it(
+    '3 seeds with holes at 1.0 mm',
+    () => {
+      for (let seed = 301; seed <= 303; seed++)
+        expectSoundSleeve(buildSleeveMesh(holedSleeve(seed), 1), `seed ${seed}`);
+    },
+    SLOW,
+  );
+  it(
+    'sleeve-starter at the export voxel (0.5 mm)',
+    () => {
+      const p = PRESETS.find((x) => x.id === 'sleeve-starter')!.params;
+      const b = buildSleeveMesh(p, p.sleeve.mesh.exportVoxel);
+      expectSoundSleeve(b, 'sleeve-starter');
+      expect(b.mesh.sleeve.islands.removedFraction).toBeLessThan(0.01);
     },
     SLOW,
   );

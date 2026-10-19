@@ -14,3 +14,7 @@ export const PRESETS: Preset[] = index.map((p) => ({
   name: p.name,
   params: normalizeParams(PRESET_FILES[p.id]),
 }));
+
+/** Vase-mode presets (the golden test and vase-only checks run over these) and sleeve presets. */
+export const VASE_PRESETS = PRESETS.filter((p) => p.params.print.outputMode !== 'sleeve');
+export const SLEEVE_PRESETS = PRESETS.filter((p) => p.params.print.outputMode === 'sleeve');
