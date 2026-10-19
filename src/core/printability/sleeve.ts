@@ -7,18 +7,20 @@ import { boundsIssues, overhangIssues } from './checks';
 import { bbox } from './geometryStats';
 import { analyzeOverhang } from './overhang';
 import { scoreOf } from './score';
-import type { Issue, Report, Stats } from './types';
+import type { FixAction, Issue, ParamChange, Report, Stats } from './types';
 
 const t = (fa: string, en: string): I18nText => ({ fa, en });
 const f1 = (x: number) => x.toFixed(1);
 const f2 = (x: number) => x.toFixed(2);
 const ORDER = { error: 0, warn: 1, info: 2 } as const;
+/** Bore contact below this share warns (the tube is held by too little wall). */
+export const BORE_CONTACT_MIN = 0.4;
 
 /**
  * Bore accuracy of a sleeve, measured between ribs: only where the S1 profile has no rib, groove or chamfer offset
  * (radiusAt = R_bore exactly). Deviation = max |ρ − R| over those snapped bore vertices; sag = how far the flat bore
  * triangles whose three vertices are all plain dip inside R (centroid and edge midpoints), since the tube touches
- * the facets, not the vertices. Facets touching a rib belong to the rib.
+ * the facets, not the vertices. Facets touching a rib belong to the rib, facets near a hole edge to the hole.
  */
 export function measureSleeveBore(b: SleeveBuild): BoreMeasure & { samples: number } {
   const { mesh, sdf } = b;
@@ -26,7 +28,13 @@ export function measureSleeveBore(b: SleeveBuild): BoreMeasure & { samples: numb
   const P = mesh.positions;
   const I = mesh.indices;
   const isBore = new Uint8Array(mesh.vertexCount);
-  const plain = (x: number, y: number, z: number) => prof.radiusAt(Math.atan2(y, x), z, H) === R;
+  // facets on hole edges belong to the hole, not to the bore wall
+  const hm = sdf.holes;
+  const margin = hm ? hm.k + 1.5 * mesh.sleeve.voxel : 0;
+  const plain = (x: number, y: number, z: number) => {
+    const phi = Math.atan2(y, x);
+    return prof.radiusAt(phi, z, H) === R && (!hm || hm.at(phi, z) > margin);
+  };
   let deviation = 0;
   let sag = 0;
   let samples = 0;
@@ -99,7 +107,13 @@ export function minWall(b: SleeveBuild, maxSamples = 3000): { thickness: number;
   return { thickness: best, z: bestZ };
 }
 
-export function sleeveStats(mesh: VaseMesh, p: VaseParams, volume: number, boreDiameter: number): Stats {
+export function sleeveStats(
+  mesh: VaseMesh,
+  p: VaseParams,
+  volume: number,
+  boreDiameter: number,
+  boreContact?: number,
+): Stats {
   const bb = bbox(mesh);
   const P = mesh.positions;
   const I = mesh.indices;
@@ -128,6 +142,29 @@ export function sleeveStats(mesh: VaseMesh, p: VaseParams, volume: number, boreD
     triangles: mesh.triangleCount,
     stlBytes: 84 + 50 * mesh.triangleCount,
     boreDiameter,
+    ...(boreContact !== undefined && { boreContact }),
+  };
+}
+
+const patch = (label: I18nText, changes: ParamChange[]): FixAction => ({ kind: 'patch', label, changes });
+
+/** One-click fixes for hole problems (sleeve-integration §7): less coverage, smaller holes, wider bridges. */
+function holeFixes(p: VaseParams) {
+  const h = p.sleeve.holes;
+  return {
+    lessCoverage: patch(t('سوراخ کمتر', 'Reduce coverage'), [
+      { path: 'sleeve.holes.coverage', value: Math.max(0, Math.round(h.coverage - 5)) },
+    ]),
+    smaller: patch(t('سوراخ کوچک‌تر', 'Smaller holes'), [
+      { path: 'sleeve.holes.size', value: Math.max(4, Math.round(h.size * 0.8 * 2) / 2) },
+    ]),
+    widerBridges: patch(t('پل پهن‌تر', 'Wider bridges'), [
+      { path: 'sleeve.holes.minBridgeWidth', value: Math.min(15, Math.round((h.minBridgeWidth + 1) * 10) / 10) },
+    ]),
+    keepOut: patch(t('نوارهای تو‌پر پهن‌تر', 'Wider keep-out bands'), [
+      { path: 'sleeve.holes.keepOutBottom', value: Math.min(60, h.keepOutBottom + 5) },
+      { path: 'sleeve.holes.keepOutTop', value: Math.min(60, h.keepOutTop + 5) },
+    ]),
   };
 }
 
@@ -178,6 +215,7 @@ export function analyzeSleeve(b: SleeveBuild, p: VaseParams): Report {
         `${f1(100 * s.islands.removedFraction)}٪ حجم به‌صورت قطعه‌های جدا حذف شد؛ طرح قسمت معلق دارد.`,
         `${f1(100 * s.islands.removedFraction)}% of the volume was removed as floating parts.`,
       ),
+      ...(s.holes && { fix: holeFixes(p).lessCoverage, fixes: [holeFixes(p).smaller, holeFixes(p).widerBridges] }),
       penalty: 8,
     });
   } else if (s.islands.components > 1) {
@@ -191,6 +229,42 @@ export function analyzeSleeve(b: SleeveBuild, p: VaseParams): Report {
       ),
       penalty: 0,
     });
+  }
+
+  const hs = s.holes;
+  if (hs) {
+    const fx = holeFixes(p);
+    const H = mesh.height || 1;
+    if (hs.thinBridges) {
+      const [z0, z1] = hs.thinBridges;
+      issues.push({
+        id: 'sleeve-bridges',
+        check: 'walls',
+        severity: 'warn',
+        heightRange: [Math.max(0, (100 * z0) / H - 1), Math.min(100, (100 * z1) / H + 1)],
+        message: t(
+          `باریک‌ترین پل بین سوراخ‌ها ${f1(hs.minBridge)} میلی‌متر است؛ کمینه ${f1(p.sleeve.holes.minBridgeWidth)}.`,
+          `The thinnest bridge between holes is ${f1(hs.minBridge)} mm; the minimum is ${f1(p.sleeve.holes.minBridgeWidth)} mm.`,
+        ),
+        fix: fx.lessCoverage,
+        fixes: [fx.smaller, fx.widerBridges],
+        penalty: 6,
+      });
+    }
+    if (hs.boreContact < BORE_CONTACT_MIN) {
+      issues.push({
+        id: 'sleeve-bore-contact',
+        check: 'bore',
+        severity: 'warn',
+        message: t(
+          `فقط ${f1(100 * hs.boreContact)}٪ دیوارهٔ حفره با لوله تماس دارد (کمینه ${100 * BORE_CONTACT_MIN}٪)؛ لوله لق می‌شود.`,
+          `Only ${f1(100 * hs.boreContact)}% of the bore wall touches the tube (minimum ${100 * BORE_CONTACT_MIN}%); the tube will be loose.`,
+        ),
+        fix: fx.lessCoverage,
+        fixes: [fx.keepOut],
+        penalty: 6,
+      });
+    }
   }
 
   const wall = minWall(b);
@@ -219,7 +293,7 @@ export function analyzeSleeve(b: SleeveBuild, p: VaseParams): Report {
   return {
     score: scoreOf(issues),
     issues,
-    stats: sleeveStats(mesh, p, v.volume, 2 * b.sdf.R),
+    stats: sleeveStats(mesh, p, v.volume, 2 * b.sdf.R, hs?.boreContact),
     overhang: oh.summary,
     vertexOverhang: oh.vertex,
     manifold: v.ok,

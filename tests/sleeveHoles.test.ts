@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeParams } from '../src/core/params/normalize';
+import { analyze } from '../src/core/printability';
+import { measureSleeveBore } from '../src/core/printability/sleeve';
 import type { VaseParamsInput } from '../src/core/params/schema';
 import { buildSleeveMesh, DRAG_VOXEL } from '../src/core/sleeve';
 import { edt, label } from '../src/core/sleeve/grid2d';
@@ -153,5 +155,45 @@ describe('organic-noise holes', () => {
     const s = buildSleeveMesh(holed({ coverage: 30 }), DRAG_VOXEL).mesh.sleeve.holes!;
     expect(s.boreContact).toBeGreaterThan(0.6);
     expect(s.boreContact).toBeLessThan(0.75);
+  });
+});
+
+describe('sleeve hole checks', () => {
+  const p = holed({ coverage: 25 }, { random: { seed: 3 } });
+  const b = buildSleeveMesh(p, 1);
+  const withHoles = (over: object) => ({
+    ...b,
+    mesh: { ...b.mesh, sleeve: { ...b.mesh.sleeve, holes: { ...b.mesh.sleeve.holes!, ...over } } },
+  });
+
+  it('bore accuracy ignores facets on hole edges: a holed sleeve still passes ±0.05 mm', () => {
+    const m = measureSleeveBore(b);
+    expect(m.samples).toBeGreaterThan(200);
+    expect(m.deviation).toBeLessThanOrEqual(0.05);
+    const r = analyze(b, p);
+    expect(r.issues.map((i) => i.id)).toContain('bore-ok');
+    expect(r.issues.some((i) => i.id === 'bore-accuracy')).toBe(false);
+    expect(r.stats.boreContact).toBeCloseTo(b.mesh.sleeve.holes!.boreContact, 9);
+  });
+
+  it('thin bridges warn with a height range and three fixes', () => {
+    const r = analyze(withHoles({ thinBridges: [40, 60], minBridge: 3 }), p);
+    const i = r.issues.find((x) => x.id === 'sleeve-bridges')!;
+    expect(i.severity).toBe('warn');
+    expect(i.heightRange![0]).toBeLessThan((100 * 40) / b.mesh.height);
+    expect(i.heightRange![1]).toBeGreaterThan((100 * 60) / b.mesh.height);
+    const paths = [i.fix!, ...i.fixes!].flatMap((f) => (f.kind === 'patch' ? f.changes.map((c) => c.path) : []));
+    expect(paths).toEqual(['sleeve.holes.coverage', 'sleeve.holes.size', 'sleeve.holes.minBridgeWidth']);
+  });
+
+  it('bore contact below 40 % warns, with coverage and keep-out fixes', () => {
+    expect(analyze(b, p).issues.some((i) => i.id === 'sleeve-bore-contact')).toBe(false);
+    const i = analyze(withHoles({ boreContact: 0.3 }), p).issues.find((x) => x.id === 'sleeve-bore-contact')!;
+    expect(i.severity).toBe('warn');
+    expect(i.fix!.kind === 'patch' && i.fix!.changes[0]).toEqual({ path: 'sleeve.holes.coverage', value: 20 });
+    expect(i.fixes![0].kind === 'patch' && i.fixes![0].changes.map((c) => c.path)).toEqual([
+      'sleeve.holes.keepOutBottom',
+      'sleeve.holes.keepOutTop',
+    ]);
   });
 });

@@ -134,6 +134,7 @@
   "insert.compensation": "جبران هر طرف",
   "insert.calibrate": "کالیبره کردن حفره…",
   "export.fitRing": "حلقهٔ تست جاافتادن (STL)",
+  "stats.boreContact": "تماس با لوله",
   "stats.bore": "قطر حفره",
   "calib.title": "کالیبراسیون حفره",
   "calib.step1": "۱. حلقهٔ تست را چاپ کنید: ۱۰ میلی‌متر پایین همین حفره.",

@@ -22,6 +22,8 @@ export interface Issue {
   heightRange?: [number, number];
   message: I18nText;
   fix?: FixAction;
+  /** Further one-click alternatives to `fix` (shown as extra buttons). */
+  fixes?: FixAction[];
   penalty: number;
 }
 
@@ -37,8 +39,10 @@ export interface Stats {
   surfaceCm2: number;
   triangles: number;
   stlBytes: number;
-  /** Design bore Ø (shell bore liner only). */
+  /** Design bore Ø (shell bore liner and sleeves). */
   boreDiameter?: number;
+  /** Sleeves with holes: solid share of the bore surface between the bore bottom and the rim (0–1). */
+  boreContact?: number;
 }
 
 export interface OverhangSummary {

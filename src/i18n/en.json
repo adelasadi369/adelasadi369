@@ -134,6 +134,7 @@
   "insert.compensation": "compensation / side",
   "insert.calibrate": "Calibrate bore…",
   "export.fitRing": "Fit test ring (STL)",
+  "stats.boreContact": "Bore contact",
   "stats.bore": "Bore Ø",
   "calib.title": "Bore calibration",
   "calib.step1": "1. Print the fit test ring: the bottom 10 mm of this bore.",
