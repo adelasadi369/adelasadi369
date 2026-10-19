@@ -80,3 +80,48 @@ describe('cross-check with the S1 shell + bore liner', () => {
     SLOW,
   );
 });
+
+/** Random sleeves with organic holes (coverage 10–34 %) and 0–3 rim peaks, seeded. */
+const holedSleeve = (seed: number) => {
+  const p = randomSleeve(seed);
+  return normalizeParams({
+    ...p,
+    sleeve: {
+      ...p.sleeve,
+      holes: { ...p.sleeve.holes, mode: 'organicNoise', coverage: 10 + (seed % 4) * 8 },
+      topEdge: { ...p.sleeve.topEdge, peakCount: seed % 4, amplitude: 25 },
+    },
+  });
+};
+
+describe('sleeve holes: manifold across random seeds', () => {
+  it(
+    '10 seeds with holes at the drag voxel (2 mm)',
+    () => {
+      for (let seed = 201; seed <= 210; seed++) {
+        const b = buildSleeveMesh(holedSleeve(seed), DRAG_VOXEL);
+        expectSoundSleeve(b, `seed ${seed}`);
+        expect(b.mesh.sleeve.holes!.thinBridges, `seed ${seed}`).toBeNull();
+      }
+    },
+    SLOW,
+  );
+  it(
+    '3 seeds with holes at 1.0 mm',
+    () => {
+      for (let seed = 301; seed <= 303; seed++)
+        expectSoundSleeve(buildSleeveMesh(holedSleeve(seed), 1), `seed ${seed}`);
+    },
+    SLOW,
+  );
+  it(
+    'sleeve-starter at the export voxel (0.5 mm)',
+    () => {
+      const p = PRESETS.find((x) => x.id === 'sleeve-starter')!.params;
+      const b = buildSleeveMesh(p, p.sleeve.mesh.exportVoxel);
+      expectSoundSleeve(b, 'sleeve-starter');
+      expect(b.mesh.sleeve.islands.removedFraction).toBeLessThan(0.01);
+    },
+    SLOW,
+  );
+});

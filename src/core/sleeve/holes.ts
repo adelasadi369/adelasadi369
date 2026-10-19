@@ -66,7 +66,9 @@ export interface HoleInputs {
 const PITCH = 0.5;
 /** Hole-size calibration: noise wavelength / typical hole diameter at ≈ 15 % coverage. */
 const SIZE_K = 2.0;
+/** Merge rounds (teardrop → bridges → merge) per threshold, also the cap on finisher passes. */
 const MAX_ROUNDS = 4;
+/** Threshold runs of the coverage search. */
 const MAX_ITER = 6;
 const COVERAGE_TOL = 0.01;
 const FINE_TOL = 0.002;
@@ -353,6 +355,29 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
     return { S: out, merged, dropped };
   };
 
+  // ---- finisher: conflicts the merge rounds left drop their smaller hole (the hole, against the rim). Removing a
+  // hole never thins another bridge or changes a roof, so this ends with every bridge ≥ w.
+  const finish = (S0: Uint8Array, br0: ReturnType<typeof bridges>) => {
+    let S = S0;
+    let br = br0;
+    let dropped = 0;
+    for (let k = 0; k < MAX_ROUNDS && br.conflicts.length; k++) {
+      const { labels, area } = br.L;
+      const rimLabel = labels[n - 1];
+      const drop = new Set<number>();
+      for (const { a, b } of br.conflicts) {
+        if (drop.has(a) || drop.has(b)) continue;
+        drop.add(a === rimLabel ? b : b === rimLabel ? a : area[a] < area[b] || (area[a] === area[b] && a > b) ? a : b);
+      }
+      const out = S.slice();
+      for (let c = 0; c < n; c++) if (out[c] && drop.has(labels[c])) out[c] = 0;
+      S = out;
+      dropped += drop.size;
+      br = bridges(S);
+    }
+    return { S, br, dropped };
+  };
+
   const run = (frac: number) => {
     const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor(frac * sorted.length)));
     const tau = frac <= 0 ? -Infinity : frac >= 1 ? Infinity : sorted[idx];
@@ -367,7 +392,6 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
       S = fi.S;
       islands += fi.filled;
       br = bridges(S);
-      // dbg
       if (!br.conflicts.length) break;
       const rs = resolve(S, br);
       S = rs.S;
@@ -381,6 +405,10 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
       islands += fi.filled;
       br = bridges(S);
     }
+    const fin = finish(S, br);
+    S = fin.S;
+    br = fin.br;
+    dropped += fin.dropped;
     let open = 0;
     for (let c = 0; c < n; c++) open += S[c];
     return { S, tau, coverage: side ? open / side : 0, merged, dropped, islands, br };
@@ -416,8 +444,7 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
     below && (!above || target - below.coverage <= COVERAGE_TOL || above.coverage - target > 0.15) ? below : above!;
 
   // ---- fine coverage: merges and dropped holes make the threshold response jumpy, so finish by offsetting the
-  // hole set by δ along its distance (at R). Shrinking keeps roofs and widens bridges; growing is capped by the
-  // bridge slack (each side gives δ) and re-pointed by the teardrop step.
+  // hole set by δ along its distance (at R). Growing is capped by the bridge slack (each side gives δ).
   let open = best.S;
   let coverage = best.coverage;
   let br = best.br;
@@ -426,19 +453,22 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
     const withRim = new Uint8Array(n);
     for (let c = 0; c < n; c++) withRim[c] = open[c] | rim[c];
     const gR = signedDistance(g2, coverage > target ? withRim : open, dphi * R, dz);
+    // every candidate ends like a run: shrinking can pinch a merged hole in two (domed ends, a thin gap), growing
+    // re-points roofs that may reach the hole above
     const at = (d: number) => {
-      let S: Uint8Array = new Uint8Array(n);
-      for (let c = 0; c < n; c++) S[c] = gR[c] < d && !rim[c] ? 1 : 0;
-      if (d > 0) S = fillIslands(teardrop(S)).S;
+      const S0 = new Uint8Array(n);
+      for (let c = 0; c < n; c++) S0[c] = gR[c] < d && !rim[c] ? 1 : 0;
+      const S1 = fillIslands(teardrop(S0)).S;
+      const f = finish(S1, bridges(S1));
       let o = 0;
-      for (let c = 0; c < n; c++) o += S[c];
-      return { S, coverage: o / side };
+      for (let c = 0; c < n; c++) o += f.S[c];
+      return { S: f.S, coverage: o / side, br: f.br };
     };
     const cell = Math.max(dphi * R, dz);
     const slack = Number.isFinite(br.minGap) ? Math.max(0, (br.minGap - w) / 2 - cell) : hp.size / 2;
     let lo = coverage > target ? -hp.size / 2 : 0;
     let hi = coverage > target ? 0 : Math.min(slack, hp.size / 2);
-    let pick = { S: open, coverage };
+    let pick = { S: open, coverage, br };
     for (let k = 0; k < FINE_STEPS && hi - lo > 0.01; k++) {
       const mid = (lo + hi) / 2;
       const r = at(mid);
@@ -446,11 +476,9 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
       if (r.coverage < target) lo = mid;
       else hi = mid;
     }
-    if (pick.S !== open) {
-      open = pick.S;
-      coverage = pick.coverage;
-      br = bridges(open);
-    }
+    open = pick.S;
+    coverage = pick.coverage;
+    br = pick.br;
   }
 
   const S = open;
