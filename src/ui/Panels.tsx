@@ -150,6 +150,7 @@ const FINGER_PATHS = [
 ];
 const DRIP_PATHS = ['sleeve.drips.count', 'sleeve.drips.length', 'sleeve.drips.bulbSize', 'sleeve.drips.placement'];
 VISIBLE['sleeve.fingers.count'] = sleeve;
+VISIBLE['sleeve.selfSupporting'] = sleeve;
 VISIBLE['sleeve.drips.count'] = sleeve;
 for (const path of FINGER_PATHS) VISIBLE[path] ??= (p) => sleeve(p) && p.sleeve.fingers.count > 0;
 for (const path of DRIP_PATHS) VISIBLE[path] ??= (p) => sleeve(p) && p.sleeve.drips.count > 0;
@@ -246,6 +247,7 @@ function SleeveGroup() {
   if (!on) return null;
   return (
     <Group title={t('group.sleeve')}>
+      <Params paths={['sleeve.selfSupporting']} />
       <h4 className="mt-1 text-[11px] font-semibold text-muted">{t('group.sleeveHoles')}</h4>
       <Params paths={HOLE_PATHS} />
       <TeardropToggle />

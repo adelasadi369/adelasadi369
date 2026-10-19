@@ -72,6 +72,7 @@ export const skinKey = (p: VaseParams, voxel: number) =>
     p.rim.flareZone,
     p.base.footRing,
     p.print.maxOverhang,
+    p.sleeve.selfSupporting,
   ]);
 let cache: { key: string; map: SkinMap } | null = null;
 
@@ -118,6 +119,16 @@ function rasterise(params: VaseParams, voxel: number): SkinMap {
   }
   const dT = TAU / nT;
   const dZ = H / (nZ - 1);
+  // self-supporting (sleeve-spec §4.9): sweeping up each column, r_j ≤ r_{j−1} + dz·tan(maxOverhang − 2°); the
+  // overhang of ρ = r(θ, z) is atan(r_z / sqrt(1 + (r_θ / r)²)) ≤ atan(r_z), so this bounds every underside
+  if (params.sleeve.selfSupporting) {
+    const g = dZ * Math.tan((params.print.maxOverhang - 2) * (Math.PI / 180));
+    for (let j = 1; j < nZ; j++)
+      for (let i = 0; i < nT; i++) {
+        const lim = r[(j - 1) * nT + i] + g;
+        if (r[j * nT + i] > lim) r[j * nT + i] = lim;
+      }
+  }
   for (let j = 0; j < nZ; j++) {
     const jp = Math.min(nZ - 1, j + 1);
     const jm = Math.max(0, j - 1);

@@ -76,7 +76,7 @@ describe('paths', () => {
 });
 
 import { PARAMS, paramInfo } from '../src/core/params/meta';
-import { mutate, randomize } from '../src/core/params/random';
+import { mutate, randomize, variationCount } from '../src/core/params/random';
 import { decodeShare, encodeShare } from '../src/core/params/share';
 import { PRESETS } from '../src/presets';
 
@@ -203,5 +203,46 @@ describe('schema v4 migration (sleeve holes + top edge)', () => {
     expect(p.sleeve.holes.coverage).toBe(50);
     expect(p.sleeve.holes.minBridgeWidth).toBe(2);
     expect(p.sleeve.topEdge.peakCount).toBe(12);
+  });
+});
+
+describe('randomize / variations in sleeve mode', () => {
+  const sleeve = normalizeParams({
+    print: { outputMode: 'sleeve' },
+    insert: { od: 50, coreWall: 2.5 },
+    sleeve: { fingers: { count: 5, lean: 6 }, holes: { mode: 'voronoi' } },
+  });
+
+  it('randomize stays in sensible sleeve ranges, clears the core tube and never touches the insert', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const r = randomize(sleeve, seed);
+      expect(r.insert).toEqual(sleeve.insert);
+      expect(r.print).toEqual(sleeve.print);
+      expect(r.sleeve.holes.coverage).toBeLessThanOrEqual(25);
+      expect(r.sleeve.fingers.lean).toBeLessThanOrEqual(10);
+      expect(Math.abs(r.sleeve.fingers.curl)).toBeLessThanOrEqual(15);
+      expect(r.sleeve.fingers.count).toBeLessThanOrEqual(7);
+      for (const d of ['baseDiameter', 'topDiameter', 'maxDiameter'] as const)
+        expect(r.dimensions[d]).toBeGreaterThanOrEqual(50 + 2 * 2.5 + 16);
+    }
+  });
+
+  it('randomize and mutate respect locks (including the design seed)', () => {
+    const locked = { ...sleeve, random: { ...sleeve.random, locks: ['sleeve.fingers', 'random.seed'] } };
+    for (let seed = 1; seed <= 5; seed++) {
+      for (const r of [randomize(locked, seed), mutate(locked, 0.3, seed)]) {
+        expect(r.sleeve.fingers).toEqual(sleeve.sleeve.fingers);
+        expect(r.random.seed).toBe(sleeve.random.seed);
+      }
+    }
+    // unlocked, variations move sleeve knobs too
+    const m = mutate(sleeve, 0.3, 3);
+    expect(m.sleeve).not.toEqual(sleeve.sleeve);
+    expect(m.insert).toEqual(sleeve.insert);
+  });
+
+  it('a 3 × 3 grid of variations for sleeves, six for vases', () => {
+    expect(variationCount(sleeve)).toBe(9);
+    expect(variationCount(normalizeParams({}))).toBe(6);
   });
 });

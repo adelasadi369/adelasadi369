@@ -1718,6 +1718,16 @@ export const SleeveSchema = z
     topEdge: SleeveTopEdgeSchema,
     fingers: SleeveFingersSchema,
     drips: SleeveDripsSchema,
+    selfSupporting: bool(false, {
+      fa: 'خودنگه‌دار (بدون ساپورت)',
+      en: 'Self-supporting',
+      basic: true,
+      phase: 2,
+      tip: [
+        'روشن: پوسته هیچ‌جا از زاویهٔ آویز مجاز تندتر به بیرون نمی‌رود (شعاع در هر میلی‌متر بالا رفتن حداکثر tan زاویه بیشتر می‌شود)، پس بدون ساپورت چاپ می‌شود؛ بهایش این است که برآمدگی‌ها و چین‌های تند کوتاه می‌شوند تا حداکثر با همان زاویه پهن شوند (فرم آرام‌تر و باریک‌تر). انگشتی‌ها و قطره‌ها همیشه این قاعده را رعایت می‌کنند. خاموش: فرم کامل، شاید ساپورت لازم شود.',
+        'On: the skin never grows outward faster than the max overhang (radius gain per mm of height ≤ tan of the angle), so it prints without supports; the trade-off is that steep bulges and folds are trimmed back so they widen at most at that angle (calmer, slimmer shapes). Fingers and drips always follow this rule. Off: the full shape, which may need supports.',
+      ],
+    }),
     coreBlend: num(0, 8, 2, {
       fa: 'نرمی اتصال هسته',
       en: 'Core blend',

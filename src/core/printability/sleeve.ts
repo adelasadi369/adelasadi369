@@ -190,8 +190,12 @@ export function analyzeSleeve(b: SleeveBuild, p: VaseParams): Report {
   for (const v of s.baseVertices) oh.vertex[v] = -1;
   const issues: Issue[] = [];
 
-  // overhang (sleeve auto-fix arrives in S3, so no autofix action yet)
-  for (const i of overhangIssues(oh.summary, maxDeg)) issues.push({ ...i, fix: undefined });
+  // overhang: the auto-fix action runs the sleeve ablation (sleeveFix.ts); the self-supporting skin is a second fix
+  const selfSup = patch(t('پوستهٔ خودنگه‌دار', 'Self-supporting skin'), [
+    { path: 'sleeve.selfSupporting', value: true },
+  ]);
+  for (const i of overhangIssues(oh.summary, maxDeg))
+    issues.push(i.severity !== 'info' && !p.sleeve.selfSupporting ? { ...i, fixes: [...(i.fixes ?? []), selfSup] } : i);
 
   const v = s.validity;
   if (!v.ok) {

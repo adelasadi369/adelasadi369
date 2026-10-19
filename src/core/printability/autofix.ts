@@ -4,6 +4,7 @@ import { diffParams, getPath, setPath, type ParamDiff } from '../params/paths';
 import type { VaseParams } from '../params/schema';
 import { analyze } from './index';
 import { analyzeOverhang } from './overhang';
+import { sleeveAutoFix } from './sleeveFix';
 import type { Report } from './types';
 
 /** A parameter that can be moved toward a neutral value to reduce overhang. */
@@ -81,6 +82,7 @@ const done = (r: Report) => !hasErrors(r) && r.score >= 90;
  * that contribute to the overhang (ablation-ranked) in 10 % steps, max 20 steps.
  */
 export function autoFix(input: VaseParams, maxIter = 20): AutoFixResult {
+  if (input.print.outputMode === 'sleeve') return sleeveAutoFix(input);
   let p = input;
   // Decisions use preview resolution (what the user sees); ablation probes use the low grid.
   const evalP = (q: VaseParams) => analyze(buildMesh(q, 'medium'), q, { manifold: false });

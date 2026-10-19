@@ -2,12 +2,13 @@ import * as Comlink from 'comlink';
 import { buildMesh, type VaseMesh } from '../core/geometry/mesh';
 import type { Quality } from '../core/geometry/grid';
 import { exportDesign } from '../core/export';
-import { mutate, randomize } from '../core/params/random';
+import { mutate, randomize, variationCount } from '../core/params/random';
 import { normalizeParams } from '../core/params/normalize';
 import { analyze, buildDesign } from '../core/printability';
 import { autoFix } from '../core/printability/autofix';
 import { analyzeOverhang } from '../core/printability/overhang';
-import { VASE_PRESETS } from '../presets';
+import type { VaseParams } from '../core/params/schema';
+import { SLEEVE_PRESETS, VASE_PRESETS } from '../presets';
 import type { GeometryApi, MeshPayload } from './protocol';
 
 /** Manifold-ness only depends on the grid topology, so it is checked once per topology. */
@@ -73,11 +74,6 @@ const api: GeometryApi = {
   },
 
   autoFix(params) {
-    if (params.print.outputMode === 'sleeve') {
-      // sleeve auto-fix arrives in S3: report the design unchanged
-      const { vertexOverhang: _v, ...report } = analyze(buildDesign(params, 'low'), params);
-      return Promise.resolve({ params, diff: [], before: report.score, after: report.score, iterations: 0, report });
-    }
     const r = autoFix(params);
     const { vertexOverhang: _v, ...report } = r.report;
     return Promise.resolve({ ...r, report });
@@ -85,7 +81,8 @@ const api: GeometryApi = {
 
   surprise(seed, base) {
     const rnd = (seed * 2654435761) >>> 0;
-    const preset = VASE_PRESETS[rnd % VASE_PRESETS.length].params;
+    const pool = base.print.outputMode === 'sleeve' ? SLEEVE_PRESETS : VASE_PRESETS;
+    const preset = pool[rnd % pool.length].params;
     const start = normalizeParams({
       ...preset,
       print: base.print,
@@ -104,13 +101,24 @@ const api: GeometryApi = {
 
   variations(params, seed) {
     const out = [];
-    for (let k = 0; k < 6; k++) {
+    const sleeve = params.print.outputMode === 'sleeve';
+    for (let k = 0; k < variationCount(params); k++) {
       // alternate gentle (±15 %) and bolder (±30 %) mutations, each with fresh effect seeds
-      let v = mutate(params, k % 2 ? 0.3 : 0.15, (seed + 7919 * (k + 1)) >>> 0);
-      v = { ...v, effects: v.effects.map((e) => ('seed' in e ? { ...e, seed: (e.seed + 1013 * (k + 1)) >>> 0 } : e)) };
-      const r = analyze(buildDesign(v, 'low'), v, { manifold: false });
-      if ((v.print.outputMode !== 'sleeve' && r.score < 90) || r.issues.some((i) => i.severity === 'error'))
-        v = autoFix(v).params;
+      const make = (amount: number) => {
+        const v = mutate(params, amount, (seed + 7919 * (k + 1)) >>> 0);
+        return {
+          ...v,
+          effects: v.effects.map((e) => ('seed' in e ? { ...e, seed: (e.seed + 1013 * (k + 1)) >>> 0 } : e)),
+        };
+      };
+      const bad = (v: VaseParams) => {
+        const r = analyze(buildDesign(v, 'low'), v, { manifold: false });
+        return r.score < 90 || r.issues.some((i) => i.severity === 'error');
+      };
+      let v = make(k % 2 ? 0.3 : 0.15);
+      // sleeves: a full auto-fix per cell is too slow for a 3 × 3 grid, so a failing cell retries gentler mutations
+      if (sleeve) for (let a = 0.08; a > 0.01 && bad(v); a /= 2) v = make(a);
+      else if (bad(v)) v = autoFix(v).params;
       out.push(v);
     }
     return Promise.resolve(out);
@@ -118,7 +126,7 @@ const api: GeometryApi = {
 
   fixForAi(params) {
     const r = analyze(buildDesign(params, 'low'), params, { manifold: false });
-    if (params.print.outputMode === 'sleeve' || (r.score >= 90 && !r.issues.some((i) => i.severity === 'error')))
+    if (r.score >= 90 && !r.issues.some((i) => i.severity === 'error'))
       return Promise.resolve({ params, changed: 0, score: r.score });
     const f = autoFix(params);
     return Promise.resolve({ params: f.params, changed: f.diff.length, score: f.after });

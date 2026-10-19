@@ -40,7 +40,17 @@ export function presetLibrary(presets: Preset[]): string {
     .map((p) => {
       const q = p.params;
       const fx = q.effects.map((e) => e.type).join('+') || 'none';
-      return `${p.id}: "${p.name.en}" — profile ${q.profile.preset}, section ${q.section.bottom.shape}${q.section.morphEnabled ? '→' + q.section.top.shape : ''}, twist ${q.twist.total}°, effects ${fx}, mode ${q.print.outputMode}, H ${q.dimensions.height} mm`;
+      const line = `${p.id}: "${p.name.en}" — profile ${q.profile.preset}, section ${q.section.bottom.shape}${q.section.morphEnabled ? '→' + q.section.top.shape : ''}, twist ${q.twist.total}°, effects ${fx}, mode ${q.print.outputMode}, H ${q.dimensions.height} mm`;
+      if (q.print.outputMode !== 'sleeve') return line;
+      const s = q.sleeve;
+      const holes =
+        s.holes.mode === 'none' ? 'no holes' : `holes ${s.holes.mode} ${s.holes.coverage}% size ${s.holes.size}`;
+      const fingers = s.fingers.count
+        ? `, ${s.fingers.count} fingers (free ${s.fingers.freeLength} mm, ${s.fingers.tipShape})`
+        : '';
+      const drips = s.drips.count ? `, ${s.drips.count} drips (${s.drips.placement})` : '';
+      const rim = s.topEdge.peakCount ? `, ${s.topEdge.peakCount} rim peaks` : '';
+      return `${line}; sleeve on ${q.insert.type} Ø${q.insert.od}: lobes ${q.twist.lobes.count}, ${holes}${fingers}${drips}${rim}`;
     })
     .join('\n');
 }
@@ -53,6 +63,8 @@ const RULES = `PRINTABILITY RULES (the app enforces them, but aim to satisfy the
 - Prefer outputMode "solidVase" (spiral vase mode) unless the request needs a shell: ruffle, slanted rim, concave base, drainage hole and the "follow" inner surface require "shell".
 - Fresh flowers: prefer PETG. Outdoor planters need a drainage hole.
 - Never change insert.* or print.printer.holeCompensation unless the user explicitly asks about the tube, insert, bore, fit or calibration: they describe a real glass/steel tube and a calibrated printer.
+- Sleeves (print.outputMode "sleeve", an organic shell around a straight glass/steel tube): keep the outputMode, insert.* and print.printer.* as they are. The skin is the vase field (profile, twist, lobes, effects); start from the closest sleeve-* preset. Molten looks use organic style "blobs" (domain warp); silk drapes use lobes + "silkFolds" + rim peaks; windswept uses twist ≥ 120° and twist.bend.offset (lean) with angled holes; fingers use sleeve.fingers with a large freeLength; coral uses holes mode "voronoi"; drips use sleeve.drips.
+- Sleeve printability: hole coverage ≤ 35 %, minBridgeWidth ≥ 3 × 1.6 mm, keep-out bands ≥ 8 mm, teardropTops on; finger lean/curl and twist are limited to the max overhang automatically; turn on sleeve.selfSupporting when the user wants no supports at all.
 - Tube bore (print.innerSurface "bore", shell only): R_bore = insert.od/2 + insert.clearance + insert.odTolerance/2 + holeCompensation. The outer radius must stay ≥ R_bore + insert.coreWall at every height, so keep every diameter ≥ insert.od + 2 × insert.coreWall + a few mm.`;
 
 export function designSystemPrompt(presets: Preset[]): string {

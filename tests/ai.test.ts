@@ -149,4 +149,17 @@ describe('AI prompt and the tube insert', () => {
     expect(sys).toContain('print.printer.holeCompensation');
     expect(refineSystemPrompt()).toMatch(/Never change insert\.\*/);
   });
+
+  it('lists the six sleeve presets with their sleeve features, and the sleeve params with their meta', () => {
+    const sys = designSystemPrompt(PRESETS);
+    for (const id of ['molten', 'silk-drape', 'windswept', 'fingers', 'coral', 'drip'])
+      expect(sys).toMatch(new RegExp(`^sleeve-${id}: .*; sleeve on (glass|steel) Ø\\d+`, 'm'));
+    expect(sys).toMatch(/sleeve-fingers: .*6 fingers/);
+    expect(sys).toMatch(/sleeve-coral: .*holes voronoi/);
+    expect(sys).toContain('sleeve.fingers.freeLength | number 0..250 mm');
+    expect(sys).toContain('sleeve.drips.placement | rim|fingers|random');
+    expect(sys).toContain('sleeve.selfSupporting | bool');
+    expect(sys).toContain('sleeve.holes.mode | none|organicNoise|ellipses|voronoi|foldGaps');
+    expect(sys).toMatch(/keep the outputMode, insert\.\* and print\.printer\.\*/);
+  });
 });

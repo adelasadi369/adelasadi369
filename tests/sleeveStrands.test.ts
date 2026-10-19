@@ -118,3 +118,31 @@ describe.each([
     expect(again.mesh.sleeve.holes!.coverage).toBe(hs.coverage);
   });
 });
+
+describe('self-supporting skin', () => {
+  it('removes the red overhang of a steep belly; the trade-off is less volume under it', () => {
+    const base = {
+      dimensions: { height: 120, baseDiameter: 66, maxDiameter: 150, topDiameter: 120, bellyPosition: 80 },
+      profile: { preset: 'convex' as const, strength: 80 },
+      effects: [{ type: 'organic' as const, style: 'blobs' as const, amount: 8, scale: 40 }],
+      print: { outputMode: 'sleeve' as const },
+      insert: { od: 40 },
+    };
+    const off = normalizeParams(base);
+    const on = normalizeParams({ ...base, sleeve: { selfSupporting: true } });
+    const bOff = buildSleeveMesh(off, DRAG_VOXEL);
+    const ro = analyze(bOff, off);
+    const bOn = buildSleeveMesh(on, DRAG_VOXEL);
+    const rn = analyze(bOn, on);
+    const red = (r: typeof ro) => r.issues.filter((i) => i.id.startsWith('overhang-red'));
+    expect(red(ro).length).toBeGreaterThan(0);
+    // the overhang issue offers the self-supporting skin as an extra fix
+    expect(red(ro)[0].fixes?.some((f) => f.kind === 'patch' && f.changes[0].path === 'sleeve.selfSupporting')).toBe(
+      true,
+    );
+    expect(red(rn)).toEqual([]);
+    expect(rn.overhang.redFraction).toBeLessThan(0.001);
+    expect(bOn.mesh.sleeve.validity.volume).toBeLessThan(bOff.mesh.sleeve.validity.volume);
+    expectSoundSleeve(bOn, 'selfSupporting');
+  });
+});
