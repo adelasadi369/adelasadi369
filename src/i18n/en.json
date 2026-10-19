@@ -146,5 +146,8 @@
   "calib.result": "Hole compensation",
   "calib.clamped": "Outside the allowed range, so it was clamped. Re-check the measurement.",
   "calib.save": "Save to printer profile",
-  "calib.saved": "Hole compensation saved (Ctrl+Z to undo)"
+  "calib.saved": "Hole compensation saved (Ctrl+Z to undo)",
+  "kind.vase": "Vase",
+  "kind.sleeve": "Sleeve",
+  "group.sleeveMesh": "Sleeve mesh"
 }

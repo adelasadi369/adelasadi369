@@ -73,6 +73,32 @@ function ExportMenu() {
   );
 }
 
+/** Vase | Sleeve: sleeve is its own output mode; going back restores the last vase output mode. */
+function KindSwitch() {
+  const t = useT();
+  const sleeve = useStore((s) => s.params.print.outputMode === 'sleeve');
+  const setKind = useStore((s) => s.setKind);
+  return (
+    <div className="flex shrink-0 rounded-lg border border-line p-0.5 text-xs" role="radiogroup">
+      {(['vase', 'sleeve'] as const).map((k) => {
+        const on = (k === 'sleeve') === sleeve;
+        return (
+          <button
+            key={k}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => setKind(k)}
+            className={`rounded-md px-2.5 py-1 ${on ? 'bg-accent text-white' : 'text-muted hover:text-ink'}`}
+          >
+            {t(`kind.${k}`)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function TopBar() {
   const t = useT();
   const s = useStore();
@@ -106,6 +132,7 @@ export function TopBar() {
         onChange={(e) => s.replace({ ...s.params, name: e.target.value }, false)}
       />
       <div className="mx-1 h-6 w-px bg-line" />
+      <KindSwitch />
       <Btn onClick={() => setModal('presets')}>▦ {t('btn.presets')}</Btn>
       <div className="scroll-thin flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
         <Btn onClick={s.randomize} title={t('btn.randomize')}>

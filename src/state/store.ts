@@ -11,7 +11,9 @@ import {
   type Effect,
   type I18nText,
   type PrinterPreset,
+  type VaseMode,
   type VaseParams,
+  VASE_MODES,
 } from '../core/params/schema';
 import { listPrinterProfiles, savePrinterProfile } from '../persist/db';
 import { applyImageAnalysis, applyProposal, applyRefine, applySilhouette } from '../ai/apply';
@@ -79,6 +81,9 @@ interface Store {
   shareLink(): Promise<void>;
   setLang(l: Lang): void;
   setLevel(l: 'basic' | 'advanced'): void;
+  /** Last vase output mode, restored by the top-bar Vase | Sleeve switch (UI pref). */
+  lastVaseMode: VaseMode;
+  setKind(kind: 'vase' | 'sleeve'): void;
   setTab(t: TabId): void;
   setViewer(v: Partial<ViewerState>): void;
   showToast(msg: string | null): void;
@@ -115,12 +120,18 @@ export interface AiState {
 const HISTORY = 200;
 const PREFS = 'vaseforge:prefs';
 
-function loadPrefs(): { lang: Lang; level: 'basic' | 'advanced' } {
+const isVaseMode = (m: unknown): m is VaseMode => (VASE_MODES as readonly unknown[]).includes(m);
+
+function loadPrefs(): { lang: Lang; level: 'basic' | 'advanced'; lastVaseMode: VaseMode } {
   try {
     const p = JSON.parse(localStorage.getItem(PREFS) ?? '{}');
-    return { lang: p.lang === 'en' ? 'en' : 'fa', level: p.level === 'advanced' ? 'advanced' : 'basic' };
+    return {
+      lang: p.lang === 'en' ? 'en' : 'fa',
+      level: p.level === 'advanced' ? 'advanced' : 'basic',
+      lastVaseMode: isVaseMode(p.lastVaseMode) ? p.lastVaseMode : 'solidVase',
+    };
   } catch {
-    return { lang: 'fa', level: 'basic' };
+    return { lang: 'fa', level: 'basic', lastVaseMode: 'solidVase' };
   }
 }
 
@@ -142,7 +153,8 @@ export const useStore = create<Store>((set, get) => {
     set({ params: next, past: push(prev), future: [], dragBase: null, fix: { ...get().fix, status: 'idle' } });
   const savePrefs = () => {
     try {
-      localStorage.setItem(PREFS, JSON.stringify({ lang: get().lang, level: get().level }));
+      const { lang, level, lastVaseMode } = get();
+      localStorage.setItem(PREFS, JSON.stringify({ lang, level, lastVaseMode }));
     } catch {
       /* private mode */
     }
@@ -297,6 +309,15 @@ export const useStore = create<Store>((set, get) => {
     setLevel(level) {
       set({ level });
       savePrefs();
+    },
+    lastVaseMode: prefs.lastVaseMode,
+    setKind(kind) {
+      const mode = get().params.print.outputMode;
+      if (kind === 'sleeve' && mode !== 'sleeve') {
+        set({ lastVaseMode: mode });
+        savePrefs();
+        get().setParam('print.outputMode', 'sleeve');
+      } else if (kind === 'vase' && mode === 'sleeve') get().setParam('print.outputMode', get().lastVaseMode);
     },
     setTab: (tab) => set({ tab }),
     setViewer: (v) => set({ viewer: { ...get().viewer, ...v } }),

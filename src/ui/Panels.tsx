@@ -14,9 +14,12 @@ import { SvgImportButton } from './SvgImportButton';
 type Rule = (p: VaseParams) => boolean;
 const NO_BELLY = ['straight', 'taper', 'concave', 'hourglass', 'flaredTrumpet'];
 const NO_NECK = ['straight', 'taper', 'convex', 'teardrop', 'sphere', 'custom'];
-const shell: Rule = (p) => p.print.outputMode !== 'solidVase';
+const sleeve: Rule = (p) => p.print.outputMode === 'sleeve';
+const vase: Rule = (p) => !sleeve(p);
+const shell: Rule = (p) => p.print.outputMode !== 'solidVase' && vase(p);
 const fullShell: Rule = (p) => p.print.outputMode === 'shell';
-const bore: Rule = (p) => fullShell(p) && p.print.innerSurface === 'bore';
+/** Tube bore: the shell bore liner or a sleeve; both use the insert block. */
+const bore: Rule = (p) => (fullShell(p) && p.print.innerSurface === 'bore') || sleeve(p);
 const bottomIs =
   (...kinds: VaseParams['insert']['bottom'][]): Rule =>
   (p) =>
@@ -41,6 +44,9 @@ const VISIBLE: Record<string, Rule> = {
   'rim.lipThickness': (p) => shell(p) && !bore(p),
   'rim.round': shell,
   'base.bottomThickness': (p) => !bore(p),
+  'base.chamfer': vase,
+  'base.saucer.enabled': vase,
+  'print.outputMode': vase,
   'base.footRing.inset': (p) => p.base.footRing.height > 0,
   'print.wallThickness': (p) => shell(p) && !bore(p),
   'print.innerSurface': (p) => p.print.outputMode === 'shell',
@@ -50,9 +56,13 @@ const VISIBLE: Record<string, Rule> = {
   'rim.slant.angle': (p) => fullShell(p) && p.rim.slant.height > 0,
   'base.concave': (p) => fullShell(p) && !bore(p),
   'base.drainageHole': (p) => fullShell(p) && !bore(p),
-  'base.saucer.gap': (p) => p.base.saucer.enabled,
-  'base.saucer.height': (p) => p.base.saucer.enabled,
-  'base.saucer.rim': (p) => p.base.saucer.enabled,
+  'base.saucer.gap': (p) => vase(p) && p.base.saucer.enabled,
+  'base.saucer.height': (p) => vase(p) && p.base.saucer.enabled,
+  'base.saucer.rim': (p) => vase(p) && p.base.saucer.enabled,
+  'sleeve.coreBlend': sleeve,
+  'sleeve.mesh.previewVoxel': sleeve,
+  'sleeve.mesh.exportVoxel': sleeve,
+  'sleeve.mesh.smoothing': sleeve,
   'print.printer.bedX': (p) => p.print.printer.preset === 'custom',
   'print.printer.bedY': (p) => p.print.printer.preset === 'custom',
   'print.printer.bedZ': (p) => p.print.printer.preset === 'custom',
@@ -306,6 +316,10 @@ function PrintPanel() {
         paths={['print.outputMode', 'print.wallThickness', 'print.innerSurface', 'print.useCase', 'print.material']}
       />
       <InsertGroup />
+      <ParamGroup
+        title={t('group.sleeveMesh')}
+        paths={['sleeve.coreBlend', 'sleeve.mesh.previewVoxel', 'sleeve.mesh.exportVoxel', 'sleeve.mesh.smoothing']}
+      />
       <ParamGroup
         title={t('group.printer')}
         paths={[

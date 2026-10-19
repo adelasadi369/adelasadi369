@@ -128,7 +128,7 @@ describe('schema v2 migration (insert block)', () => {
     delete v1.insert;
     delete (v1.print as { printer: Record<string, unknown> }).printer.holeCompensation;
     const raw = migrateParams(v1) as typeof v1;
-    expect(raw.version).toBe(2);
+    expect(raw.version).toBe(SCHEMA_VERSION);
     expect((raw.print as { printer: { holeCompensation: number } }).printer.holeCompensation).toBe(0.05);
     const p = normalizeParams(v1);
     expect(p.version).toBe(SCHEMA_VERSION);
@@ -160,5 +160,23 @@ describe('schema v2 migration (insert block)', () => {
   it('decodes a v1 share token onto v2 defaults', () => {
     const token = encodeShare(PRESETS[1].params).replace(/^\d+\./, '1.');
     expect(decodeShare(token)).toEqual(PRESETS[1].params);
+  });
+});
+
+describe('schema v3 migration (sleeve mode)', () => {
+  it('upgrades a v2 document and fills the sleeve block', () => {
+    const v2 = { ...structuredClone(PRESETS[2].params), version: 2 } as Record<string, unknown>;
+    delete v2.sleeve;
+    const p = normalizeParams(v2);
+    expect(p.version).toBe(3);
+    expect(p.sleeve).toEqual(DEFAULT_PARAMS.sleeve);
+    expect(p.print.outputMode).toBe(PRESETS[2].params.print.outputMode);
+  });
+
+  it('accepts the sleeve output mode and its mesh defaults', () => {
+    const p = normalizeParams({ print: { outputMode: 'sleeve' } });
+    expect(p.print.outputMode).toBe('sleeve');
+    expect(p.sleeve.mesh).toEqual({ previewVoxel: 1, exportVoxel: 0.5, smoothing: 3 });
+    expect(normalizeParams({ sleeve: { mesh: { exportVoxel: 0.1 } } }).sleeve.mesh.exportVoxel).toBe(0.3);
   });
 });

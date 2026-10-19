@@ -14,6 +14,8 @@ const MIGRATIONS: Record<number, (p: Raw) => void> = {
       printer.holeCompensation = preset ? preset.holeCompensation : PRINTER_PRESETS.bambuA1.holeCompensation;
     }
   },
+  // v2 → v3: outputMode 'sleeve' and the `sleeve` block (filled by its defaults); nothing to rewrite.
+  2: () => {},
 };
 
 /**
