@@ -504,7 +504,9 @@ No peaks or zero amplitude keeps the S2a sharp cut `z − H` (byte-identical mes
 ### 13b. Openings (`sleeve/holes.ts`, `sleeve/grid2d.ts`)
 
 The hole set is built on a periodic map over (φ, z) at 0.5 mm per cell at the mean skin radius `r_ref`, independent
-of the voxel, and cached while hole, top-edge, seed, overhang and bore inputs are unchanged. Holes are radial
+of the voxel, and cached while hole, top-edge, seed, overhang and bore inputs are unchanged. `r_ref` and `r_out`
+come from a fixed 256 × 64 sampling of the skin (`skinRadii`, `r_out` + 2 % + 0.5 mm), not from the voxel-dependent
+skin map, so drag, release and export share one hole map. Holes are radial
 through-holes. Each step uses the metric where its constraint is tightest (an anisotropic distance transform,
 exact Felzenszwalb, periodic in φ):
 
