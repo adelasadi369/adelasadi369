@@ -52,7 +52,8 @@ Repository layout (paths relative to the repo root; the spec's `/core`,
 
 ```
 src/core/{params,geometry,printability,export,random,jsonpatch}
-src/presets/*.json          14 trend presets + sleeve-starter (full param JSON) + index.ts (VASE_/SLEEVE_PRESETS)
+src/presets/*.json          14 trend presets + 7 sleeve presets (starter, molten, silk-drape, windswept, fingers,
+                            coral, drip; full param JSON) + index.ts (VASE_/SLEEVE_PRESETS)
 src/ai/{prompts.ts,schema.ts,client.ts}
 src/workers/geometry.worker.ts
 src/ui/…  src/state/…  src/persist/…
@@ -164,8 +165,11 @@ the UI (labels, tooltips, units, steps, Basic/Advanced, phase gating) and
   (sleeve topology is not fixed, so nothing is cached), plus islands, bore accuracy between ribs (hole edges
   skipped), min wall from the SDF, overhang without the bed seam (teardrop tips count as short bridges), bounds,
   the reused bore checks, and with holes `sleeve-bridges` and `sleeve-bore-contact` (`stats.boreContact`).
-  An issue may offer extra one-click fixes in `Issue.fixes` (PrintCheck shows one button each). Sleeve auto-fix
-  arrives in S3.
+  An issue may offer extra one-click fixes in `Issue.fixes` (PrintCheck shows one button each). Sleeve overhang
+  issues offer the auto-fix and a "self-supporting skin" patch.
+- Sleeve auto-fix (`printability/sleeveFix.ts`, GEOMETRY.md §13f): `autoFix()` dispatches sleeves to the same
+  ablation idea on the sleeve path: shape knobs probed without holes on a 3 mm lattice, then hole knobs; decisions
+  at the 2 mm drag voxel; `insert.*` and the printer are never changed.
 - Auto-fix (§3 of GEOMETRY.md) is iterative and runs on a low-res grid
   (128×100), then re-verifies at preview resolution and returns a param diff.
 
@@ -217,7 +221,11 @@ the UI (labels, tooltips, units, steps, Basic/Advanced, phase gating) and
   is sent as a hint, or applied directly with "use silhouette only", with
   no AI involved.
 - **Variations:** 6 seeded mutations (±15 % / ±30 %, fresh effect seeds)
-  generated in the worker and auto-fixed. No AI call.
+  generated in the worker and auto-fixed. No AI call. Sleeves get a 3 × 3 grid (`variationCount`); mutate also
+  jitters the sleeve shape knobs (never counts, bridges, keep-outs or the insert), locks (including `random.seed`)
+  are respected, and a failing cell retries gentler mutations instead of a full sleeve auto-fix.
+- **Randomize / Surprise in sleeve mode:** sensible sleeve ranges (`SLEEVE_SAFE` in `params/random.ts`: holes, rim,
+  fingers, drips; every diameter clears the core tube by ≥ 8 mm per side); Surprise starts from a sleeve preset.
 - Slider edits never touch the network.
 
 ## 10. Testing
@@ -238,4 +246,8 @@ Vitest, core only. Test files:
   error issues; sleeve presets also pass the bore check at the preview voxel.
 - `sleeveHoles.test.ts` (+ hole sweeps in `sleeve.slow.test.ts`): EDT vs brute force, top edge, coverage from
   radial rays (±3 points), bridges ≥ minBridgeWidth, roof overhang from normals, keep-outs, determinism, checks.
+- `sleeveStrands.test.ts` (+ random finger seeds in `sleeve.slow.test.ts`): finger tilt / radii / rooting, drip
+  bulb angles, no holes above the body cap, finger and drip presets at 1 mm (strand overhang from normals, strand
+  walls ≥ two lines), each new hole mode (coverage ±3 points, bridges, manifold, determinism), self-supporting skin.
+- `autofix.test.ts`: vase ablation and the sleeve auto-fix (errors removed, insert / printer untouched).
 - `perf.bench.ts`: preview regen < 50 ms (reported, not a hard CI gate).

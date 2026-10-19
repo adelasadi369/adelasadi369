@@ -164,6 +164,27 @@ New blocks, each with ranges in zod and labels/tooltips (fa/en), units, steps an
     span > 1/3 of the circumference (at the bore radius) or > 2.5 × size in height; then the smaller hole goes.
     Holes that reach the rim open into a notch.
   - New stat `boreContact` (solid share of the bore between its bottom and the rim) with a warning below 40 %.
+- **As implemented in S3** (`SCHEMA_VERSION` 5; v4 → v5 moves a stored `smoothing` 3 → 4 and `edgeRoundness` 1 → 1.5):
+  - Smoother defaults: `mesh.smoothing` 4 (5+ thins 3 mm ribs below two lines at the 2 mm drag voxel), hole
+    `edgeRoundness` 1.5 mm, rim rounded by a 2.5 mm smooth max (also flat tops), one-octave hole noise, specks
+    < 0.4 × size dropped.
+  - **New skin option** (the only one): organic effect `style: 'blobs'` (domain-warped fBm) + `warp` 0–2 (1), through
+    the existing effects system; `stretch` now also applies to blobs.
+  - `sleeve.fingers`: `count` 0–12 (0), `width` 4–30 mm (12), `widthVariation` % (30), `heightMin`/`heightMax`
+    20–100 % of H (70/100, tip heights), `freeLength` 0–250 mm (50), `tipShape` round|pointed|dripBulb, `twist`
+    ±360° (0, on top of the skin twist), `lean` 0–40° (5, outward), `curl` ±40° (10), `taper` 0–80 % (40), `blend`
+    0–12 mm (4, also for drips). The spec's `lobeCount`/`lobeBlend`/… map onto these; attached lobes stay
+    `twist.lobes`. Skin and core are capped at `z_body = lowest tip − freeLength` (never below `minTubeCoverage`),
+    so the free part stands alone; no holes above `z_body`.
+  - `sleeve.drips`: `count` 0–12 (0), `length` 5–150 mm (35), `bulbSize` 3–20 mm (8), `placement` rim|fingers|random
+    (fingers = one per finger tip, the rest from the rim).
+  - `sleeve.holes.mode` adds `ellipses`, `voronoi`, `foldGaps` (one shared pipeline, GEOMETRY.md §13d).
+  - `sleeve.selfSupporting` (off): skin radius growth ≤ tan(maxOverhang − 2°) per mm; fingers and drips are always
+    self-supporting (tilt ≤ maxOverhang − 3°, bulb undersides ≤ maxOverhang − 8°). `minWall` of the spec is two
+    print lines; strands never go below `max(1.25, lineWidth)` radius.
+  - Deviations: fingers are round strands (the references' flat ribbon fingers are approximated by lobes + round
+    fingers); fold gaps read the skin about the slice centre (bend ignored); `selfSupporting` ignores bend's `dC/dz`;
+    the sleeve auto-fix steps 25 % (not 10 %) and stops after 8 steps, because each probe is a sleeve build.
 - **Visibility:**
   - Vase-only controls are hidden in sleeve mode via `visibility.ts`: rim lip/round rim, ruffle/slant, concave base, drainage, double wall, saucer, spiral G-code.
   - Sleeve controls are hidden in vase modes, except `insert` when the shell liner is `bore` (§6).
@@ -206,6 +227,9 @@ Use the same `analyze()` issue/score/fixAction framework. Add sleeve checks:
 - **Existing checks that still apply:** overhang (from normals), bounds and stability. For stability, include the insert mass (glass ≈ 2.5 g/cm³, steel ≈ 7.9 g/cm³) plus water.
 
 **Auto-fix for sleeves:** reuse the ablation approach at low resolution. Contributors are hole coverage/size, finger lean/curl, skin effect depths and twist.
+As implemented in S3 (`printability/sleeveFix.ts`, GEOMETRY.md §13f): shape knobs (twist, lobes, bend, max diameter,
+flare, effect depths, finger lean/curl/width, drip bulb) probed without holes on a 3 mm lattice, then hole knobs
+(coverage, size, minBridgeWidth); the overhang issue also offers "self-supporting skin".
 
 ---
 
