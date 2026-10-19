@@ -179,9 +179,12 @@ export function analyzeSleeve(b: SleeveBuild, p: VaseParams): Report {
   // the first voxel above the bed is the base seam; teardrop tips are short bridges (see tipZone)
   const hm = b.sdf.holes;
   const dTip = tipZone(s.voxel, hm?.k ?? 0);
+  // drip bottoms and pointed finger tips are rounded tips too (strands.ts)
+  const st = b.sdf.strands;
+  const strandTip = st.list.length ? st.tip : null;
   const oh = analyzeOverhang(mesh, maxDeg, {
     bedSkip: s.voxel,
-    soft: hm ? (x, y, z) => hm.tip(Math.atan2(y, x), z, dTip) : undefined,
+    soft: hm || strandTip ? (x, y, z) => !!(hm?.tip(Math.atan2(y, x), z, dTip) || strandTip?.(x, y, z)) : undefined,
   });
   // the bed is not an overhang
   for (const v of s.baseVertices) oh.vertex[v] = -1;

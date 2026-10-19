@@ -15,7 +15,15 @@ describe('presets', () => {
   it('has the 14 trend presets and the sleeve presets, in sync with their sources', () => {
     expect(PRESETS.map((p) => p.id)).toEqual(PRESET_SOURCES.map((s) => s.id));
     expect(VASE_PRESETS).toHaveLength(14);
-    expect(SLEEVE_PRESETS.map((p) => p.id)).toEqual(['sleeve-starter', 'sleeve-molten', 'sleeve-silk-drape', 'sleeve-windswept']);
+    expect(SLEEVE_PRESETS.map((p) => p.id)).toEqual([
+      'sleeve-starter',
+      'sleeve-molten',
+      'sleeve-silk-drape',
+      'sleeve-windswept',
+      'sleeve-fingers',
+      'sleeve-coral',
+      'sleeve-drip',
+    ]);
     for (const p of PRESETS) {
       const src = PRESET_SOURCES.find((s) => s.id === p.id)!;
       const regenerated = normalizeParams({ ...src.params, name: src.name.en });

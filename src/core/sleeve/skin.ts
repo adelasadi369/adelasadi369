@@ -60,7 +60,7 @@ let radiiCache: { key: string; radii: { mean: number; outer: number } } | null =
 const qualityFor = (voxel: number): Quality => (voxel >= 1.5 ? 'low' : voxel > 0.7 ? 'medium' : 'high');
 
 /** Everything compileField reads; the map is a pure function of these and the voxel. */
-const skinKey = (p: VaseParams, voxel: number) =>
+export const skinKey = (p: VaseParams, voxel: number) =>
   JSON.stringify([
     voxel,
     p.dimensions,

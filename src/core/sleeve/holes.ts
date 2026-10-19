@@ -1,7 +1,8 @@
 import { DEG, TAU } from '../math';
 import type { VaseParams } from '../params/schema';
-import { createSimplex3 } from '../random';
 import { blur, edt, label, signedDistance, type Grid2 } from './grid2d';
+import { holeField } from './holeFields';
+import { skinKey } from './skin';
 import type { TopEdge } from './topEdge';
 
 /**
@@ -60,12 +61,12 @@ export interface HoleInputs {
   rRef: number;
   rOut: number;
   top: TopEdge;
+  /** Body cap (fingers stand free above it): no holes above min(Htop, cap). */
+  cap?: number;
 }
 
 /** Map cell size at r_ref (mm); the map does not depend on the voxel. */
 const PITCH = 0.5;
-/** Hole-size calibration: noise wavelength / typical hole diameter at ≈ 15 % coverage. */
-const SIZE_K = 2.0;
 /** Merge rounds (teardrop → bridges → merge) per threshold, also the cap on finisher passes. */
 const MAX_ROUNDS = 4;
 /** Threshold runs of the coverage search. */
@@ -92,6 +93,8 @@ export function buildHoleMap(params: VaseParams, inp: HoleInputs): HoleMap | nul
     inp.zb,
     inp.rRef,
     inp.rOut,
+    inp.cap ?? inp.H,
+    h.mode === 'foldGaps' ? skinKey(params, -1) : 0,
   ]);
   if (cache?.key === key) return cache.map;
   const map = build(params, inp);
@@ -119,7 +122,7 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
   const boreBand = new Uint8Array(n);
   let side = 0;
   for (let i = 0; i < nx; i++) {
-    const ht = top.at(i * dphi);
+    const ht = Math.min(top.at(i * dphi), inp.cap ?? H);
     for (let j = 0; j < nz; j++) {
       const z = j * dz;
       const c = j * nx + i;
@@ -132,25 +135,8 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
     }
   }
 
-  // ---- organic noise in surface coordinates: sampled on the cylinder r_ref (periodic), stretched, sheared by angle
-  const noise = createSimplex3((params.random.seed ^ 0x6a09e667) >>> 0);
-  const f = 1 / (hp.size * SIZE_K);
-  const shear = Math.tan(hp.angle * DEG) / rRef;
-  const vari = hp.sizeVariation / 100;
-  const field = new Float64Array(n);
-  for (let j = 0; j < nz; j++) {
-    const z = j * dz;
-    const zs = (z / hp.verticalStretch) * f;
-    for (let i = 0; i < nx; i++) {
-      const c = j * nx + i;
-      if (!allowed[c]) continue;
-      const p = i * dphi - z * shear;
-      const x = rRef * Math.cos(p) * f;
-      const y = rRef * Math.sin(p) * f;
-      // one octave: a second one frays the hole outlines (S3: rounded ovals like the references)
-      field[c] = noise(x, y, zs) + 0.8 * vari * noise(0.35 * x + 17.3, 0.35 * y - 4.1, 0.35 * zs + 9.7);
-    }
-  }
+  // ---- hole field for the mode (holeFields.ts); lower = opens first
+  const field = holeField(params, { nx, nz, dphi, dz, rRef, allowed });
   const sorted: number[] = [];
   for (let c = 0; c < n; c++) if (allowed[c]) sorted.push(field[c]);
   sorted.sort((a, b) => a - b);

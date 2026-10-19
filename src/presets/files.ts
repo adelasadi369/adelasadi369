@@ -17,5 +17,8 @@ import sleeveStarter from './sleeve-starter.json';
 import sleeveMolten from './sleeve-molten.json';
 import sleeveSilkDrape from './sleeve-silk-drape.json';
 import sleeveWindswept from './sleeve-windswept.json';
+import sleeveFingers from './sleeve-fingers.json';
+import sleeveCoral from './sleeve-coral.json';
+import sleeveDrip from './sleeve-drip.json';
 
-export const PRESET_FILES: Record<string, unknown> = { 'japandi-ribbed': japandiRibbed, 'twisted-hex': twistedHex, 'fluted-column': flutedColumn, 'helix-ribs': helixRibs, 'ripple-wave': rippleWave, 'star-bloom': starBloom, 'silk-drape': silkDrape, 'low-poly-facet': lowPolyFacet, 'lattice-teardrop': latticeTeardrop, 'supershape-bloom': supershapeBloom, 'stone-glitch': stoneGlitch, 'hammered-urn': hammeredUrn, 'stepped-square': steppedSquare, 'planter-classic': planterClassic, 'sleeve-starter': sleeveStarter, 'sleeve-molten': sleeveMolten, 'sleeve-silk-drape': sleeveSilkDrape, 'sleeve-windswept': sleeveWindswept };
+export const PRESET_FILES: Record<string, unknown> = { 'japandi-ribbed': japandiRibbed, 'twisted-hex': twistedHex, 'fluted-column': flutedColumn, 'helix-ribs': helixRibs, 'ripple-wave': rippleWave, 'star-bloom': starBloom, 'silk-drape': silkDrape, 'low-poly-facet': lowPolyFacet, 'lattice-teardrop': latticeTeardrop, 'supershape-bloom': supershapeBloom, 'stone-glitch': stoneGlitch, 'hammered-urn': hammeredUrn, 'stepped-square': steppedSquare, 'planter-classic': planterClassic, 'sleeve-starter': sleeveStarter, 'sleeve-molten': sleeveMolten, 'sleeve-silk-drape': sleeveSilkDrape, 'sleeve-windswept': sleeveWindswept, 'sleeve-fingers': sleeveFingers, 'sleeve-coral': sleeveCoral, 'sleeve-drip': sleeveDrip };

@@ -124,5 +124,26 @@
       "fa": "غلاف باد‌خورده",
       "en": "Sleeve Windswept"
     }
+  },
+  {
+    "id": "sleeve-fingers",
+    "name": {
+      "fa": "غلاف انگشتی",
+      "en": "Sleeve Fingers"
+    }
+  },
+  {
+    "id": "sleeve-coral",
+    "name": {
+      "fa": "غلاف مرجانی",
+      "en": "Sleeve Coral"
+    }
+  },
+  {
+    "id": "sleeve-drip",
+    "name": {
+      "fa": "غلاف چکه",
+      "en": "Sleeve Drip"
+    }
   }
 ]
