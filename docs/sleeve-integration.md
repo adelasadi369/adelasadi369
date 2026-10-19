@@ -93,6 +93,9 @@ body    = max(body, R_bore − ρ) for z > floorZ      (exact bore, sharp, ALWAY
 - **Attached lobes:** the existing inward-normalised `Lobes` already covers them. Only free-standing fingers are new SDF primitives: tapered capsules along twisted, leaning, curling paths that stay connected below `lobeFreeLength`.
 - **Hole fields:** organic noise, ellipses, Voronoi or fold-gap. They are evaluated in surface coordinates `(arc length, z)` on the skin.
 - **Teardrop tops:** `g_td(p) = min_t ( g(p − t·ẑ) + t·tan(maxOverhang) )`, using 8–12 samples.
+  - As implemented (S2b): g is the per-layer horizontal distance and every map row is a sample (a layer sweep,
+    GEOMETRY.md §13b). Sparse samples leave flat shelves over wide holes, and with a 2D distance the formula
+    needs `sin α` instead of `tan α`.
 - **Coverage control:** enforce `minBridgeWidth`, and iterate the threshold until the target coverage is reached.
 
 ---
@@ -149,8 +152,18 @@ New blocks, each with ranges in zod and labels/tooltips (fa/en), units, steps an
   Vase | Sleeve switch; the last vase mode is a UI pref) and a top-level `sleeve` block:
   - `coreBlend` 0–8 mm (2): smooth-union radius between the skin and the core tube (the `k_blend` of §3);
   - `mesh.previewVoxel` 0.6–2 mm (1.0), `mesh.exportVoxel` 0.3–0.6 mm (0.5), `mesh.smoothing` 0–10 Taubin passes (3).
-  - The drag voxel is fixed at 2 mm. Decimation is deferred to S4; fingers, drips, holes, top edge and
-    self-supporting come with S2b/S3.
+  - The drag voxel is fixed at 2 mm. Decimation is deferred to S4; fingers, drips and self-supporting come with S3.
+- **As implemented in S2b** (`SCHEMA_VERSION` 4; v3 → v4 moves a stored `previewVoxel` 1.0 to the new default 1.5):
+  - `sleeve.holes`: `mode` none|organicNoise (none), `coverage` 0–50 % (15), `size` 4–40 mm (12),
+    `sizeVariation` 0–100 % (40), `verticalStretch` 0.5–4 (1.6), `angle` −60–60° (0), `edgeRoundness` 0–3 mm (1),
+    `minBridgeWidth` 2–15 mm (4.8 = 3 × 1.6), `keepOutBottom` 0–60 mm (10), `keepOutTop` 0–60 mm (8, from the
+    local rim), `teardropTops` (on).
+  - `sleeve.topEdge`: `peakCount` 0–12 (0), `amplitude` 0–120 mm (20), `sharpness` 0–100 % (50), `irregularity`
+    0–100 % (30), `minTubeCoverage` 10–400 mm (50, capped at the height).
+  - Coverage counts the whole side (keep-out bands included). Thin bridges merge holes, unless the merged hole would
+    span > 1/3 of the circumference (at the bore radius) or > 2.5 × size in height; then the smaller hole goes.
+    Holes that reach the rim open into a notch.
+  - New stat `boreContact` (solid share of the bore between its bottom and the rim) with a warning below 40 %.
 - **Visibility:**
   - Vase-only controls are hidden in sleeve mode via `visibility.ts`: rim lip/round rim, ruffle/slant, concave base, drainage, double wall, saucer, spiral G-code.
   - Sleeve controls are hidden in vase modes, except `insert` when the shell liner is `bore` (§6).
@@ -189,6 +202,7 @@ Use the same `analyze()` issue/score/fixAction framework. Add sleeve checks:
 - **Islands removed** above 1% of volume: warning.
 - **Minimum wall:** sampled from the SDF along inward normals; feeds a heatmap.
 - **Hole bridges** thinner than `minBridgeWidth`.
+- **Bore contact** (S2b): solid share of the bore wall between its bottom and the rim; warning below 40 %.
 - **Existing checks that still apply:** overhang (from normals), bounds and stability. For stability, include the insert mass (glass ≈ 2.5 g/cm³, steel ≈ 7.9 g/cm³) plus water.
 
 **Auto-fix for sleeves:** reuse the ablation approach at low resolution. Contributors are hole coverage/size, finger lean/curl, skin effect depths and twist.

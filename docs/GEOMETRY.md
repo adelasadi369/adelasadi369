@@ -442,11 +442,12 @@ d_skin = (ρ_c − r(θ_c, z)) · L                   ρ_c, θ_c about C(z)
 Approximations: `L` uses `r` instead of `ρ_c` (exact on the surface) and ignores `dC/dz` from bend; the narrow
 band carries a 1.5× safety factor for both, and for the bore chamfers' √2 slope.
 
-**Composition** (`sleeve/field.ts`, order fixed, integration doc §3; S2a subset):
+**Composition** (`sleeve/field.ts`, order fixed, integration doc §3; fingers and drips arrive in S3):
 
 ```
 body = smin(d_skin, ρ − (R_bore + coreWall), coreBlend)     smin(a,b,k) = min − h²k/4, h = max(k − |a − b|, 0)/k
-body = max(body, z − H)                                      top: the skin's own top (peaks in S2b)
+body = smax(body, (z − Htop(φ)) / √(1 + (Htop′/ρ)²), 1)      top edge (§13a); sharp max(body, z − H) when flat
+body = smax(body, −g(φ, z), k_hole)                          openings (§13b), k_hole = edgeRoundness · R / r_ref
 body = max(body, −z)                                         flat base, sharp
 hole = min( max(ρ − R(φ, z), z_b − z),  ρ − r_hole )         r_hole only for lip (R − lipWidth) and drain (Ø/2)
 body = max(body, −hole)                                      exact bore, sharp, LAST
@@ -480,6 +481,65 @@ core radius, `+ coreBlend/4`), offset by `0.5·h` on x, y and z, so no sample li
    logged (`mesh.sleeve.log`, info issue `sleeve-retry`).
 
 **Checks** (`printability/sleeve.ts`): mesh validity (error), islands > 1 % (warning), bore accuracy between ribs
-(plain snapped vertices `|ρ − R|` and plain bore facets' sag at centroid and edge midpoints, ±0.05 mm), min wall
-(march along −n through the SDF from ≤ 3000 vertices; warning below 2 × line width), overhang from face normals
-with bed faces excluded, bounds, and the S1 press-fit / short-tube / bore-wall checks.
+(plain snapped vertices `|ρ − R|` and plain bore facets' sag at centroid and edge midpoints, ±0.05 mm; vertices
+with `g < k_hole + 1.5·h` belong to a hole edge and are skipped), min wall (march along −n through the SDF from
+≤ 3000 vertices; warning below 2 × line width), overhang from face normals (bed faces and faces entirely below one
+voxel, the base seam, are skipped; faces in a teardrop-tip zone count as yellow at most), bounds, the S1
+press-fit / short-tube / bore-wall checks, and with holes: thin bridges (warning with height range) and bore
+contact < 40 % (warning).
+
+### 13a. Top edge (`sleeve/topEdge.ts`)
+
+Tabulated over the axis angle φ (2048 entries, linear interpolation):
+
+```
+u     = |sin(N·φ′/2)|,  φ′ = φ + irr · 0.35 · (π/N) · n₁(φ)          u = 0 at the peaks, 1 in the valleys
+A(φ)  = amplitude · max(0, 1 + 0.5 · irr · n₂(φ))                    n₁, n₂: seeded simplex on a circle (periodic)
+Htop  = max( H − A(φ) · ((1 − s)·u² + s·u),  min(minTubeCoverage, H) )   s = sharpness (u: cusp, u²: wave)
+d_top = (z − Htop(φ)) / √(1 + (Htop′(φ)/ρ)²)                         distance correction (Lipschitz ≤ 1)
+```
+
+No peaks or zero amplitude keeps the S2a sharp cut `z − H` (byte-identical meshes).
+
+### 13b. Openings (`sleeve/holes.ts`, `sleeve/grid2d.ts`)
+
+The hole set is built on a periodic map over (φ, z) at 0.5 mm per cell at the mean skin radius `r_ref`, independent
+of the voxel, and cached while hole, top-edge, seed, overhang and bore inputs are unchanged. Holes are radial
+through-holes. Each step uses the metric where its constraint is tightest (an anisotropic distance transform,
+exact Felzenszwalb, periodic in φ):
+
+| Step | Metric (horizontal mm per radian) | Why |
+| --- | --- | --- |
+| noise, size, coverage | `r_ref` (mean skin radius) | sizes as seen on the skin |
+| teardrop slope | `r_out` (outermost material radius) | radial roofs are steeper further in |
+| bridges, final `g` | `R` (bore radius) | bridges between radial holes are thinnest there; `g` is 1-Lipschitz in 3D for ρ ≥ R, so the narrow band stays valid |
+
+Pipeline per threshold τ:
+
+1. `S = { n < τ } ∩ band`, with `n = fbm₂(P·f) + 0.8·var·noise(0.35·P·f)`, `P = (r_ref cos φ′, r_ref sin φ′, z/stretch)`,
+   `φ′ = φ − z·tan(angle)/r_ref`, `f = 1/(2·size)`. Band: `z ≥ max(keepOutBottom, z_b + minBridgeWidth)` and
+   `z ≤ Htop(φ) − keepOutTop`. Rim region = `z ≥ Htop(φ)` plus the top row.
+2. Up to 4 rounds of: teardrop closure → fill islands → measure bridges → merge.
+   - **Teardrop closure** (layer sweep): `D_j = max(d_j, D_{j−1} − dz·tan α)`, hole where `D > 0`, `d_j` = horizontal
+     distance to the hole boundary in row j. This is the spec's `g_td(p) = min_t ( g(p − t·ẑ) + t·tan α )` with g the
+     per-layer horizontal distance and every row a sample (12 sparse samples leave flat shelves over wide holes;
+     with a 2D distance the formula would need `sin α`). Each layer's hole contains the layer below eroded by
+     `dz·tan α`: overhang ≤ α by construction.
+   - **Islands:** material components not connected to the base become hole.
+   - **Bridges:** labelled EDT from all holes and the rim; at each Voronoi edge (neighbouring cells whose nearest
+     holes differ) the gap is `d₁ + d₂`. Pairs with gap < `minBridgeWidth` (w) conflict.
+   - **Merge** (thinnest first): a capsule of radius w/2 joins the two nearest cells, then a closing of radius w/2
+     fills the strips left between them. Guard: if the merged hole would span more than 1/3 of the circumference or
+     more than 2.5 × size in height, the smaller hole is removed instead. A hole meeting the rim opens into a notch.
+3. Finisher: conflicts still left drop their smaller hole (never thins another bridge or changes a roof).
+
+Coverage (open share of the side `0 ≤ z < Htop`, keep-out bands included): τ by quantile, multiplicative until
+bracketed, then bisection (≤ 6 runs). The run closest above the target is preferred (it can shrink smoothly) unless
+one below is within 1 point. Fine step: offset the hole set by δ along its distance at R (shrinking measures from
+holes ∪ rim, so notches stay open), bisected up to 8 times; every candidate ends with teardrop → islands → bridges →
+finisher. Growth is capped by the bridge slack `(minBridge − w)/2 − 1 cell`.
+
+Final field: `g` = signed distance at R to the holes (plus rim cells right above a notch), one [1 2 1] blur pass.
+Bore contact = solid share of the bore band `z_b ≤ z < Htop(φ)` on the map. Teardrop tips (`HoleMap.tip`): within
+2 mm of a hole edge, where the hole or the material ∨ between merged roofs is narrower than `2·max(1.5·h, k + 1.5)`
+at r_out; the meshed tip is rounded there.

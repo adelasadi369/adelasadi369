@@ -40,7 +40,7 @@ src/core/          pure TS — no DOM, no three, no react/zustand (enforced by e
   params/          schema.ts (zod + paramMeta, SCHEMA_VERSION, DEFAULT_PARAMS), migrate, clamp, normalize, share, paths
   insert/          computeBore, boreProfile (chamfers, grooves, ribs), boreRay, calibrateHoleCompensation
   sdf/             smin / smax / cylinder
-  sleeve/          skin map (cached), composed SDF (field.ts), buildSleeveMesh (lattice, snapping, retry)
+  sleeve/          skin map (cached), top edge, hole map (cached), composed SDF (field.ts), buildSleeveMesh
   mc/              generated MC table, slab extractor with 2-level narrow band, Taubin, islands, O(T) validity
   geometry/        profile · sections · twist · effects/* · field (compileField) · grid · mesh (buildMesh)
   printability/    checks, bore, sleeve, overhang, sanity, stats, score, autofix, index (analyze/buildDesign)
@@ -52,7 +52,7 @@ src/state/         zustand store (params, locks, history/undo, result, ui prefs)
 src/ui/            panels, editors, viewer (heatmap, clipping, dimensions), TopBar, PrintCheck, AiPanel
 src/persist/       IndexedDB designs + calibrated printer profiles; share links are lz-string diffs vs DEFAULT_PARAMS
 src/ai/            prompts (system prompt generated from paramMeta), schema, client, apply
-src/presets/       14 generated preset JSON files + index (built by scripts/build-presets.ts)
+src/presets/       15 generated preset JSON files (14 vase + sleeve-starter) + index (scripts/build-presets.ts)
 server/            AI proxy: /api/ai/params | refine | image | health
 tests/             vitest, core only
 ```
@@ -98,7 +98,21 @@ Phases (one branch `sleeve/sN` and one PR each):
 
 Do only the phase you were asked for.
 
-**Status:** S0, S1 and S2a are done. S2b (top-edge peaks, organic-noise holes + teardrops) is next.
+**Status:** S0, S1, S2a and S2b are done. S3 (fingers, drips, all hole modes, six `sleeve-*` presets, sleeve
+auto-fix, variations) is next.
+
+S2b notes:
+
+- Schema v4: `sleeve.holes.*` (organicNoise) and `sleeve.topEdge.*`; preview voxel default 1.5 mm; 3MF first in sleeve mode.
+- Holes live on a cached 2D map over (φ, z) (`sleeve/holes.ts`, toolkit `sleeve/grid2d.ts`), independent of the
+  voxel; the SDF samples its signed distance `g` (at the bore radius, 1-Lipschitz). GEOMETRY.md §13a/§13b.
+- Teardrops are a layer sweep `D_j = max(d_j, D_{j−1} − dz·tan α)` (the spec formula with every row a sample;
+  8–12 samples leave shelves, and a 2D distance would need sin α). Bridges: thinnest first, capsule + closing
+  merge, guarded (> 1/3 turn or > 2.5 × size ⇒ drop the smaller), then a finisher that drops holes still in conflict.
+- Coverage: bracketed threshold search, then a δ offset; every candidate ends teardrop → islands → bridges → finisher.
+- Sleeve overhang skips the bed seam (first voxel) and counts teardrop tips (`HoleMap.tip`) as yellow at most.
+- `VASE_PRESETS` / `SLEEVE_PRESETS`: golden test and vase-only loops use the 14 vase presets. `Issue.fixes` = extra fix buttons.
+- Measured (Node, warm): see the S2b PR. The hole map is the slow part (≈ 0.6–1.8 s per hole/skin change); S4.
 
 S2a notes:
 
