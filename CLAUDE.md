@@ -111,6 +111,9 @@ S3 notes (GEOMETRY.md §13c–§13f, integration §5 "As implemented in S3", `do
 - Sleeve auto-fix = `printability/sleeveFix.ts` (shape knobs without holes at 3 mm, then hole knobs; ≤ 8 steps; slow on
   hard cases because the hole map rebuilds: S4). Variations: 3 × 3 for sleeves, no per-cell auto-fix.
 - The six `sleeve-*` presets are tuned in `docs/preset-tuning.md` (known look gaps listed there).
+- Measured (Node, warm): presets without strands drag 2 mm 130–240 ms, release 1.5 mm 280–470 ms + 50–120 ms
+  analysis, export 0.5 mm 3.4–5.3 s; with fingers/drips drag ≈ 0.8 s, release ≈ 1.5 s, export 15–19.5 s (strand SDF:
+  S4 target, together with the hole map).
 
 S2b notes:
 
