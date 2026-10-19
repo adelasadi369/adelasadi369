@@ -422,3 +422,64 @@ refines the formulas above:
 - **Saucer.** A separate shell body. Its inner wall is the vase's base
   contour plus `gap`, with flare `rim·u²`. The viewer and 3MF place it
   10 mm beside the vase; STL/OBJ exports become a ZIP.
+
+## 13. Sleeve mode (S2a): SDF + marching cubes (`src/core/{sdf,sleeve,mc}`)
+
+`print.outputMode = 'sleeve'` has its own deterministic mesh path, `buildSleeveMesh(params, voxel)`. Material is
+`d < 0` (mm). The bore axis is vertical through the origin; `R(φ, z)` is the S1 bore profile (§7b) with `zTop = H`.
+
+**Skin map** (`sleeve/skin.ts`). The vase master field is rasterised on a periodic grid in world angles about the
+slice centre `C(z)`: column `i` at `θ = 2πi/Nθ`, row `j` at `z = H·j/(Nz − 1)`, value
+`r = max(R_MIN, outerRaw(θ − Twist(t), …))`. `Nθ ≥` the grid path's auto-raised count and `≥ πD_max / (voxel/2)`;
+`Nz ≥ H / (voxel/2) + 1`. Sampling is bilinear with periodic θ. Ruffle/slant and the shell-only base features are
+not part of the skin. The map is cached while only non-skin params change.
+
+```
+L      = 1 / sqrt(1 + (r_θ / r)² + r_z²)          finite differences on the map (Lipschitz correction)
+d_skin = (ρ_c − r(θ_c, z)) · L                   ρ_c, θ_c about C(z)
+```
+
+Approximations: `L` uses `r` instead of `ρ_c` (exact on the surface) and ignores `dC/dz` from bend; the narrow
+band carries a 1.5× safety factor for both, and for the bore chamfers' √2 slope.
+
+**Composition** (`sleeve/field.ts`, order fixed, integration doc §3; S2a subset):
+
+```
+body = smin(d_skin, ρ − (R_bore + coreWall), coreBlend)     smin(a,b,k) = min − h²k/4, h = max(k − |a − b|, 0)/k
+body = max(body, z − H)                                      top: the skin's own top (peaks in S2b)
+body = max(body, −z)                                         flat base, sharp
+hole = min( max(ρ − R(φ, z), z_b − z),  ρ − r_hole )         r_hole only for lip (R − lipWidth) and drain (Ø/2)
+body = max(body, −hole)                                      exact bore, sharp, LAST
+```
+
+`R(φ, z)` is evaluated only within 4 mm of `R_bore` (no feature reaches further). With a floor bottom there is no
+opening term at all.
+
+**Lattice.** Coarse-aligned cube lattice over `[−reach − 2h, reach + 2h]² × [−2h, H + 2h]` (`reach` = skin reach,
+core radius, `+ coreBlend/4`), offset by `0.5·h` on x, y and z, so no sample lies on the axis or on z = 0 / z = H.
+
+**Marching cubes** (`mc/`):
+- Case table generated from face rules: on each face, crossing edges are joined so inside corners stay apart
+  (ambiguous faces), segments chain into loops (exit on one face = entry on the other), and each loop is fanned
+  from an apex none of whose diagonals lies in a cube face (otherwise two cubes could share a face diagonal).
+  Face-consistent ⇒ crack-free and edge-manifold.
+- Slab by slab in z with per-plane edge caches (output already welded). Crossing `t` is clamped to `[0.01, 0.99]`.
+- Narrow band: field at a 4-voxel coarse lattice, then 2-voxel cells inside near coarse cells; a cell is near when
+  `min |corner| < 1.5 · diagonal / 2`. Exact samples only within one voxel of a near cell; other samples take the
+  sign of a corner value (they never bracket the surface). Identical output to evaluating every sample (tested).
+
+**Post-processing** (`sleeve/index.ts`, `mc/post.ts`):
+1. Islands: union-find; keep the largest-volume component, report the removed volume and fraction.
+2. Snapping (normals from the raw mesh): `n·r̂ < −0.7` and `|ρ − R(φ, z)| < 0.75·h` ⇒ `ρ := R(φ, z)` for `z > z_b`,
+   `ρ := r_hole` below it; `|z| < 0.5·h` and `n_z < −0.7` ⇒ `z := 0`. Snapped vertices are locked.
+3. Taubin smoothing, uniform Laplacian, λ = 0.5, μ = −0.53, `sleeve.mesh.smoothing` passes, locked vertices fixed.
+4. Outward orientation (flip all if the signed volume is negative), bed triangles (all three `z = 0`) grouped last
+   as the `bottom` surface, area-weighted normals.
+5. Validity in O(T): every edge used once in each direction, every vertex's link one cycle, no degenerate triangle,
+   one body, positive volume. On failure the mesh is rebuilt once on a lattice offset by `0.3·h` and the retry is
+   logged (`mesh.sleeve.log`, info issue `sleeve-retry`).
+
+**Checks** (`printability/sleeve.ts`): mesh validity (error), islands > 1 % (warning), bore accuracy between ribs
+(plain snapped vertices `|ρ − R|` and plain bore facets' sag at centroid and edge midpoints, ±0.05 mm), min wall
+(march along −n through the SDF from ≤ 3000 vertices; warning below 2 × line width), overhang from face normals
+with bed faces excluded, bounds, and the S1 press-fit / short-tube / bore-wall checks.
