@@ -11,6 +11,7 @@ import {
 } from '../mc/post';
 import type { VaseParams } from '../params/schema';
 import { createSleeveField, type SleeveField } from './field';
+import type { HoleStats } from './holes';
 
 /** Voxel while a slider is dragged (docs/sleeve-integration.md §4). */
 export const DRAG_VOXEL = 2;
@@ -46,6 +47,8 @@ export interface SleeveInfo {
   log: string[];
   exactSamples: number;
   totalSamples: number;
+  /** Hole map statistics (coverage, bridges, bore contact); null without holes. */
+  holes: HoleStats | null;
   timings: { skin: number; extract: number; post: number; total: number };
 }
 
@@ -94,6 +97,7 @@ export function buildSleeveMesh(params: VaseParams, voxel: number, opts: SleeveO
     ...built.info,
     retried,
     log,
+    holes: sdf.holes?.stats ?? null,
     timings: { skin: tSkin, extract: built.tExtract, post: built.tPost, total: now() - t0 },
   };
   return { mesh: { ...built.mesh, sleeve: info }, sdf };
