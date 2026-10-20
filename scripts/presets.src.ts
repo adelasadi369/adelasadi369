@@ -250,6 +250,7 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
       ],
       insert: { type: 'glass', od: 50, fit: 'slip' },
       sleeve: {
+        skinThickness: 0,
         holes: {
           mode: 'organicNoise',
           coverage: 15,
@@ -283,13 +284,16 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
           stretch: 1.3,
           warp: 1.2,
           seed: 23,
+          // S4: fades out over the narrow top, where the second octave read as fine streaks (preset-tuning.md)
           start: 0,
-          end: 100,
-          fade: 14,
+          end: 82,
+          fade: 24,
         },
       ],
       insert: { type: 'steel', od: 40, fit: 'slip' },
       sleeve: {
+        // S4: a chunky 3.2 mm draped shell, open between shell and tube at the top like the photo
+        skinThickness: 3.2,
         coreBlend: 4,
         holes: {
           mode: 'organicNoise',
@@ -332,6 +336,7 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
       ],
       insert: { type: 'glass', od: 50, fit: 'slip' },
       sleeve: {
+        skinThickness: 2.4,
         coreBlend: 3,
         holes: {
           mode: 'organicNoise',
@@ -342,6 +347,8 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
           angle: 15,
           edgeRoundness: 2,
           keepOutBottom: 18,
+          // S4: no notch holes in the rim valleys (they left a flat tab where a valley met a notch)
+          keepOutTop: 16,
         },
         topEdge: { peakCount: 4, amplitude: 60, sharpness: 40, irregularity: 35, minTubeCoverage: 100 },
       },
@@ -377,6 +384,7 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
       ],
       insert: { type: 'glass', od: 50, fit: 'slip' },
       sleeve: {
+        skinThickness: 2.4,
         coreBlend: 3,
         holes: {
           mode: 'organicNoise',
@@ -417,10 +425,11 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
       ],
       insert: { type: 'glass', od: 50, fit: 'slip' },
       sleeve: {
+        skinThickness: 2.4,
         coreBlend: 3,
         fingers: {
           count: 6,
-          width: 22,
+          width: 28,
           widthVariation: 35,
           heightMin: 65,
           heightMax: 100,
@@ -430,6 +439,9 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
           lean: 4,
           curl: 9,
           taper: 25,
+          // S4: flat tongues of the draped shell, like the photo (≈ 6 mm thick)
+          crossSection: 'ribbon',
+          ribbonRatio: 4.5,
           blend: 8,
         },
         holes: {
@@ -461,6 +473,7 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
       ],
       insert: { type: 'glass', od: 50, fit: 'slip' },
       sleeve: {
+        skinThickness: 0,
         coreBlend: 2.5,
         holes: {
           mode: 'voronoi',
@@ -489,6 +502,7 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
       effects: [{ type: 'organic', style: 'softBulges', amount: 2.5, scale: 60, seed: 8, start: 0, end: 100, fade: 5 }],
       insert: { type: 'glass', od: 50, fit: 'slip' },
       sleeve: {
+        skinThickness: 0,
         coreBlend: 3,
         fingers: {
           count: 4,

@@ -1,5 +1,5 @@
 import { buildFitTestRing, buildMesh, type BuildResult } from '../geometry/mesh';
-import { buildSleeveMesh, type SleeveOptions } from '../sleeve';
+import { buildSleeveMesh, decimateSleeve, type SleeveOptions } from '../sleeve';
 import { computeBore } from '../insert';
 import type { Quality } from '../geometry/grid';
 import type { VaseParams } from '../params/schema';
@@ -17,7 +17,7 @@ export interface ExportFile {
   data: Uint8Array;
 }
 
-const slug = (s: string) =>
+export const slug = (s: string) =>
   (s || 'vaseforge-vase')
     .toLowerCase()
     .replace(/[^a-z0-9؀-ۿ]+/g, '-')
@@ -44,9 +44,7 @@ export async function exportDesign(
   }
   // sleeves mesh at sleeve.mesh.exportVoxel (0.3–0.6 mm) with progress; vases at the export quality
   const built: Pick<BuildResult, 'mesh' | 'saucer'> =
-    params.print.outputMode === 'sleeve'
-      ? { mesh: buildSleeveMesh(params, params.sleeve.mesh.exportVoxel, opts).mesh }
-      : buildMesh(params, quality);
+    params.print.outputMode === 'sleeve' ? { mesh: sleeveExportMesh(params, opts).mesh } : buildMesh(params, quality);
   const w = weld(built.mesh);
   const saucer = built.saucer ? weld(built.saucer) : null;
   const single = (m: typeof w, name: string) =>
@@ -72,6 +70,16 @@ export async function exportDesign(
       return { name: `${base}.3mf`, mime: 'model/3mf', data: await write3MF(bodies, params) };
     }
   }
+}
+
+/** Sleeve mesh as exported: built at sleeve.mesh.exportVoxel, then decimated to sleeve.mesh.decimateTarget. */
+export function sleeveExportMesh(params: VaseParams, opts: SleeveOptions = {}) {
+  const b = decimateSleeve(
+    buildSleeveMesh(params, params.sleeve.mesh.exportVoxel, opts),
+    params.sleeve.mesh.decimateTarget,
+  );
+  opts.onProgress?.(1);
+  return b;
 }
 
 /** Shift the saucer along +X so it sits next to the vase on the plate (10 mm clearance). */

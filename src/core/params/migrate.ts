@@ -29,6 +29,12 @@ const MIGRATIONS: Record<number, (p: Raw) => void> = {
     if (sl && isObj(sl.mesh) && sl.mesh.smoothing === 3) sl.mesh.smoothing = 4;
     if (sl && isObj(sl.holes) && sl.holes.edgeRoundness === 1) sl.holes.edgeRoundness = 1.5;
   },
+  // v5 → v6 (S4): thin draped shell `sleeve.skinThickness` (new designs 2.4 mm) and ribbon fingers (round by
+  // default). Stored designs stay solid (0) so they keep their look, weight and print time.
+  5: (p) => {
+    const sl = isObj(p.sleeve) ? p.sleeve : (p.sleeve = {});
+    if (sl.skinThickness === undefined) sl.skinThickness = 0;
+  },
 };
 
 /**

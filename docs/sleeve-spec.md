@@ -3,16 +3,19 @@
 ## 0. Context: read this first
 
 I run a small studio with an FDM 3D printer, a glass workshop and a gold/metal workshop. I make **multi-material vases**:
+
 - An **insert**: a straight cylinder of clear glass or brushed stainless steel that holds the water and flowers. I make these myself.
 - A **3D-printed organic sculptural sleeve** that wraps around the insert and grips it.
 
 The sleeve style is:
+
 - **Form:** flowing, draped-fabric folds; melting or dripping blobs; finger-like vertical lobes; twisting, windswept strands.
 - **Silhouette:** asymmetric, with irregular top edges.
 - **Openings:** organic oval openings that let the cylinder show through.
 - **Materials:** printed in matte PLA or dual-colour coaxial silk PLA.
 
 Reference photos are in `docs/references/`. Open and study them before designing the geometry engine:
+
 - an orange matte sleeve around a steel tube with oval holes;
 - teal/blue silk sleeves with twisting folds around clear glass tubes;
 - a sleeve with separated finger lobes rising around a glass tube.
@@ -20,6 +23,7 @@ Reference photos are in `docs/references/`. Open and study them before designing
 **Goal:** a local web app where I set parameters, see the sleeve live in 3D, and download a print-ready file. I need no other software: no Blender, no CAD, no repair tool. The output must slice and print first time.
 
 The app must always guarantee three things:
+
 1. **Exact bore.** The inner hole must fit my real tube to within ±0.05 mm of the computed target diameter.
 2. **Valid mesh.** The mesh must be watertight, 2-manifold and a single connected body.
 3. **Printable.** The sleeve must sit on a flat base, respect a minimum wall thickness, and keep overhangs under control. Any violation must be reported visibly.
@@ -31,11 +35,13 @@ The app must always guarantee three things:
 Model the sleeve as a **signed distance field (SDF)** in millimetres. Material is where `d < 0`. Then mesh it.
 
 Use SDF because:
+
 - booleans and smooth blends never break topology;
 - the output from a closed field is watertight by construction;
 - the bore can be subtracted exactly as the last operation.
 
 **Composition order** (fixed; do not change it):
+
 1. **Skin (outer form).** Smooth-union (`smin`) of:
    - a radial "shell" field (profile + folds + lobes + noise);
    - free-standing lobe/finger primitives (capsules or tapered curves along twisted paths);
@@ -47,6 +53,7 @@ Use SDF because:
 6. **Bore.** Sharp subtract `ρ < R_bore` for `z > floorThickness`, or for the full height if the bottom is open. This is always the **last** operation and is never smoothed.
 
 Notation: `ρ = sqrt(x²+y²)`, `θ = atan2(y,x)`.
+
 - All noise is evaluated in **Cartesian** space (x, y, z) or with wrapped angles, so there is no seam at θ = ±π.
 - All angular distances use wrapped difference.
 
@@ -68,6 +75,7 @@ Notation: `ρ = sqrt(x²+y²)`, `θ = atan2(y,x)`.
 - **Architecture:** keep `src/core/` pure TypeScript with zero DOM or three.js imports, so the engine can later run in Node or a server.
 
 Suggested layout:
+
 ```
 src/core/sdf/        primitives, smin/smax, domain ops (twist, bend, lean)
 src/core/noise/      seeded simplex, fbm, ridged, domain warp
@@ -102,6 +110,7 @@ references/          my reference photos
 ## 4. Parameters (complete list)
 
 All lengths are in **mm** and all angles in **degrees**. Every parameter needs:
+
 - a slider **and** a numeric input (I need exact millimetre entry);
 - a sensible min/max/default;
 - a lock icon, so randomise and variations leave it unchanged;
@@ -111,23 +120,24 @@ Group them in collapsible panels in this order.
 
 ### 4.1 Insert and bore (the "adaptive" part)
 
-| Parameter | Description |
-|---|---|
-| `insertType` | glass / stainless steel / custom. Only used for presets and render material. |
-| `insertOD` | Measured outer diameter of my real tube. I measure several points; use the maximum. |
-| `insertODTolerance` | Expected variation of handmade glass, e.g. ±0.3. Added on top of the clearance. |
-| `fitType` | Each option sets the default `clearancePerSide`, which stays editable:<br>• press = 0.10 (show a warning: not for glass)<br>• snug = 0.18<br>• slip = 0.25 |
-| `holeCompensation` | Printer-specific offset (default 0.05 per side). Comes from the active printer profile; see the calibration flow in §7. |
-| Computed `R_bore` | `insertOD/2 + clearancePerSide + insertODTolerance/2 + holeCompensation`. Show it prominently. |
-| `insertLength` | Length of the tube. |
-| `insertProtrusion` | How far the tube sticks out above the highest point of the sleeve. Used for the preview and as a sanity check. |
-| `bottomType` | open / closed floor (`floorThickness`) / inner lip ring (`lipWidth`, `lipThickness`) / closed with drain hole (`drainDiameter`). |
-| `gripRibs` | count 0–8, `ribWidth`, `ribInterference` 0–0.3, `ribHeightFraction`.<br>Ribs are small vertical bumps inside the bore that grip the tube. When ribs are on, the bore exactness rule applies to the gaps between ribs. |
-| `oRingGrooves` | count 0–2, width, depth, z positions. For a silicone ring or band. |
-| `boreEntryChamfer` | 0–2. Top edge only. |
-| `coreWall` | Minimum wall around the bore, 1.2–4, default 2.0. |
+| Parameter           | Description                                                                                                                                                                                                           |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `insertType`        | glass / stainless steel / custom. Only used for presets and render material.                                                                                                                                          |
+| `insertOD`          | Measured outer diameter of my real tube. I measure several points; use the maximum.                                                                                                                                   |
+| `insertODTolerance` | Expected variation of handmade glass, e.g. ±0.3. Added on top of the clearance.                                                                                                                                       |
+| `fitType`           | Each option sets the default `clearancePerSide`, which stays editable:<br>• press = 0.10 (show a warning: not for glass)<br>• snug = 0.18<br>• slip = 0.25                                                            |
+| `holeCompensation`  | Printer-specific offset (default 0.05 per side). Comes from the active printer profile; see the calibration flow in §7.                                                                                               |
+| Computed `R_bore`   | `insertOD/2 + clearancePerSide + insertODTolerance/2 + holeCompensation`. Show it prominently.                                                                                                                        |
+| `insertLength`      | Length of the tube.                                                                                                                                                                                                   |
+| `insertProtrusion`  | How far the tube sticks out above the highest point of the sleeve. Used for the preview and as a sanity check.                                                                                                        |
+| `bottomType`        | open / closed floor (`floorThickness`) / inner lip ring (`lipWidth`, `lipThickness`) / closed with drain hole (`drainDiameter`).                                                                                      |
+| `gripRibs`          | count 0–8, `ribWidth`, `ribInterference` 0–0.3, `ribHeightFraction`.<br>Ribs are small vertical bumps inside the bore that grip the tube. When ribs are on, the bore exactness rule applies to the gaps between ribs. |
+| `oRingGrooves`      | count 0–2, width, depth, z positions. For a silicone ring or band.                                                                                                                                                    |
+| `boreEntryChamfer`  | 0–2. Top edge only.                                                                                                                                                                                                   |
+| `coreWall`          | Minimum wall around the bore, 1.2–4, default 2.0.                                                                                                                                                                     |
 
 ### 4.2 Envelope and profile
+
 - `height`: total sleeve height. Default ≈ 0.7 × insertLength.
 - `profile`: an editable spline of outer base radius vs normalised height. Provide a small curve editor with 4–6 control points and presets: straight / flared base / bulb / waist / tapered top.
 - `baseFlare`: extra radius at the bottom, plus the falloff height of that flare.
@@ -137,6 +147,7 @@ Group them in collapsible panels in this order.
 - `minBaseContact`: a warning fires if the base contact area falls below this many mm².
 
 ### 4.3 Folds / drape (the silk "fabric" look)
+
 - `foldCount` 0–16.
 - `foldDepth`.
 - `foldWidthVariation`.
@@ -147,6 +158,7 @@ Group them in collapsible panels in this order.
 - `drapeWaves`: horizontal low-frequency ripples along each fold.
 
 ### 4.4 Lobes / fingers / strands
+
 - `lobeCount` 0–12, `lobeWidth`, `lobeWidthVariation`.
 - `lobeBlend`: smooth-union radius `k` with the body.
 - `lobeHeightMin` / `lobeHeightMax`: heights vary per lobe.
@@ -156,10 +168,12 @@ Group them in collapsible panels in this order.
 - `lobeThicknessTaper`: thinner toward the tip, never below `minWall`.
 
 ### 4.5 Drips
+
 - `dripCount` 0–12, `dripLength`, `dripBulbSize`.
 - `dripPlacement`: on rim / on lobes / random.
 
 ### 4.6 Surface noise and flow
+
 - `noiseAmplitude`, `noiseFrequency`, `octaves`, `lacunarity`, `gain`.
 - `noiseType`: smooth / ridged / billow.
 - `domainWarpStrength` and `domainWarpFrequency`. These give the "molten / flowing" look.
@@ -169,12 +183,14 @@ Group them in collapsible panels in this order.
 ### 4.7 Openings (holes showing the insert)
 
 **`holeMode`**: none / organic noise / ellipses / Voronoi coral / fold gaps.
+
 - **Organic noise:** threshold an fbm field.
 - **Ellipses:** seeded placement with Poisson-disk spacing.
 - **Voronoi coral:** shrunken cells.
 - **Fold gaps:** openings in the valleys between folds.
 
 **Controls:**
+
 - `holeCoverage`: target % of the sleeve's side area that is open. Iterate the threshold to hit it.
 - `holeSize` and `holeSizeVariation`.
 - `holeVerticalStretch` and `holeAngle`, for diagonal windswept holes.
@@ -183,6 +199,7 @@ Group them in collapsible panels in this order.
 - `keepOutBottom` / `keepOutTop`: solid bands with no holes, which protect base strength and rim.
 
 **`teardropTops` (default ON)**: makes the top of every hole self-supporting.
+
 - Implementation for any hole field `g` (negative inside the hole), evaluated in surface coordinates (arc length, z):
   `g_td(p) = min over t in [0, T] of ( g(p - t·ẑ) + t·tan(maxOverhang) )`
 - Use about 8–12 samples of `t`.
@@ -190,10 +207,12 @@ Group them in collapsible panels in this order.
 - Show a before/after toggle.
 
 ### 4.8 Top edge (rim)
+
 - `rimPeakCount`, `rimAmplitude`, `rimSharpness`, `rimIrregularity`.
 - `minTubeCoverage`: the lowest rim point must still cover at least this height of the tube, so it holds.
 
 ### 4.9 Printability
+
 - `minWall`: default 1.6; 4 × nozzle is a good rule.
 - `maxOverhang`: degrees from vertical, default 45.
 - `selfSupportingMode`: limits profile and lobe undersides so the outer surface never overhangs beyond `maxOverhang` (the radius may not grow faster than `tan(maxOverhang)` per mm going up). Explain the trade-off in the UI.
@@ -201,10 +220,12 @@ Group them in collapsible panels in this order.
 - `printerBuildVolume`: comes from the printer profile. Warn if the sleeve exceeds it.
 
 ### 4.10 Seed and variation
+
 - `seed`: shown as a number, with buttons for re-roll and lock.
 - `variationStrength`: how far "Generate variations" may move unlocked parameters.
 
 ### 4.11 Mesh quality
+
 - `previewVoxel`, `exportVoxel`, `smoothingIterations`, `decimateTarget`.
 
 ---
@@ -239,6 +260,7 @@ Implement these presets as complete parameter sets. They are starting values: co
 Run these on every export-resolution mesh. Run cheap versions on the preview.
 
 **Measurements and checks:**
+
 - **Bore check.** Sample bore vertices and report the measured diameter, roundness and min/max against the target. Show **PASS** at ±0.05 mm.
 - **Mesh checks.**
   - Manifold: every edge is shared by exactly 2 faces.
@@ -255,6 +277,7 @@ Run these on every export-resolution mesh. Run cheap versions on the preview.
 - **Base contact area** and a **tipping-stability check**: the centre of mass must sit inside the base polygon, considering the full assembly with the insert.
 
 **Export gate:**
+
 - Export is **blocked** if the mesh is not manifold/watertight or the bore fails. The user can override with an explicit "export anyway" confirmation.
 - Warnings (thin walls, overhang) never block export.
 
@@ -263,14 +286,17 @@ Run these on every export-resolution mesh. Run cheap versions on the preview.
 ## 7. Printer profiles and calibration flow
 
 **Printer profiles:**
+
 - A profile holds: name, build volume, nozzle, default layer height, `holeCompensation`.
 - Profiles are stored in localStorage/IndexedDB.
 
 **Fit Test Ring export:**
+
 - A 10 mm tall slice of the current bore, with its ribs, grooves and core wall.
 - This prints in minutes.
 
 **Calibration wizard:**
+
 1. Print the test ring.
 2. Measure the printed bore with calipers and enter the value.
 3. The app computes and saves the corrected `holeCompensation` to the active printer profile.
@@ -279,6 +305,7 @@ Run these on every export-resolution mesh. Run cheap versions on the preview.
 ---
 
 ## 8. Viewport and rendering
+
 - **Display:** the sleeve shown together with the insert. Glass uses a transmission material with slight green edges; steel uses a brushed anisotropic look. Toggle the insert on and off.
 - **Materials:**
   - matte PLA, with a colour picker;
@@ -298,6 +325,7 @@ Run these on every export-resolution mesh. Run cheap versions on the preview.
 ---
 
 ## 9. Workflow features
+
 - **Generate variations.** Builds a 3×3 grid of thumbnails from the current design by mutating unlocked parameters by `variationStrength`. Click one to adopt it.
 - **Randomise.** Within the style preset's ranges only.
 - **Undo/redo, history.**
@@ -312,6 +340,7 @@ Run these on every export-resolution mesh. Run cheap versions on the preview.
 ---
 
 ## 10. UI and language
+
 - Bilingual **Persian (RTL) / English** with a toggle. All labels and tooltips come from translation files.
 - **Layout:**
   - **Left:** parameter groups.
@@ -324,6 +353,7 @@ Run these on every export-resolution mesh. Run cheap versions on the preview.
 ---
 
 ## 11. Optional AI layer (Phase 3)
+
 - **Text → parameters.** I describe a form ("twisting silk fabric, 3 tall peaks, few long openings, for a 50 mm glass tube"). An LLM, with an API key I enter in settings and store locally, returns **only a parameter JSON** validated against the schema. The geometry engine then builds the form.
 - **Never** let AI generate the mesh directly.
 - **Image → parameters** (stretch goal): send a reference photo and ask for the closest preset plus parameter values.
@@ -333,12 +363,14 @@ Run these on every export-resolution mesh. Run cheap versions on the preview.
 ## 12. Delivery plan: build in phases and verify each one
 
 **Phase 1: engine and MVP**
+
 - SDF core: profile, noise, lobes, noise holes, top edge, flat base, exact bore.
 - Chunked narrow-band marching cubes in workers, with bore and base snapping, Taubin smoothing and island removal.
 - Viewport, parameter panels for §4.1, §4.2, §4.4, §4.6, §4.7 (noise mode) and §4.8.
 - Binary STL export, manifold/watertight/bore checks, `validate.ts`.
 
 **Phase 2: style and printability**
+
 - Folds/drape, twist, lean, asymmetry, drips.
 - All hole modes, teardrop tops, `selfSupportingMode`.
 - Thickness and overhang heatmaps, mass and time estimates.
@@ -346,10 +378,12 @@ Run these on every export-resolution mesh. Run cheap versions on the preview.
 - Variations grid, 3MF, Fit Test Ring, calibration, printer profiles, print card.
 
 **Phase 3: polish and extras**
+
 - Materials and gold preview, PNG/GLB export, batch bore export.
 - Persian/English localisation completeness, AI text-to-parameters.
 
 **Acceptance criteria per phase:**
+
 - **Tests (Vitest):**
   - SDF primitives;
   - seed determinism;
@@ -360,6 +394,7 @@ Run these on every export-resolution mesh. Run cheap versions on the preview.
 - **Proof:** after Phase 2, export each preset, render a screenshot of each, and compare it side by side with the reference photos. Write down what still differs and fix it.
 
 **Working rules for you (Claude Code):**
+
 - Start by reading this whole file and the reference images.
 - Propose the architecture and the exact parameter schema, as a TypeScript type with defaults and ranges, before writing the engine.
 - Create a `CLAUDE.md` summarising the architecture, commands and conventions.

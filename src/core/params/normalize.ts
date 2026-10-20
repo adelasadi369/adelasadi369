@@ -1,6 +1,6 @@
 import { clampToSchema } from './clamp';
 import { migrateParams } from './migrate';
-import { DEFAULT_PARAMS, SCHEMA_VERSION, VaseParamsSchema, type VaseParams } from './schema';
+import { DEFAULT_PARAMS, SCHEMA_VERSION, SKIN_THICKNESS_MIN, VaseParamsSchema, type VaseParams } from './schema';
 
 let idCounter = 0;
 const newId = () => `fx${Date.now().toString(36)}${(idCounter++).toString(36)}`;
@@ -33,6 +33,9 @@ export function normalizeParams(raw: unknown): VaseParams {
     if (!e.id || ids.has(e.id)) e.id = newId();
     ids.add(e.id);
   }
+  // sleeve skin: 0 (solid) or at least the thin-shell minimum
+  const sk = p.sleeve.skinThickness;
+  if (sk > 0 && sk < SKIN_THICKNESS_MIN) p.sleeve.skinThickness = SKIN_THICKNESS_MIN;
   // shell wall snaps to a multiple of the line width
   const lw = p.print.lineWidth;
   const snapped = Math.round(p.print.wallThickness / lw) * lw;

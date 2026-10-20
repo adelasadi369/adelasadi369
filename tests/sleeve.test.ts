@@ -5,7 +5,7 @@ import { BORE_TOLERANCE, computeBore } from '../src/core/insert';
 import { normalizeParams } from '../src/core/params/normalize';
 import { analyze, evaluate } from '../src/core/printability';
 import { measureSleeveBore } from '../src/core/printability/sleeve';
-import { buildSleeveMesh, DRAG_VOXEL, type SleeveBuild } from '../src/core/sleeve';
+import { buildSleeveMesh, decimateSleeve, DRAG_VOXEL, type SleeveBuild } from '../src/core/sleeve';
 import { PRESETS } from '../src/presets';
 import { hashBuffer, slice } from './helpers';
 import { expectSoundSleeve, sleeveParams } from './sleeveHelpers';
@@ -46,9 +46,10 @@ describe('sleeve engine', () => {
     // the field is material on the axis through the floor, and the bore starts above it
     for (const z of [0.3, 1, 1.7]) expect(b.sdf.at(0, 0, z)).toBeLessThan(0);
     expect(b.sdf.at(0, 0, 3)).toBeGreaterThan(0);
-    // a slice through the floor is one solid disc (one contour), above it an annulus (two)
+    // a slice through the floor is one solid disc (one contour), above it (inside the shell's floor ring) an annulus
     expect(slice(b.mesh, 1).loops.length).toBe(1);
-    expect(slice(b.mesh, 10).loops.length).toBe(2);
+    expect(b.sdf.zFloor).toBeGreaterThan(5);
+    expect(slice(b.mesh, 5).loops.length).toBe(2);
     expect(b.mesh.sleeve.holeVertices.length).toBe(0);
   });
 
@@ -139,7 +140,10 @@ describe('sleeve exports', () => {
     expect(f.name.endsWith('.stl')).toBe(true);
     const tris = new DataView(f.data.buffer, f.data.byteOffset).getUint32(80, true);
     expect(f.data.byteLength).toBe(84 + 50 * tris);
-    expect(tris).toBe(buildSleeveMesh(q, 0.6).mesh.triangleCount);
+    // built at the export voxel, then decimated toward sleeve.mesh.decimateTarget (stops early at the error cap)
+    const built = buildSleeveMesh(q, 0.6);
+    expect(tris).toBe(decimateSleeve(built, q.sleeve.mesh.decimateTarget).mesh.triangleCount);
+    expect(tris).toBeLessThan(built.mesh.triangleCount);
     expect(seen.length).toBeGreaterThan(10);
     expect(seen.at(-1)).toBe(1);
     const signal = { aborted: false };

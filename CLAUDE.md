@@ -41,10 +41,10 @@ src/core/          pure TS — no DOM, no three, no react/zustand (enforced by e
   insert/          computeBore, boreProfile (chamfers, grooves, ribs), boreRay, calibrateHoleCompensation
   sdf/             smin / smax / cylinder
   sleeve/          skin map (cached), top edge, hole map + hole fields (cached), strands (fingers/drips), SDF, build
-  mc/              generated MC table, slab extractor with 2-level narrow band, Taubin, islands, O(T) validity
+  mc/              generated MC table, slab extractor with 2-level narrow band, Taubin, islands, O(T) validity, decimate
   geometry/        profile · sections · twist · effects/* · field (compileField) · grid · mesh (buildMesh)
   printability/    checks, bore, sleeve, sleeveFix, overhang, sanity, stats, score, autofix, index (analyze/buildDesign)
-  export/          stl · obj · threeMF · zip · weld · slicerSettings
+  export/          stl · obj · threeMF · zip · weld · slicerSettings · batch (multi-OD ZIP + print cards)
   random/          mulberry32, simplex 2D/3D
   jsonpatch/       RFC 6902 apply + validate
 src/workers/       geometry.worker.ts: regen(params, quality) → transferable buffers + report; export runs in a 2nd instance
@@ -98,8 +98,22 @@ Phases (one branch `sleeve/sN` and one PR each):
 
 Do only the phase you were asked for.
 
-**Status:** S0, S1, S2a, S2b and S3 are done. S4 (viewer insert/material previews, hard AI insert filter, multi-bore
-batch export, perf, docs) is next.
+**Status:** S0–S4 are done (S4: thin draped shells, ribbon fingers, export decimation, batch export, viewer tube and
+material previews, perf). Still open: the hard AI `insert.*` filter, insert mass in stability, a cheaper hole map
+and marching cubes split across workers.
+
+S4 notes (GEOMETRY.md §13g–§13i, integration §5 "As implemented in S4", ARCHITECTURE §8, §8b):
+
+- Schema v6: `sleeve.skinThickness` (0 = solid; new designs 2.4 mm; v5 designs migrate to 0), `fingers.crossSection`
+  round|ribbon + `ribbonRatio`, `sleeve.mesh.decimateTarget` (400k), `render.color2`, `render.goldMask`, view looks
+  `dualSilk` and `gold`.
+- Thin shell inner face = skin map eroded by a ball of radius T (not `−d_skin − T`: not Lipschitz in ribbed skins),
+  swept self-supporting; floor ring `max(keepOutBottom, 3)`; gaps < max(T, coreBlend) filled. Mesh voxel ≤
+  min(T, coreWall)/1.5 (`meshVoxel`), so drag and release mesh at the same voxel and the worker reuses the drag mesh.
+- Strand `at(x, y, z, cap)`: pass `skin + k` from the field (exact for the smooth union). Hole-map key quantises
+  r_ref / r_out; the skin map is rasterised at min(voxel, previewVoxel).
+- Measured (Node, warm): fingers export build 15.7 → 7.6 s, drip 10.0 → 2.2 s (+ decimation 2–3 s); release after a
+  drag ≤ 260 ms or reused; hole-map rebuild 0.2–0.55 s, except windswept ≈ 0.9 s and coral ≈ 1.5 s.
 
 S3 notes (GEOMETRY.md §13c–§13f, integration §5 "As implemented in S3", `docs/preset-tuning.md`):
 
@@ -109,11 +123,8 @@ S3 notes (GEOMETRY.md §13c–§13f, integration §5 "As implemented in S3", `do
   Tilt ≤ maxOverhang − 3° by scaling lateral motion; radii ≥ max(1.25, lineWidth). Strand tips are soft overhang zones.
 - Hole modes only fill the thresholded field (`sleeve/holeFields.ts`); never add a second hole pipeline.
 - Sleeve auto-fix = `printability/sleeveFix.ts` (shape knobs without holes at 3 mm, then hole knobs; ≤ 8 steps; slow on
-  hard cases because the hole map rebuilds: S4). Variations: 3 × 3 for sleeves, no per-cell auto-fix.
+  hard cases because the hole map rebuilds). Variations: 3 × 3 for sleeves, no per-cell auto-fix.
 - The six `sleeve-*` presets are tuned in `docs/preset-tuning.md` (known look gaps listed there).
-- Measured (Node, warm): presets without strands drag 2 mm 130–240 ms, release 1.5 mm 280–470 ms + 50–120 ms
-  analysis, export 0.5 mm 3.4–5.3 s; with fingers/drips drag ≈ 0.8 s, release ≈ 1.5 s, export 15–19.5 s (strand SDF:
-  S4 target, together with the hole map).
 
 S2b notes:
 
@@ -126,8 +137,6 @@ S2b notes:
 - Coverage: bracketed threshold search, then a δ offset; every candidate ends teardrop → islands → bridges → finisher.
 - Sleeve overhang skips the bed seam (first voxel) and counts teardrop tips (`HoleMap.tip`) as yellow at most.
 - `VASE_PRESETS` / `SLEEVE_PRESETS`: golden test and vase-only loops use the 14 vase presets. `Issue.fixes` = extra fix buttons.
-- Measured (Node, warm, sleeve-starter): drag 2 mm ≈ 260 ms; release 1.5 mm ≈ 500 ms + 130 ms analysis; export 0.5 mm
-  ≈ 4.6 s build. The hole map (voxel-independent, cached) costs ≈ 1.4 s per hole/skin change: the S4 perf target.
 
 S2a notes:
 
@@ -138,8 +147,6 @@ S2a notes:
   offset by half a voxel on all axes; a failed validity check retries once on a 0.3-voxel offset and logs it.
 - Sleeve meshes keep the `VaseMesh` contract (`mode: 'sleeve'`, one `outer` + a `bottom` bed range, identity
   `canonical`) plus `mesh.sleeve` (bore/base vertex ids, islands, validity, timings).
-- Measured (Chromium, warm): drag 2 mm 65–175 ms; release 1 mm 400–630 ms + 35–65 ms analysis (target 300 ms,
-  missed; parallel slab workers in S4 is the planned fix); export 0.5 mm 2.5–2.9 s build, ≈ 5 s end to end.
 - The viewer renders on demand (`frameloop="demand"`); call `invalidate()` after imperative three.js updates.
 - Slow sleeve tests live in `tests/sleeve.slow.test.ts` and run in CI with `npm test`.
 

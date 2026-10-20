@@ -160,5 +160,17 @@
   "sleeve.teardropAfter": "بعد",
   "group.sleeveMesh": "مش غلاف",
   "export.cancel": "لغو",
-  "viewer.voxel": "وکسل"
+  "viewer.voxel": "وکسل",
+  "export.batch": "ZIP چندتایی",
+  "export.batchSizes": "چند اندازه: قطر بیرونی لوله‌ها (میلی‌متر)",
+  "export.batchHint": "یک ZIP: برای هر اندازه یک مش و یک کارت چاپ؛ پوسته با قطر حفره بزرگ و کوچک می‌شود.",
+  "viewer.insert": "لوله",
+  "viewer.goldMask": "پوشش طلایی",
+  "viewer.goldEdges": "لبه‌ها و نوک‌ها",
+  "viewer.goldWhole": "کامل",
+  "viewer.color2": "رنگ ۲",
+  "viewer.snapshot": "عکس PNG",
+  "viewer.snapshotBg": "پس‌زمینهٔ عکس",
+  "viewer.bgWhite": "سفید",
+  "viewer.bgTransparent": "شفاف"
 }

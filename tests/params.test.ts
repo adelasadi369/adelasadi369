@@ -170,14 +170,15 @@ describe('schema v3 migration (sleeve mode)', () => {
     delete v2.sleeve;
     const p = normalizeParams(v2);
     expect(p.version).toBe(SCHEMA_VERSION);
-    expect(p.sleeve).toEqual(DEFAULT_PARAMS.sleeve);
+    // stored designs stay solid (v5 → v6), new ones get the thin shell
+    expect(p.sleeve).toEqual({ ...DEFAULT_PARAMS.sleeve, skinThickness: 0 });
     expect(p.print.outputMode).toBe(PRESETS[2].params.print.outputMode);
   });
 
   it('accepts the sleeve output mode and its mesh defaults', () => {
     const p = normalizeParams({ print: { outputMode: 'sleeve' } });
     expect(p.print.outputMode).toBe('sleeve');
-    expect(p.sleeve.mesh).toEqual({ previewVoxel: 1.5, exportVoxel: 0.5, smoothing: 4 });
+    expect(p.sleeve.mesh).toEqual({ previewVoxel: 1.5, exportVoxel: 0.5, decimateTarget: 400000, smoothing: 4 });
     expect(normalizeParams({ sleeve: { mesh: { exportVoxel: 0.1 } } }).sleeve.mesh.exportVoxel).toBe(0.3);
   });
 });

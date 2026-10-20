@@ -1,6 +1,6 @@
 import * as Comlink from 'comlink';
 import { create } from 'zustand';
-import type { ExportFormat } from '../core/export';
+import type { ExportFile, ExportFormat } from '../core/export';
 import { normalizeParams } from '../core/params/normalize';
 import { diffParams, setPath, type ParamDiff } from '../core/params/paths';
 import { mutate, randomize } from '../core/params/random';
@@ -36,6 +36,8 @@ export interface ViewerState {
   clip: number | null;
   /** Sleeve holes: preview the openings without teardrop tops ("before"); params and exports are untouched. */
   teardropBefore: boolean;
+  /** Render-only glass / steel tube in the bore (S4); never exported. */
+  insert: boolean;
 }
 
 export interface FixState {
@@ -84,6 +86,8 @@ interface Store {
   removeEffect(i: number): void;
   toggleLock(path: string): void;
   exportAs(format: ExportFormat): Promise<void>;
+  /** Sleeve batch: one ZIP for several insert ODs (mesh + print card per size). */
+  exportBatchAs(ods: number[], format: 'stl' | '3mf'): Promise<void>;
   shareLink(): Promise<void>;
   setLang(l: Lang): void;
   setLevel(l: 'basic' | 'advanced'): void;
@@ -174,6 +178,35 @@ export const useStore = create<Store>((set, get) => {
     return hc === undefined ? p : setPath(p, 'print.printer.holeCompensation', hc);
   };
 
+  /** Runs one export in the export worker with progress and cancel, then downloads the file. */
+  const runExport = async (
+    job: (w: ReturnType<typeof getExportWorker>, p: VaseParams, on: (f: number) => void) => Promise<ExportFile>,
+  ) => {
+    set({ exporting: true, exportProgress: null });
+    const token = (exportToken = {});
+    try {
+      const f = await job(
+        getExportWorker(),
+        get().params,
+        Comlink.proxy((p: number) => {
+          if (exportToken === token) set({ exportProgress: p });
+        }),
+      );
+      if (exportToken !== token) return;
+      const url = URL.createObjectURL(new Blob([f.data as BlobPart], { type: f.mime }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = f.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (e) {
+      // a cancelled export rejects when its worker is terminated
+      if (exportToken === token) throw e;
+    } finally {
+      if (exportToken === token) set({ exporting: false, exportProgress: null });
+    }
+  };
+
   const setAi = (patch: Partial<AiState>) => set({ ai: { ...get().ai, ...patch } });
   /** AI output → validated/clamped params → auto-fix in the worker → one undoable history entry. */
   const finishAi = async (params: VaseParams, summary: I18nText, rejected: string[], chat: AiChatEntry[]) => {
@@ -193,7 +226,7 @@ export const useStore = create<Store>((set, get) => {
     lang: prefs.lang,
     level: prefs.level,
     tab: 'shape',
-    viewer: { heatmap: false, layers: false, dims: true, clip: null, teardropBefore: false },
+    viewer: { heatmap: false, layers: false, dims: true, clip: null, teardropBefore: false, insert: true },
     fix: { status: 'idle', diff: [], before: 0, after: 0, prev: null },
     toast: null,
     exporting: false,
@@ -289,29 +322,10 @@ export const useStore = create<Store>((set, get) => {
       set({ params: { ...p, random: { ...p.random, locks } } });
     },
     async exportAs(format) {
-      set({ exporting: true, exportProgress: null });
-      const token = (exportToken = {});
-      try {
-        const f = await getExportWorker().exportDesign(
-          get().params,
-          format,
-          Comlink.proxy((p: number) => {
-            if (exportToken === token) set({ exportProgress: p });
-          }),
-        );
-        if (exportToken !== token) return;
-        const url = URL.createObjectURL(new Blob([f.data as BlobPart], { type: f.mime }));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = f.name;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 10_000);
-      } catch (e) {
-        // a cancelled export rejects when its worker is terminated
-        if (exportToken === token) throw e;
-      } finally {
-        if (exportToken === token) set({ exporting: false, exportProgress: null });
-      }
+      await runExport((w, p, on) => w.exportDesign(p, format, on));
+    },
+    async exportBatchAs(ods, format) {
+      await runExport((w, p, on) => w.exportBatch(p, ods, format, on));
     },
     cancelExport() {
       exportToken = {};

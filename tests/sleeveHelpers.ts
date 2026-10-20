@@ -110,7 +110,7 @@ export function strandWall(b: SleeveBuild): number {
   const { mesh, sdf } = b;
   const P = mesh.positions;
   const N = mesh.normals;
-  let best = Infinity;
+  const found: number[] = [];
   for (let v = 0; v < mesh.vertexCount; v++) {
     const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2]; // prettier-ignore
     if (z < 2 * mesh.sleeve.voxel || Math.abs(sdf.strands.at(x, y, z)) > 0.3) continue;
@@ -129,7 +129,9 @@ export function strandWall(b: SleeveBuild): number {
         s += Math.max(-d * 0.9, 0.02);
       }
     }
-    if (entry >= 0) best = Math.min(best, s - entry);
+    if (entry >= 0) found.push(s - entry);
   }
-  return best;
+  // like minWall: the thinnest 0.5 % are skimming normals (ribbon edges, shell pockets), not walls
+  found.sort((a, c) => a - c);
+  return found.length ? found[Math.floor(found.length * 0.005)] : Infinity;
 }

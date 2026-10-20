@@ -115,13 +115,21 @@ describe('organic-noise holes', () => {
   });
 
   it('teardrop tops keep hole roofs within maxOverhang (from face normals); without them roofs overhang', () => {
-    const pOn = holed({}, { random: { seed: 2 } });
-    const pOff = holed({ teardropTops: false }, { random: { seed: 2 } });
+    // solid sleeve: deep roofs through the whole wall
+    const solid = { random: { seed: 2 }, sleeve: { skinThickness: 0 } };
+    const pOn = holed({}, solid);
+    const pOff = holed({ teardropTops: false }, solid);
     const on = roofOverhang(buildSleeveMesh(pOn, 1), pOn);
     const off = roofOverhang(buildSleeveMesh(pOff, 1), pOff);
     expect(on.area).toBeGreaterThan(500);
     expect(on.badFraction).toBeLessThan(0.02);
     expect(off.badFraction).toBeGreaterThan(0.1);
+    // thin draped shell (default): the same holes cut shell and core, roofs stay within maxOverhang
+    const pShell = holed({}, { random: { seed: 2 } });
+    expect(pShell.sleeve.skinThickness).toBeGreaterThan(0);
+    const shell = roofOverhang(buildSleeveMesh(pShell, 1), pShell);
+    expect(shell.area).toBeGreaterThan(200);
+    expect(shell.badFraction).toBeLessThan(0.02);
   });
 
   it('holes keep out of the base, the bore-bottom ring and the keep-out bands', () => {

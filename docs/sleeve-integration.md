@@ -31,18 +31,21 @@ Read `docs/ARCHITECTURE.md` and `docs/GEOMETRY.md` first. They are accurate and 
 ## 1. Core decision: Sleeve = a new output mode with its own mesh path
 
 Sleeves need two things the grid builder cannot produce, by design:
+
 - **through-holes**: genus > 0;
 - **free-standing fingers**: slices with several contours.
 
 Rules:
+
 - **Do not break the star-shaped invariant** for the existing modes.
 - Add `print.outputMode = 'sleeve'` (extend `OUTPUT_MODES`).
 - When `outputMode === 'sleeve'`, the worker calls a **second deterministic function**, `buildSleeveMesh(params, quality)`, instead of the grid builder.
-- Extend the invariant text in ARCHITECTURE.md to: *"UI and AI produce params; geometry comes from deterministic build functions, one per mesh path."*
+- Extend the invariant text in ARCHITECTURE.md to: _"UI and AI produce params; geometry comes from deterministic build functions, one per mesh path."_
 
 Why an output mode and not a separate app or schema: presets, share links, IndexedDB designs, undo/redo, locks, the AI contract and exports all keep working with **zero duplication**.
 
 The top bar gets a **Vase | Sleeve** switch:
+
 - Switching to Sleeve sets `outputMode = 'sleeve'`.
 - Switching back restores the last vase output mode (remember it in UI prefs).
 
@@ -53,6 +56,7 @@ Bump `SCHEMA_VERSION` and add a migration that inserts defaults for the new bloc
 ## 2. Reuse the vase master field as the sleeve "skin"
 
 The sleeve's outer form is **not** reinvented. It is the existing master field `r(θ, z)` from `compileField`, which includes:
+
 - profile, section and morph;
 - twist and lobes;
 - bend, where `C(t)` gives the slice centre;
@@ -62,6 +66,7 @@ The sleeve's outer form is **not** reinvented. It is the existing master field `
 Every existing style therefore works on sleeves for free.
 
 **Implementation:**
+
 1. **Skin map.** Rasterise the field on a dense periodic `(Nθ × Nz)` grid. Reuse the compile/grid code; the resolution comes from the quality level, e.g. 512 × 400 at preview. Store `r_skin` and slice centres `C(t)`.
 2. **Skin SDF.** `d_skin(p) = (ρ_c − r_skin(θ_c, z)) / sqrt(1 + |∇r|²)`.
    - `ρ_c` and `θ_c` are measured about `C(z/H)`.
@@ -70,6 +75,7 @@ Every existing style therefore works on sleeves for free.
 3. **Not reused:** ruffle/slant (a grid-row remap) and the shell-only base features. Sleeves get their own top-edge and base handling in the SDF (§3).
 
 The sleeve-spec parameters in §4.2 (profile), §4.3 (folds/drape) and §4.6 (noise) therefore map onto **existing** params:
+
 - profile and twist;
 - the `organic` effect: `silkFolds` with stretch, and `softBulges`;
 - `noise`, `waves` and `ribs`.
@@ -116,10 +122,10 @@ src/core/mc/         chunked narrow-band marching cubes, bore & base snapping,
 
 **Resolution and performance budgets:**
 
-| Situation | Voxel size | Time budget |
-|---|---|---|
-| Drag preview | about 2 mm | — |
-| Release preview | about 1 mm | under 300 ms |
+| Situation                            | Voxel size                                           | Time budget          |
+| ------------------------------------ | ---------------------------------------------------- | -------------------- |
+| Drag preview                         | about 2 mm                                           | —                    |
+| Release preview                      | about 1 mm                                           | under 300 ms         |
 | Export (0.3–0.6 mm, user-selectable) | in the export worker, with comlink progress + cancel | under 20 s at 0.5 mm |
 
 Bore and base snapping follow sleeve-spec §3 exactly. Bore accuracy must be ±0.05 mm at any voxel size.
@@ -185,6 +191,21 @@ New blocks, each with ranges in zod and labels/tooltips (fa/en), units, steps an
   - Deviations: fingers are round strands (the references' flat ribbon fingers are approximated by lobes + round
     fingers); fold gaps read the skin about the slice centre (bend ignored); `selfSupporting` ignores bend's `dC/dz`;
     the sleeve auto-fix steps 25 % (not 10 %) and stops after 8 steps, because each probe is a sleeve build.
+- **As implemented in S4** (`SCHEMA_VERSION` 6; v5 → v6 stores `skinThickness` 0 so saved designs stay solid):
+  - **New** `sleeve.skinThickness` 0 | 1.6–6 mm (new designs 2.4; 0 < T < 1.6 snaps to 1.6): thin draped shell =
+    the outer T mm of the skin (ball-eroded inner face, swept self-supporting) ∪ core tube, gap open at the top,
+    closed by a floor ring `max(keepOutBottom, 3 mm)`, gaps < max(T, coreBlend) filled (GEOMETRY.md §13g). Thin
+    shells mesh at ≤ min(T, coreWall)/1.5 (preview 1.33 mm at the defaults). Weight / print time of the updated
+    presets (1.5 mm preview): silk-drape 833 → 277 g, 20.9 → 7.0 h; windswept 693 → 226 g, 17.4 → 5.8 h; molten (T 3.2)
+    674 → 279 g, 11.3 → 4.7 h; fingers 377 → 240 g, 9.5 → 6.1 h. Coral, drip and starter stay solid.
+  - **New** `sleeve.fingers.crossSection` round|ribbon + `ribbonRatio` 1.5–6 (3): flat fingers that hug the skin
+    (GEOMETRY.md §13h); sleeve-fingers uses ribbons (ratio 4.5, width 28).
+  - **New** `sleeve.mesh.decimateTarget` 0–2M (400k) triangles at export (GEOMETRY.md §13i).
+  - Batch export for several insert ODs with print cards; viewer tube (glass / steel), `dualSilk` and `gold`
+    looks (`render.color2`, `render.goldMask`), PNG snapshot (ARCHITECTURE.md §8, §8b).
+  - Perf: strand bounding volumes and search cap, shared drag / release skin map, quantised hole-map key, worker
+    reuse of the drag preview. Not done: MC split across workers, a cheaper hole map (still 0.5–1.5 s cold on molten,
+    windswept and coral), the hard AI `insert.*` filter and the insert mass in stability.
 - **Visibility:**
   - Vase-only controls are hidden in sleeve mode via `visibility.ts`: rim lip/round rim, ruffle/slant, concave base, drainage, double wall, saucer, spiral G-code.
   - Sleeve controls are hidden in vase modes, except `insert` when the shell liner is `bore` (§6).
@@ -196,6 +217,7 @@ New blocks, each with ranges in zod and labels/tooltips (fa/en), units, steps an
 Before any SDF work, add `liner: 'bore'` to shell mode.
 
 **Geometry:**
+
 - The inner surface is an exact cylinder of radius `R_bore`, through the full height.
 - The bottom is an annulus. Reuse the drainage-hole annulus machinery.
 - Optional bottom lip or floor, from `insert.bottom`.
@@ -203,12 +225,14 @@ Before any SDF work, add `liner: 'bore'` to shell mode.
 - This stays star-shaped and genus-correct inside the current grid builder.
 
 **Printability:**
+
 - New error: `r_outer < R_bore + wall` anywhere.
 - Fix action: constrain or scale the profile radii upward.
 
 **Result:** every existing preset becomes a **closed sleeve** (no holes) around a real tube. This is printable and sellable while the SDF path is being built.
 
 **Also in S1, shared by both modes:**
+
 - printer `holeCompensation`;
 - the **Fit Test Ring** export (a 10 mm slice of bore + ribs + core wall);
 - a **calibration modal**: enter the measured bore and save the corrected `holeCompensation` to the profile.
@@ -218,6 +242,7 @@ Before any SDF work, add `liner: 'bore'` to shell mode.
 ## 7. Printability for sleeves
 
 Use the same `analyze()` issue/score/fixAction framework. Add sleeve checks:
+
 - **Bore accuracy** (measured from bore vertices vs target): error if outside ±0.05 mm.
 - **Mesh validity:** manifold, watertight, single body. Any failure is an error.
 - **Islands removed** above 1% of volume: warning.
@@ -266,12 +291,12 @@ flare, effect depths, finger lean/curl/width, drip bulb) probed without holes on
 
 ## 10. Phases
 
-| Phase | Scope |
-|---|---|
-| S0 | `CLAUDE.md`, baseline green, golden test. No behaviour change. |
-| S1 | `insert` block, `computeBore`, shell `liner: 'bore'`, printer `holeCompensation`, Fit Test Ring, calibration modal, bore check. |
-| S2 | `outputMode: 'sleeve'` + top-bar switch, skin map, SDF core/bore/base/top edge/organic-noise holes, MC pipeline, sleeve checks, export. |
-| S3 | Fingers, drips, all hole modes + teardrop + bridges, the six `sleeve-*` presets tuned against `docs/references/`, sleeve auto-fix, variations. |
-| S4 | Viewer insert and material previews, AI sleeve rules, batch export for several bore sizes, narrow-band and perf work, docs update (ARCHITECTURE/GEOMETRY sections for sleeves). |
+| Phase | Scope                                                                                                                                                                           |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S0    | `CLAUDE.md`, baseline green, golden test. No behaviour change.                                                                                                                  |
+| S1    | `insert` block, `computeBore`, shell `liner: 'bore'`, printer `holeCompensation`, Fit Test Ring, calibration modal, bore check.                                                 |
+| S2    | `outputMode: 'sleeve'` + top-bar switch, skin map, SDF core/bore/base/top edge/organic-noise holes, MC pipeline, sleeve checks, export.                                         |
+| S3    | Fingers, drips, all hole modes + teardrop + bridges, the six `sleeve-*` presets tuned against `docs/references/`, sleeve auto-fix, variations.                                  |
+| S4    | Viewer insert and material previews, AI sleeve rules, batch export for several bore sizes, narrow-band and perf work, docs update (ARCHITECTURE/GEOMETRY sections for sleeves). |
 
 Each phase runs on its own branch (`sleeve/s0` …) and ends in its own PR.
