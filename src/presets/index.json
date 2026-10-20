@@ -103,5 +103,47 @@
       "fa": "غلاف آغازین",
       "en": "Sleeve Starter"
     }
+  },
+  {
+    "id": "sleeve-molten",
+    "name": {
+      "fa": "غلاف مذاب",
+      "en": "Sleeve Molten"
+    }
+  },
+  {
+    "id": "sleeve-silk-drape",
+    "name": {
+      "fa": "غلاف پارچهٔ ابریشمی",
+      "en": "Sleeve Silk Drape"
+    }
+  },
+  {
+    "id": "sleeve-windswept",
+    "name": {
+      "fa": "غلاف باد‌خورده",
+      "en": "Sleeve Windswept"
+    }
+  },
+  {
+    "id": "sleeve-fingers",
+    "name": {
+      "fa": "غلاف انگشتی",
+      "en": "Sleeve Fingers"
+    }
+  },
+  {
+    "id": "sleeve-coral",
+    "name": {
+      "fa": "غلاف مرجانی",
+      "en": "Sleeve Coral"
+    }
+  },
+  {
+    "id": "sleeve-drip",
+    "name": {
+      "fa": "غلاف چکه",
+      "en": "Sleeve Drip"
+    }
   }
 ]

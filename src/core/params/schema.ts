@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 
-export const SCHEMA_VERSION = 4 as const;
+export const SCHEMA_VERSION = 5 as const;
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -742,11 +742,18 @@ export const NoiseSchema = z.object({
 export const OrganicSchema = z.object({
   type: z.literal('organic'),
   ...windowFields,
-  style: enm(['softBulges', 'silkFolds'] as const, 'softBulges', {
+  style: enm(['softBulges', 'silkFolds', 'blobs'] as const, 'softBulges', {
     fa: 'سبک',
     en: 'Style',
-    tip: ['برآمدگی نرم یا چین ابریشمی.', 'Soft bulges or silk folds.'],
-    options: { softBulges: t('برآمدگی نرم', 'Soft bulges'), silkFolds: t('چین ابریشمی', 'Silk folds') },
+    tip: [
+      'برآمدگی نرم، چین ابریشمی یا حباب‌های مذاب (نویز کم‌بسامد با پیچش دامنه، نامتقارن).',
+      'Soft bulges, silk folds or molten blobs (low-frequency domain-warped noise, asymmetric).',
+    ],
+    options: {
+      softBulges: t('برآمدگی نرم', 'Soft bulges'),
+      silkFolds: t('چین ابریشمی', 'Silk folds'),
+      blobs: t('حباب مذاب', 'Molten blobs'),
+    },
   }),
   amount: num(0, 10, 3, {
     fa: 'شدت',
@@ -762,6 +769,16 @@ export const OrganicSchema = z.object({
     unit: 'x',
     step: 0.1,
     tip: ['کشیدگی چین‌ها در ارتفاع.', 'Vertical elongation of folds.'],
+  }),
+  warp: num(0, 2, 1, {
+    fa: 'پیچش دامنه',
+    en: 'Domain warp',
+    unit: 'x',
+    step: 0.05,
+    tip: [
+      'فقط برای «حباب مذاب»: بیشتر = برآمدگی‌های کج و نامتقارن‌تر، مثل مواد مذاب.',
+      'Molten blobs only: higher = more skewed, asymmetric lumps, like molten material.',
+    ],
   }),
   seed: seed(),
 });
@@ -1348,10 +1365,10 @@ export const InsertSchema = z
 
 // ---------------------------------------------------------------------------
 // G3) Sleeve (outputMode 'sleeve'): SDF of the vase skin + core tube − exact bore, meshed by marching cubes.
-//     See docs/sleeve-integration.md §2–§4. Holes and top edge since S2b; fingers and drips arrive in S3.
+//     See docs/sleeve-integration.md §2–§4. Holes and top edge since S2b; fingers, drips, more hole modes since S3.
 // ---------------------------------------------------------------------------
 
-export const HOLE_MODES = ['none', 'organicNoise'] as const;
+export const HOLE_MODES = ['none', 'organicNoise', 'ellipses', 'voronoi', 'foldGaps'] as const;
 
 const SleeveHolesSchema = z
   .object({
@@ -1361,10 +1378,16 @@ const SleeveHolesSchema = z
       basic: true,
       phase: 2,
       tip: [
-        'سوراخ‌هایی در غلاف که لولهٔ داخل را نشان می‌دهند. «نویز ارگانیک» = لکه‌های نرم و طبیعی.',
-        'Openings in the sleeve that show the tube inside. Organic noise = soft natural blobs.',
+        'سوراخ‌هایی در غلاف که لولهٔ داخل را نشان می‌دهند. «نویز ارگانیک» = لکه‌های نرم؛ «بیضی‌ها» = بیضی‌های پراکنده با فاصلهٔ یکنواخت؛ «مرجانی» = سلول‌های کوچک‌شدهٔ ورونوی؛ «شکاف بین چین‌ها» = بازشو در دره‌های پوسته.',
+        'Openings in the sleeve that show the tube inside. Organic noise = soft blobs; Ellipses = evenly spaced ovals; Voronoi coral = shrunken cells; Fold gaps = openings in the skin valleys.',
       ],
-      options: { none: t('بدون سوراخ', 'None'), organicNoise: t('نویز ارگانیک', 'Organic noise') },
+      options: {
+        none: t('بدون سوراخ', 'None'),
+        organicNoise: t('نویز ارگانیک', 'Organic noise'),
+        ellipses: t('بیضی‌ها', 'Ellipses'),
+        voronoi: t('مرجانی (ورونوی)', 'Voronoi coral'),
+        foldGaps: t('شکاف بین چین‌ها', 'Fold gaps'),
+      },
     }),
     coverage: num(0, 50, 15, {
       fa: 'سهم سوراخ‌ها',
@@ -1414,7 +1437,7 @@ const SleeveHolesSchema = z
       step: 1,
       tip: ['کج کردن سوراخ‌های کشیده برای حالت باد‌خورده.', 'Tilts stretched holes for a windswept look.'],
     }),
-    edgeRoundness: num(0, 3, 1, {
+    edgeRoundness: num(0, 3, 1.5, {
       fa: 'گردی لبهٔ سوراخ',
       en: 'Edge roundness',
       phase: 2,
@@ -1520,10 +1543,191 @@ const SleeveTopEdgeSchema = z
   })
   .prefault({});
 
+export const FINGER_TIPS = ['round', 'pointed', 'dripBulb'] as const;
+
+const SleeveFingersSchema = z
+  .object({
+    count: int(0, 12, 0, {
+      fa: 'تعداد انگشتی‌ها',
+      en: 'Fingers',
+      basic: true,
+      phase: 2,
+      step: 1,
+      tip: [
+        'رشته‌های آزاد دور لوله که بالایشان از بدنه جدا می‌ایستد و پایینشان به بدنه وصل است. ۰ = بدون انگشتی.',
+        'Free-standing strands around the tube: their tops stand free, their bottoms stay fused to the body. 0 = none.',
+      ],
+    }),
+    width: num(4, 30, 12, {
+      fa: 'پهنای انگشتی',
+      en: 'Finger width',
+      basic: true,
+      phase: 2,
+      unit: 'mm',
+      step: 0.5,
+      tip: ['قطر هر انگشتی در پایین.', 'Diameter of each finger at its base.'],
+    }),
+    widthVariation: num(0, 100, 30, {
+      fa: 'تنوع پهنا',
+      en: 'Width variation',
+      phase: 2,
+      unit: '%',
+      step: 1,
+      tip: ['تفاوت تصادفی پهنا و جای انگشتی‌ها (از بذر طرح).', 'Random width and position spread (from the seed).'],
+    }),
+    heightMin: num(20, 100, 70, {
+      fa: 'کمینهٔ ارتفاع نوک',
+      en: 'Tip height min',
+      phase: 2,
+      unit: '%',
+      step: 1,
+      tip: ['پایین‌ترین نوک انگشتی، درصد ارتفاع.', 'Lowest finger tip, % of the height.'],
+    }),
+    heightMax: num(20, 100, 100, {
+      fa: 'بیشینهٔ ارتفاع نوک',
+      en: 'Tip height max',
+      phase: 2,
+      unit: '%',
+      step: 1,
+      tip: ['بلندترین نوک انگشتی، درصد ارتفاع.', 'Highest finger tip, % of the height.'],
+    }),
+    freeLength: num(0, 250, 50, {
+      fa: 'طول آزاد',
+      en: 'Free length',
+      basic: true,
+      phase: 2,
+      unit: 'mm',
+      step: 1,
+      tip: [
+        'بدنه زیر پایین‌ترین نوک منهای این طول تمام می‌شود و بالای آن فقط انگشتی‌ها هستند. هرگز کمتر از «کمینهٔ پوشش لوله» نمی‌شود.',
+        'The body ends this far below the lowest tip; above it only the fingers stand. Never below Min tube coverage.',
+      ],
+    }),
+    tipShape: enm(FINGER_TIPS, 'round', {
+      fa: 'شکل نوک',
+      en: 'Tip shape',
+      phase: 2,
+      tip: [
+        'نوک گرد، تیز یا قطره‌ای (برآمدگی که زیرش با زاویهٔ مجاز آویز ساخته می‌شود).',
+        'Round, pointed, or drip bulb (its underside is built within the max overhang).',
+      ],
+      options: { round: t('گرد', 'Round'), pointed: t('تیز', 'Pointed'), dripBulb: t('قطره‌ای', 'Drip bulb') },
+    }),
+    twist: num(-360, 360, 0, {
+      fa: 'پیچش انگشتی‌ها',
+      en: 'Finger twist',
+      phase: 2,
+      unit: 'deg',
+      step: 1,
+      tip: [
+        'پیچش اضافه روی پیچش بدنه، از پایین تا نوک. شیب کل محدود به زاویهٔ آویز مجاز است.',
+        'Extra twist on top of the body twist, base to tip. The total slope is limited to the max overhang.',
+      ],
+    }),
+    lean: num(0, 40, 5, {
+      fa: 'باز شدن به بیرون',
+      en: 'Outward lean',
+      phase: 2,
+      unit: 'deg',
+      step: 0.5,
+      tip: [
+        'خم شدن بخش آزاد به بیرون. زیر انگشتی هرگز از زاویهٔ آویز مجاز تندتر نمی‌شود.',
+        'Outward tilt of the free part. The underside never exceeds the max overhang.',
+      ],
+    }),
+    curl: num(-40, 40, 10, {
+      fa: 'پیچ نوک',
+      en: 'Curl',
+      phase: 2,
+      unit: 'deg',
+      step: 0.5,
+      tip: [
+        'خم شدن کناری که به سمت نوک بیشتر می‌شود (مسیر منحنی، نه خط راست).',
+        'Sideways bend that grows toward the tip (a curved path, not a straight line).',
+      ],
+    }),
+    taper: num(0, 80, 40, {
+      fa: 'باریک شدن',
+      en: 'Taper',
+      phase: 2,
+      unit: '%',
+      step: 1,
+      tip: [
+        'چقدر به سمت نوک نازک‌تر شود؛ هرگز زیر دو خط چاپ نمی‌شود.',
+        'How much thinner toward the tip; never below two print lines.',
+      ],
+    }),
+    blend: num(0, 12, 4, {
+      fa: 'نرمی اتصال انگشتی',
+      en: 'Finger blend',
+      phase: 2,
+      unit: 'mm',
+      step: 0.5,
+      tip: ['شعاع اتصال نرم انگشتی‌ها و قطره‌ها به بدنه.', 'Smooth-union radius of fingers and drips with the body.'],
+    }),
+  })
+  .prefault({});
+
+export const DRIP_PLACEMENTS = ['rim', 'fingers', 'random'] as const;
+
+const SleeveDripsSchema = z
+  .object({
+    count: int(0, 12, 0, {
+      fa: 'تعداد قطره‌ها',
+      en: 'Drips',
+      basic: true,
+      phase: 2,
+      step: 1,
+      tip: ['قطره‌های آویزان روی سطح بیرونی. ۰ = بدون قطره.', 'Drips hanging on the outer surface. 0 = none.'],
+    }),
+    length: num(5, 150, 35, {
+      fa: 'طول قطره',
+      en: 'Drip length',
+      phase: 2,
+      unit: 'mm',
+      step: 1,
+      tip: ['طول هر قطره از جای شروع تا نوک پایین.', 'Length of each drip from its start to the bottom tip.'],
+    }),
+    bulbSize: num(3, 20, 8, {
+      fa: 'اندازهٔ برآمدگی قطره',
+      en: 'Bulb size',
+      phase: 2,
+      unit: 'mm',
+      step: 0.5,
+      tip: [
+        'قطر برآمدگی پایین قطره. زیرش مخروطی با زاویهٔ آویز مجاز است تا بدون ساپورت چاپ شود.',
+        'Diameter of the bulb at the bottom. Its underside is a cone within the max overhang, so it prints unsupported.',
+      ],
+    }),
+    placement: enm(DRIP_PLACEMENTS, 'rim', {
+      fa: 'جای قطره‌ها',
+      en: 'Drip placement',
+      phase: 2,
+      tip: [
+        'آویزان از لبهٔ بالا، از نوک انگشتی‌ها (یکی برای هر انگشتی، بقیه از لبه)، یا پراکنده (از بذر طرح).',
+        'Hanging from the rim, from the finger tips (one per finger, the rest from the rim), or scattered (from the seed).',
+      ],
+      options: { rim: t('لبه', 'Rim'), fingers: t('روی انگشتی‌ها', 'On fingers'), random: t('تصادفی', 'Random') },
+    }),
+  })
+  .prefault({});
+
 export const SleeveSchema = z
   .object({
     holes: SleeveHolesSchema,
     topEdge: SleeveTopEdgeSchema,
+    fingers: SleeveFingersSchema,
+    drips: SleeveDripsSchema,
+    selfSupporting: bool(false, {
+      fa: 'خودنگه‌دار (بدون ساپورت)',
+      en: 'Self-supporting',
+      basic: true,
+      phase: 2,
+      tip: [
+        'روشن: پوسته هیچ‌جا از زاویهٔ آویز مجاز تندتر به بیرون نمی‌رود (شعاع در هر میلی‌متر بالا رفتن حداکثر tan زاویه بیشتر می‌شود)، پس بدون ساپورت چاپ می‌شود؛ بهایش این است که برآمدگی‌ها و چین‌های تند کوتاه می‌شوند تا حداکثر با همان زاویه پهن شوند (فرم آرام‌تر و باریک‌تر). انگشتی‌ها و قطره‌ها همیشه این قاعده را رعایت می‌کنند. خاموش: فرم کامل، شاید ساپورت لازم شود.',
+        'On: the skin never grows outward faster than the max overhang (radius gain per mm of height ≤ tan of the angle), so it prints without supports; the trade-off is that steep bulges and folds are trimmed back so they widen at most at that angle (calmer, slimmer shapes). Fingers and drips always follow this rule. Off: the full shape, which may need supports.',
+      ],
+    }),
     coreBlend: num(0, 8, 2, {
       fa: 'نرمی اتصال هسته',
       en: 'Core blend',
@@ -1560,7 +1764,7 @@ export const SleeveSchema = z
             'Mesh cell size of the exported file (0.3–0.6). Smaller = bigger file.',
           ],
         }),
-        smoothing: int(0, 10, 3, {
+        smoothing: int(0, 10, 4, {
           fa: 'هموارسازی',
           en: 'Smoothing',
           phase: 2,

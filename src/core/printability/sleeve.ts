@@ -179,16 +179,23 @@ export function analyzeSleeve(b: SleeveBuild, p: VaseParams): Report {
   // the first voxel above the bed is the base seam; teardrop tips are short bridges (see tipZone)
   const hm = b.sdf.holes;
   const dTip = tipZone(s.voxel, hm?.k ?? 0);
+  // drip bottoms and pointed finger tips are rounded tips too (strands.ts)
+  const st = b.sdf.strands;
+  const strandTip = st.list.length ? st.tip : null;
   const oh = analyzeOverhang(mesh, maxDeg, {
     bedSkip: s.voxel,
-    soft: hm ? (x, y, z) => hm.tip(Math.atan2(y, x), z, dTip) : undefined,
+    soft: hm || strandTip ? (x, y, z) => !!(hm?.tip(Math.atan2(y, x), z, dTip) || strandTip?.(x, y, z)) : undefined,
   });
   // the bed is not an overhang
   for (const v of s.baseVertices) oh.vertex[v] = -1;
   const issues: Issue[] = [];
 
-  // overhang (sleeve auto-fix arrives in S3, so no autofix action yet)
-  for (const i of overhangIssues(oh.summary, maxDeg)) issues.push({ ...i, fix: undefined });
+  // overhang: the auto-fix action runs the sleeve ablation (sleeveFix.ts); the self-supporting skin is a second fix
+  const selfSup = patch(t('پوستهٔ خودنگه‌دار', 'Self-supporting skin'), [
+    { path: 'sleeve.selfSupporting', value: true },
+  ]);
+  for (const i of overhangIssues(oh.summary, maxDeg))
+    issues.push(i.severity !== 'info' && !p.sleeve.selfSupporting ? { ...i, fixes: [...(i.fixes ?? []), selfSup] } : i);
 
   const v = s.validity;
   if (!v.ok) {

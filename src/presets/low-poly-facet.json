@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "name": "Low-Poly Facet",
   "dimensions": {
     "height": 170,
@@ -231,7 +231,7 @@
       "sizeVariation": 40,
       "verticalStretch": 1.6,
       "angle": 0,
-      "edgeRoundness": 1,
+      "edgeRoundness": 1.5,
       "minBridgeWidth": 4.8,
       "keepOutBottom": 10,
       "keepOutTop": 8,
@@ -244,11 +244,31 @@
       "irregularity": 30,
       "minTubeCoverage": 50
     },
+    "fingers": {
+      "count": 0,
+      "width": 12,
+      "widthVariation": 30,
+      "heightMin": 70,
+      "heightMax": 100,
+      "freeLength": 50,
+      "tipShape": "round",
+      "twist": 0,
+      "lean": 5,
+      "curl": 10,
+      "taper": 40,
+      "blend": 4
+    },
+    "drips": {
+      "count": 0,
+      "length": 35,
+      "bulbSize": 8,
+      "placement": "rim"
+    },
     "coreBlend": 2,
     "mesh": {
       "previewVoxel": 1.5,
       "exportVoxel": 0.5,
-      "smoothing": 3
+      "smoothing": 4
     }
   },
   "print": {

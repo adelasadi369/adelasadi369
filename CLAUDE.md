@@ -40,10 +40,10 @@ src/core/          pure TS — no DOM, no three, no react/zustand (enforced by e
   params/          schema.ts (zod + paramMeta, SCHEMA_VERSION, DEFAULT_PARAMS), migrate, clamp, normalize, share, paths
   insert/          computeBore, boreProfile (chamfers, grooves, ribs), boreRay, calibrateHoleCompensation
   sdf/             smin / smax / cylinder
-  sleeve/          skin map (cached), top edge, hole map (cached), composed SDF (field.ts), buildSleeveMesh
+  sleeve/          skin map (cached), top edge, hole map + hole fields (cached), strands (fingers/drips), SDF, build
   mc/              generated MC table, slab extractor with 2-level narrow band, Taubin, islands, O(T) validity
   geometry/        profile · sections · twist · effects/* · field (compileField) · grid · mesh (buildMesh)
-  printability/    checks, bore, sleeve, overhang, sanity, stats, score, autofix, index (analyze/buildDesign)
+  printability/    checks, bore, sleeve, sleeveFix, overhang, sanity, stats, score, autofix, index (analyze/buildDesign)
   export/          stl · obj · threeMF · zip · weld · slicerSettings
   random/          mulberry32, simplex 2D/3D
   jsonpatch/       RFC 6902 apply + validate
@@ -52,7 +52,7 @@ src/state/         zustand store (params, locks, history/undo, result, ui prefs)
 src/ui/            panels, editors, viewer (heatmap, clipping, dimensions), TopBar, PrintCheck, AiPanel
 src/persist/       IndexedDB designs + calibrated printer profiles; share links are lz-string diffs vs DEFAULT_PARAMS
 src/ai/            prompts (system prompt generated from paramMeta), schema, client, apply
-src/presets/       15 generated preset JSON files (14 vase + sleeve-starter) + index (scripts/build-presets.ts)
+src/presets/       21 generated preset JSON files (14 vase + 7 sleeve) + index (scripts/build-presets.ts)
 server/            AI proxy: /api/ai/params | refine | image | health
 tests/             vitest, core only
 ```
@@ -98,8 +98,22 @@ Phases (one branch `sleeve/sN` and one PR each):
 
 Do only the phase you were asked for.
 
-**Status:** S0, S1, S2a and S2b are done. S3 (fingers, drips, all hole modes, six `sleeve-*` presets, sleeve
-auto-fix, variations) is next.
+**Status:** S0, S1, S2a, S2b and S3 are done. S4 (viewer insert/material previews, hard AI insert filter, multi-bore
+batch export, perf, docs) is next.
+
+S3 notes (GEOMETRY.md §13c–§13f, integration §5 "As implemented in S3", `docs/preset-tuning.md`):
+
+- Schema v5: `sleeve.fingers`, `sleeve.drips`, `sleeve.selfSupporting`, hole modes ellipses/voronoi/foldGaps, organic
+  style `blobs` + `warp`. Smoother defaults (smoothing 4, edge roundness 1.5, 2.5 mm rim blend, one-octave holes).
+- Fingers/drips are round-cone polylines (`sleeve/strands.ts`); skin and core are capped at `z_body`, holes stop there.
+  Tilt ≤ maxOverhang − 3° by scaling lateral motion; radii ≥ max(1.25, lineWidth). Strand tips are soft overhang zones.
+- Hole modes only fill the thresholded field (`sleeve/holeFields.ts`); never add a second hole pipeline.
+- Sleeve auto-fix = `printability/sleeveFix.ts` (shape knobs without holes at 3 mm, then hole knobs; ≤ 8 steps; slow on
+  hard cases because the hole map rebuilds: S4). Variations: 3 × 3 for sleeves, no per-cell auto-fix.
+- The six `sleeve-*` presets are tuned in `docs/preset-tuning.md` (known look gaps listed there).
+- Measured (Node, warm): presets without strands drag 2 mm 130–240 ms, release 1.5 mm 280–470 ms + 50–120 ms
+  analysis, export 0.5 mm 3.4–5.3 s; with fingers/drips drag ≈ 0.8 s, release ≈ 1.5 s, export 15–19.5 s (strand SDF:
+  S4 target, together with the hole map).
 
 S2b notes:
 

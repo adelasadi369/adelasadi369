@@ -13,7 +13,8 @@ const HIDDEN = ['id', 'type', 'enabled', ...WINDOW];
 /** Conditional fields per effect type. */
 const SHOW: Record<string, (e: Effect) => boolean> = {
   crisscross: (e) => e.type === 'ribs' && e.helixTurns !== 0,
-  stretch: (e) => e.type === 'organic' && e.style === 'silkFolds',
+  stretch: (e) => e.type === 'organic' && e.style !== 'softBulges',
+  warp: (e) => e.type === 'organic' && e.style === 'blobs',
 };
 
 function EffectCard({ e, i, n }: { e: Effect; i: number; n: number }) {

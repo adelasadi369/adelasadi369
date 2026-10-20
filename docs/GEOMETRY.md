@@ -169,6 +169,9 @@ E  = A · Σ_{o<O} 0.5^o · simplex3(2^o q)  /  Σ 0.5^o
   `E = amount · fbm`.
 - `silkFolds`: anisotropic `q_z = z / (s·stretch)`, ridged.
   `E = amount · (1 − |simplex3(q)|)²`.
+- `blobs` (S3, molten looks): domain-warped 2-octave fBm, `q_z = z / (s·stretch)`,
+  `E = amount · fbm(q + warp · (n_x, n_y, n_z)(0.3·q))` with three offset simplex fields `n`. The warp field is
+  smoother than the lumps (0.3 ×), so `warp ≤ 2` bends and merges lumps without folding the domain over.
 
 **Textures** run in cell space `U = repeats · θw/2π`,
 `V = z / (aspect · 2π R̄ / repeats)`. Every pattern has period 1 in U
@@ -442,11 +445,13 @@ d_skin = (ρ_c − r(θ_c, z)) · L                   ρ_c, θ_c about C(z)
 Approximations: `L` uses `r` instead of `ρ_c` (exact on the surface) and ignores `dC/dz` from bend; the narrow
 band carries a 1.5× safety factor for both, and for the bore chamfers' √2 slope.
 
-**Composition** (`sleeve/field.ts`, order fixed, integration doc §3; fingers and drips arrive in S3):
+**Composition** (`sleeve/field.ts`, order fixed, integration doc §3):
 
 ```
-body = smin(d_skin, ρ − (R_bore + coreWall), coreBlend)     smin(a,b,k) = min − h²k/4, h = max(k − |a − b|, 0)/k
-body = smax(body, (z − Htop(φ)) / √(1 + (Htop′/ρ)²), 1)      top edge (§13a); sharp max(body, z − H) when flat
+skin′ = smax(d_skin, z − z_body, 2.5), core′ = smax(ρ − (R_bore + coreWall), z − z_body, 2.5)   only with fingers (§13c)
+body = smin(skin′, strands, fingers.blend)                  fingers ∪ drips (§13c)
+body = smin(body, core′, coreBlend)                         smin(a,b,k) = min − h²k/4, h = max(k − |a − b|, 0)/k
+body = smax(body, (z − Htop(φ)) / √(1 + (Htop′/ρ)²), 2.5)    top edge (§13a); smax(body, z − H, 2.5) when flat
 body = smax(body, −g(φ, z), k_hole)                          openings (§13b), k_hole = edgeRoundness · R / r_ref
 body = max(body, −z)                                         flat base, sharp
 hole = min( max(ρ − R(φ, z), z_b − z),  ρ − r_hole )         r_hole only for lip (R − lipWidth) and drain (Ø/2)
@@ -457,7 +462,7 @@ body = max(body, −hole)                                      exact bore, sharp
 opening term at all.
 
 **Lattice.** Coarse-aligned cube lattice over `[−reach − 2h, reach + 2h]² × [−2h, H + 2h]` (`reach` = skin reach,
-core radius, `+ coreBlend/4`), offset by `0.5·h` on x, y and z, so no sample lies on the axis or on z = 0 / z = H.
+core radius, strand reach, `+ max(coreBlend, fingers.blend)/4`), offset by `0.5·h` on x, y and z, so no sample lies on the axis or on z = 0 / z = H.
 
 **Marching cubes** (`mc/`):
 - Case table generated from face rules: on each face, crossing edges are joined so inside corners stay apart
@@ -473,7 +478,8 @@ core radius, `+ coreBlend/4`), offset by `0.5·h` on x, y and z, so no sample li
 1. Islands: union-find; keep the largest-volume component, report the removed volume and fraction.
 2. Snapping (normals from the raw mesh): `n·r̂ < −0.7` and `|ρ − R(φ, z)| < 0.75·h` ⇒ `ρ := R(φ, z)` for `z > z_b`,
    `ρ := r_hole` below it; `|z| < 0.5·h` and `n_z < −0.7` ⇒ `z := 0`. Snapped vertices are locked.
-3. Taubin smoothing, uniform Laplacian, λ = 0.5, μ = −0.53, `sleeve.mesh.smoothing` passes, locked vertices fixed.
+3. Taubin smoothing, uniform Laplacian, λ = 0.5, μ = −0.53, `sleeve.mesh.smoothing` passes (default 4 since S3; 5+
+   thins 3 mm ribs below two lines at the 2 mm drag voxel), locked vertices fixed.
 4. Outward orientation (flip all if the signed volume is negative), bed triangles (all three `z = 0`) grouped last
    as the `bottom` surface, area-weighted normals.
 5. Validity in O(T): every edge used once in each direction, every vertex's link one cycle, no degenerate triangle,
@@ -499,7 +505,8 @@ Htop  = max( H − A(φ) · ((1 − s)·u² + s·u),  min(minTubeCoverage, H) ) 
 d_top = (z − Htop(φ)) / √(1 + (Htop′(φ)/ρ)²)                         distance correction (Lipschitz ≤ 1)
 ```
 
-No peaks or zero amplitude keeps the S2a sharp cut `z − H` (byte-identical meshes).
+No peaks or zero amplitude gives the flat top `z − H`. Since S3 the rim (flat or peaked) is a smooth max with a
+2.5 mm radius (S2a/S2b: 1 mm, and a sharp cut when flat), which reads far less boxy next to the references.
 
 ### 13b. Openings (`sleeve/holes.ts`, `sleeve/grid2d.ts`)
 
@@ -518,8 +525,10 @@ exact Felzenszwalb, periodic in φ):
 
 Pipeline per threshold τ:
 
-1. `S = { n < τ } ∩ band`, with `n = fbm₂(P·f) + 0.8·var·noise(0.35·P·f)`, `P = (r_ref cos φ′, r_ref sin φ′, z/stretch)`,
-   `φ′ = φ − z·tan(angle)/r_ref`, `f = 1/(2·size)`. Band: `z ≥ max(keepOutBottom, z_b + minBridgeWidth)` and
+1. `S = { n < τ } ∩ band`, with the mode's field `n` (`sleeve/holeFields.ts`, §13d); organic noise is
+   `n = simplex(P·f) + 0.8·var·simplex(0.35·P·f)`, `P = (r_ref cos φ′, r_ref sin φ′, z/stretch)`,
+   `φ′ = φ − z·tan(angle)/r_ref`, `f = 1/(2·size)` (one octave since S3: two fray the outlines). Components
+   narrower than a disc of 0.4 × size (at r_ref) are dropped as specks. Band: `z ≥ max(keepOutBottom, z_b + minBridgeWidth)` and
    `z ≤ Htop(φ) − keepOutTop`. Rim region = `z ≥ Htop(φ)` plus the top row.
 2. Up to 4 rounds of: teardrop closure → fill islands → measure bridges → merge.
    - **Teardrop closure** (layer sweep): `D_j = max(d_j, D_{j−1} − dz·tan α)`, hole where `D > 0`, `d_j` = horizontal
@@ -545,3 +554,69 @@ Final field: `g` = signed distance at R to the holes (plus rim cells right above
 Bore contact = solid share of the bore band `z_b ≤ z < Htop(φ)` on the map. Teardrop tips (`HoleMap.tip`): within
 2 mm of a hole edge, where the hole or the material ∨ between merged roofs is narrower than `2·max(1.5·h, k + 1.5)`
 at r_out; the meshed tip is rounded there.
+
+With fingers, the band also ends at `z_body − keepOutTop` (cells above `z_body` count as rim), so free fingers are
+never cut.
+
+### 13c. Fingers and drips (`sleeve/strands.ts`)
+
+Both are polylines of round cones (`sdf.roundCone`, the exact SDF of the hull of two spheres; its side makes
+`asin((r₁ − r₂)/L)` with the axis) about the bore axis, smooth-unioned to the capped skin with `fingers.blend`.
+Every radius is ≥ `r_min = max(1.25, lineWidth)` (≥ two lines, and ≥ 2.5 mm across so the 2 mm drag voxel keeps it).
+
+**Fingers.** Finger i (seeded by `random.seed`): tip height `h_i = H·(min + (max − min)·u_i)` from `heightMin/Max`,
+base radius `ρ₀ = max(r_min, width/2 · (1 + var·(u − ½)))`, angle `φ₀ = 2πi/N + var·(u − ½)·0.3·2π/N` (so with
+`twist.lobes.count = N` the fingers sit on the skin lobes). `z_body = clamp(min_i h_i − freeLength, min(minTubeCoverage,
+H), H)`. Path, 28 segments from the bed to `z_end = h_i − tip extent`, with lateral scale `s`:
+
+```
+r(z)    = R + 0.6·ρ₀ + s · max(0, z − z_body) · tan(lean)                 rooted against the core and the bore
+φ(z)    = φ₀ + s · (Twist(z) + twist · z / z_end)                          follows the skin twist
+side(z) = s · tan(curl) · max(0, z − z_body)² / (2 · (z_end − z_body))     curl grows toward the tip
+ρ(z)    = max(r_min, ρ₀ · (1 − taper · z / z_end))
+```
+
+`s = 1` unless the steepest segment tilts more than `maxOverhang − 3°`; then `s` is bisected (14 steps) until it
+does not. A tilted, tapering strand's underside overhangs by at most its tilt. Tips: round (the last sphere),
+pointed (a cone of length `2ρ` down to `r_min`), drip bulb (a round cone along the path widening to
+`ρ_b = max(1.6ρ, ρ + 2)` at side angle `β = max(8°, maxOverhang − 3° − tilt − 2°)`, length ≤ 3ρ).
+
+**Drips** (`count`, `length`, `bulbSize`, `placement`): bulb radius `r_b = max(1.2·r_min, bulbSize/2)`, strand
+`r_s = max(r_min, 0.45·r_b)`, bottom tip `r_t = r_min`. The centreline lies `0.2·ρ` outside the skin (`max(r_skin,
+R_core)` sampled from the field at the drip's angle) or, on a finger, `ρ_f + 0.2·ρ` out from the finger axis. From
+the bottom: tip sphere `r_t` at `z_bot`, bulb sphere `r_b` at `z_bot + (r_b − r_t)/sin β` with `β = max(10°,
+maxOverhang − 8°)`, then the strand up to `z_top` (rim: `min(Htop, z_body) − r_s/2`; fingers: one per finger tip, the
+rest from the rim; random: seeded heights). The bulb's underside is that round cone (no flat downward faces); a short
+drip gets a smaller bulb, never a steeper one. Tip spheres (drip bottoms, pointed tips) are soft overhang zones
+(`Strands.tip`), like teardrop tips.
+
+### 13d. Hole modes (`sleeve/holeFields.ts`)
+
+Every mode only fills the field `n` thresholded in §13b, so teardrops, islands, bridges, the merge guard, the
+finisher and the coverage search are shared. Surface coordinates `u = (φ − z·tan(angle)/r_ref)·r_ref` (periodic,
+sheared) and `v = z / verticalStretch`.
+
+| Mode | Field | Notes |
+| --- | --- | --- |
+| `organicNoise` | one-octave simplex + size-variation term | S2b, one octave since S3 |
+| `ellipses` | `min_i |(u, v) − c_i| / a_i` | seeded dart-throwing Poisson disk, spacing 1.6 × size; `a_i = size/2 · (1 + var·(u − ½))` |
+| `voronoi` | `−(F₂ − F₁)` | Poisson sites, spacing = size; cell centres open first, so holes are shrunken cells and bridges follow cell edges |
+| `foldGaps` | `(r − row mean)/row spread + 0.6·simplex` | skin radius from the field on a 256 × ≤ 160 grid about the slice centre (bend ignored); the noise breaks each valley into slits |
+
+### 13e. Self-supporting skin (`sleeve.selfSupporting`)
+
+On the skin map, each column (fixed world angle about C(z)) is swept upward: `r_j := min(r_j, r_{j−1} + dz·tan(α −
+2°))`, before the Lipschitz factors. The overhang of `ρ = r(θ, z)` is `atan(r_z / √(1 + (r_θ/r)²)) ≤ atan(r_z)`, so
+every skin underside stays within α. Bulges and folds that widen faster are trimmed back (less volume). Bend's
+`dC/dz` is not included. Fingers and drips follow the rule always (§13c).
+
+### 13f. Sleeve auto-fix (`printability/sleeveFix.ts`)
+
+Direct patches from the issues first (hole fixes; never `insert.*` or `print.printer.*`), then ablation like §10, in
+two phases: **shape** (overhang, wall, mesh issues; knobs: twist, lobe depth, bend, max diameter, flare, effect
+depths, finger lean / curl / width, drip bulb) with `cost = red + 0.15·yellow + wall deficit + islands + validity`,
+probed **without holes** on a 3 mm lattice; then **holes** (bridges, bore contact, islands; knobs: coverage, size,
+minBridgeWidth) with `cost = 0.3·[thin bridges] + max(0, 0.4 − boreContact) + islands`. Each probe sets one knob to
+its neutral value; the best knob steps 25 % toward neutral while it helps (a knob whose first step fails is skipped
+until another moves); decisions use the 2 mm drag voxel; at most 8 steps.
+

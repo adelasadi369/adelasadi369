@@ -1,0 +1,305 @@
+{
+  "version": 5,
+  "name": "Sleeve Windswept",
+  "dimensions": {
+    "height": 180,
+    "baseDiameter": 100,
+    "topDiameter": 82,
+    "maxDiameter": 104,
+    "neckDiameter": 50,
+    "bellyPosition": 20,
+    "neckPosition": 80
+  },
+  "profile": {
+    "preset": "convex",
+    "strength": 25,
+    "controlPoints": [
+      {
+        "t": 0,
+        "r": 0.72,
+        "sharp": false
+      },
+      {
+        "t": 40,
+        "r": 1,
+        "sharp": false
+      },
+      {
+        "t": 80,
+        "r": 0.55,
+        "sharp": false
+      },
+      {
+        "t": 100,
+        "r": 0.64,
+        "sharp": false
+      }
+    ],
+    "waveCycles": 0,
+    "waveAmplitude": 0
+  },
+  "section": {
+    "bottom": {
+      "shape": "circle",
+      "sides": 6,
+      "cornerRadius": 2,
+      "starPoints": 8,
+      "starInnerRatio": 0.8,
+      "petals": 6,
+      "petalDepth": 20,
+      "superellipseExponent": 4,
+      "aspectXY": 1,
+      "supershape": {
+        "m": 5,
+        "n1": 2,
+        "n2": 7,
+        "n3": 7,
+        "a": 1,
+        "b": 1
+      },
+      "custom": {
+        "symmetry": 6,
+        "mirror": false,
+        "points": [
+          {
+            "a": 0,
+            "r": 1
+          },
+          {
+            "a": 0.5,
+            "r": 0.8
+          },
+          {
+            "a": 0.8,
+            "r": 0.9
+          }
+        ]
+      },
+      "svg": {
+        "name": "",
+        "samples": []
+      }
+    },
+    "top": {
+      "shape": "circle",
+      "sides": 6,
+      "cornerRadius": 2,
+      "starPoints": 8,
+      "starInnerRatio": 0.8,
+      "petals": 6,
+      "petalDepth": 20,
+      "superellipseExponent": 4,
+      "aspectXY": 1,
+      "supershape": {
+        "m": 5,
+        "n1": 2,
+        "n2": 7,
+        "n3": 7,
+        "a": 1,
+        "b": 1
+      },
+      "custom": {
+        "symmetry": 6,
+        "mirror": false,
+        "points": [
+          {
+            "a": 0,
+            "r": 1
+          },
+          {
+            "a": 0.5,
+            "r": 0.8
+          },
+          {
+            "a": 0.8,
+            "r": 0.9
+          }
+        ]
+      },
+      "svg": {
+        "name": "",
+        "samples": []
+      }
+    },
+    "morphEnabled": false,
+    "morphEasing": "easeInOut",
+    "rotationTop": 0
+  },
+  "twist": {
+    "total": 140,
+    "curve": "linear",
+    "oscillations": 1,
+    "customCurve": [
+      {
+        "t": 0,
+        "v": 0
+      },
+      {
+        "t": 100,
+        "v": 1
+      }
+    ],
+    "lobes": {
+      "count": 5,
+      "depth": 24,
+      "swirl": 0
+    },
+    "bend": {
+      "offset": 36,
+      "direction": 30
+    }
+  },
+  "effects": [
+    {
+      "type": "organic",
+      "id": "sleeve-windswept-0",
+      "enabled": true,
+      "start": 0,
+      "end": 100,
+      "fade": 5,
+      "style": "silkFolds",
+      "amount": 3.5,
+      "scale": 50,
+      "stretch": 7,
+      "warp": 1,
+      "seed": 31
+    }
+  ],
+  "rim": {
+    "flare": 0,
+    "flareZone": 10,
+    "lipThickness": 0,
+    "round": true,
+    "ruffle": {
+      "count": 0,
+      "depth": 4
+    },
+    "slant": {
+      "height": 0,
+      "angle": 0
+    }
+  },
+  "base": {
+    "bottomThickness": 2,
+    "chamfer": 0.6,
+    "footRing": {
+      "height": 0,
+      "inset": 3
+    },
+    "concave": 0,
+    "drainageHole": 0,
+    "saucer": {
+      "enabled": false,
+      "gap": 3,
+      "height": 15,
+      "rim": 2
+    }
+  },
+  "insert": {
+    "type": "glass",
+    "od": 50,
+    "odTolerance": 0.3,
+    "fit": "slip",
+    "clearance": 0.25,
+    "length": 200,
+    "protrusion": 0,
+    "coreWall": 2,
+    "bottom": "open",
+    "lipWidth": 2.5,
+    "lipThickness": 1.6,
+    "floorThickness": 1.6,
+    "drainDiameter": 8,
+    "entryChamfer": 0.8,
+    "bottomChamfer": 0.6,
+    "ribs": {
+      "count": 0,
+      "width": 1.6,
+      "interference": 0.15,
+      "heightFraction": 50
+    },
+    "grooves": {
+      "count": 0,
+      "width": 2.5,
+      "depth": 1,
+      "z1": 30,
+      "z2": 70
+    }
+  },
+  "sleeve": {
+    "holes": {
+      "mode": "organicNoise",
+      "coverage": 14,
+      "size": 16,
+      "sizeVariation": 35,
+      "verticalStretch": 3.2,
+      "angle": 30,
+      "edgeRoundness": 2,
+      "minBridgeWidth": 4.8,
+      "keepOutBottom": 14,
+      "keepOutTop": 8,
+      "teardropTops": true
+    },
+    "topEdge": {
+      "peakCount": 2,
+      "amplitude": 45,
+      "sharpness": 55,
+      "irregularity": 50,
+      "minTubeCoverage": 100
+    },
+    "fingers": {
+      "count": 0,
+      "width": 12,
+      "widthVariation": 30,
+      "heightMin": 70,
+      "heightMax": 100,
+      "freeLength": 50,
+      "tipShape": "round",
+      "twist": 0,
+      "lean": 5,
+      "curl": 10,
+      "taper": 40,
+      "blend": 4
+    },
+    "drips": {
+      "count": 0,
+      "length": 35,
+      "bulbSize": 8,
+      "placement": "rim"
+    },
+    "coreBlend": 3,
+    "mesh": {
+      "previewVoxel": 1.5,
+      "exportVoxel": 0.5,
+      "smoothing": 4
+    }
+  },
+  "print": {
+    "outputMode": "sleeve",
+    "wallThickness": 2.1,
+    "innerSurface": "smoothLiner",
+    "useCase": "dryDecor",
+    "printer": {
+      "preset": "bambuA1",
+      "bedX": 220,
+      "bedY": 220,
+      "bedZ": 250,
+      "holeCompensation": 0.05
+    },
+    "nozzle": 0.4,
+    "lineWidth": 0.7,
+    "layerHeight": 0.24,
+    "material": "silkPLA",
+    "maxOverhang": 45,
+    "flow": 100
+  },
+  "random": {
+    "seed": 29,
+    "locks": []
+  },
+  "render": {
+    "previewQuality": "medium",
+    "exportQuality": "high",
+    "viewMaterial": "silk",
+    "color": "#2f7fc4"
+  }
+}

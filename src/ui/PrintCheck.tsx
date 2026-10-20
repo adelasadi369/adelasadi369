@@ -127,8 +127,7 @@ export function PrintCheck() {
   const sleeve = useStore((s) => s.params.print.outputMode === 'sleeve');
   if (!report) return <div className="p-4 text-sm text-muted">…</div>;
   const s = report.stats;
-  // sleeve auto-fix arrives in S3
-  const hasProblems = !sleeve && report.issues.some((i) => i.severity !== 'info');
+  const hasProblems = report.issues.some((i) => i.severity !== 'info');
   const stats: [string, string][] = [
     [t('stats.height'), `${num(s.height, 1)} ${t('unit.mm')}`],
     [t('stats.maxDiameter'), `${num(s.maxDiameter, 1)} ${t('unit.mm')}`],

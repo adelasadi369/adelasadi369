@@ -6,7 +6,7 @@ import { randomize } from '../src/core/params/random';
 import { signedVolume } from '../src/core/printability/sanity';
 import { buildSleeveMesh, DRAG_VOXEL } from '../src/core/sleeve';
 import { PRESETS, VASE_PRESETS } from '../src/presets';
-import { expectSoundSleeve, sleeveParams } from './sleeveHelpers';
+import { expectSoundSleeve, sleeveParams, strandWall } from './sleeveHelpers';
 
 const SLOW = 120_000;
 
@@ -121,6 +121,59 @@ describe('sleeve holes: manifold across random seeds', () => {
       const b = buildSleeveMesh(p, p.sleeve.mesh.exportVoxel);
       expectSoundSleeve(b, 'sleeve-starter');
       expect(b.mesh.sleeve.islands.removedFraction).toBeLessThan(0.01);
+    },
+    SLOW,
+  );
+});
+
+/** Random sleeves with fingers (3–8, any lean/curl/twist/tip/taper) and some drips, seeded. */
+const fingered = (seed: number) => {
+  const p = randomSleeve(seed);
+  const r = (k: number) => ((seed * 7919 + k * 104729) % 1000) / 1000;
+  return normalizeParams({
+    ...p,
+    sleeve: {
+      ...p.sleeve,
+      fingers: {
+        count: 3 + (seed % 6),
+        width: 6 + 18 * r(1),
+        widthVariation: 100 * r(2),
+        freeLength: 20 + 100 * r(3),
+        lean: 40 * r(4),
+        curl: -40 + 80 * r(5),
+        twist: -180 + 360 * r(6),
+        taper: 80 * r(7),
+        tipShape: (['round', 'pointed', 'dripBulb'] as const)[seed % 3],
+      },
+      drips: { count: seed % 5, placement: (['rim', 'fingers', 'random'] as const)[seed % 3], bulbSize: 4 + 12 * r(8) },
+    },
+  });
+};
+
+describe('fingers and drips: connected and thick enough across random seeds', () => {
+  it(
+    '10 seeds at the drag voxel (2 mm)',
+    () => {
+      for (let seed = 401; seed <= 410; seed++) {
+        const p = fingered(seed);
+        const b = buildSleeveMesh(p, DRAG_VOXEL);
+        expectSoundSleeve(b, `seed ${seed}`);
+        expect(b.mesh.sleeve.islands.removedFraction, `seed ${seed}`).toBeLessThan(0.01);
+        expect(strandWall(b), `seed ${seed}`).toBeGreaterThanOrEqual(2 * p.print.lineWidth);
+      }
+    },
+    SLOW,
+  );
+  it(
+    '2 seeds at 1.0 mm',
+    () => {
+      for (let seed = 501; seed <= 502; seed++) {
+        const p = fingered(seed);
+        const b = buildSleeveMesh(p, 1);
+        expectSoundSleeve(b, `seed ${seed}`);
+        expect(b.mesh.sleeve.islands.removedFraction, `seed ${seed}`).toBeLessThan(0.01);
+        expect(strandWall(b), `seed ${seed}`).toBeGreaterThanOrEqual(2 * p.print.lineWidth);
+      }
     },
     SLOW,
   );

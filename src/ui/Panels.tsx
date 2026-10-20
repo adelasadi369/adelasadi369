@@ -133,6 +133,27 @@ const TOP_EDGE_PATHS = [
   'sleeve.topEdge.irregularity',
   'sleeve.topEdge.minTubeCoverage',
 ];
+/** Fingers and drips: the count is always shown, the rest only when there is at least one. */
+const FINGER_PATHS = [
+  'sleeve.fingers.count',
+  'sleeve.fingers.width',
+  'sleeve.fingers.widthVariation',
+  'sleeve.fingers.heightMin',
+  'sleeve.fingers.heightMax',
+  'sleeve.fingers.freeLength',
+  'sleeve.fingers.tipShape',
+  'sleeve.fingers.twist',
+  'sleeve.fingers.lean',
+  'sleeve.fingers.curl',
+  'sleeve.fingers.taper',
+  'sleeve.fingers.blend',
+];
+const DRIP_PATHS = ['sleeve.drips.count', 'sleeve.drips.length', 'sleeve.drips.bulbSize', 'sleeve.drips.placement'];
+VISIBLE['sleeve.fingers.count'] = sleeve;
+VISIBLE['sleeve.selfSupporting'] = sleeve;
+VISIBLE['sleeve.drips.count'] = sleeve;
+for (const path of FINGER_PATHS) VISIBLE[path] ??= (p) => sleeve(p) && p.sleeve.fingers.count > 0;
+for (const path of DRIP_PATHS) VISIBLE[path] ??= (p) => sleeve(p) && p.sleeve.drips.count > 0;
 for (const path of HOLE_PATHS) VISIBLE[path] ??= (p) => sleeve(p) && p.sleeve.holes.mode !== 'none';
 for (const path of TOP_EDGE_PATHS) VISIBLE[path] ??= (p) => sleeve(p) && p.sleeve.topEdge.peakCount > 0;
 
@@ -226,11 +247,16 @@ function SleeveGroup() {
   if (!on) return null;
   return (
     <Group title={t('group.sleeve')}>
+      <Params paths={['sleeve.selfSupporting']} />
       <h4 className="mt-1 text-[11px] font-semibold text-muted">{t('group.sleeveHoles')}</h4>
       <Params paths={HOLE_PATHS} />
       <TeardropToggle />
       <h4 className="mt-2 text-[11px] font-semibold text-muted">{t('group.sleeveTopEdge')}</h4>
       <Params paths={TOP_EDGE_PATHS} />
+      <h4 className="mt-2 text-[11px] font-semibold text-muted">{t('group.sleeveFingers')}</h4>
+      <Params paths={FINGER_PATHS} />
+      <h4 className="mt-2 text-[11px] font-semibold text-muted">{t('group.sleeveDrips')}</h4>
+      <Params paths={DRIP_PATHS} />
     </Group>
   );
 }
