@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ExportFormat } from '../core/export';
+import { parseOdList } from '../core/export/odList';
 import { usesBore } from '../core/insert';
 import { saveDesign } from '../persist/db';
 import { useStore } from '../state/store';
@@ -42,7 +43,11 @@ function ExportMenu() {
   const sleeve = useStore((s) => s.params.print.outputMode === 'sleeve');
   const progress = useStore((s) => s.exportProgress);
   const cancel = useStore((s) => s.cancelExport);
+  const exportBatchAs = useStore((s) => s.exportBatchAs);
+  const od = useStore((s) => s.params.insert.od);
   const [open, setOpen] = useState(false);
+  const [sizes, setSizes] = useState('');
+  const ods = parseOdList(sizes || String(od));
   // sleeve meshes are large: 3MF (compressed, units in the file) is the default there
   const mesh: [ExportFormat, Parameters<typeof t>[0]][] = [
     ['stl', 'export.stl'],
@@ -71,7 +76,7 @@ function ExportMenu() {
         </Btn>
       )}
       {open && (
-        <div className="absolute top-10 z-40 w-56 overflow-hidden rounded-xl border border-line bg-card shadow-xl ltr:right-0 rtl:left-0">
+        <div className="absolute top-10 z-40 w-64 overflow-hidden rounded-xl border border-line bg-card shadow-xl ltr:right-0 rtl:left-0">
           {items.map(([f, k]) => (
             <button
               key={f}
@@ -85,6 +90,38 @@ function ExportMenu() {
               {t(k)}
             </button>
           ))}
+          {sleeve && (
+            <div className="border-t border-line px-4 py-2.5 text-sm">
+              <label className="block text-xs text-muted" htmlFor="batch-ods">
+                {t('export.batchSizes')}
+              </label>
+              <input
+                id="batch-ods"
+                dir="ltr"
+                value={sizes}
+                placeholder={`${od}, ${od + 10}, ${od + 20}`}
+                onChange={(e) => setSizes(e.target.value)}
+                className="mt-1 w-full rounded-md border border-line bg-paper px-2 py-1 text-sm"
+              />
+              <div className="mt-2 flex gap-2">
+                {(['3mf', 'stl'] as const).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    disabled={!ods.length}
+                    className="flex-1 rounded-md border border-line px-2 py-1 text-xs hover:border-accent hover:text-accent disabled:opacity-40"
+                    onClick={() => {
+                      setOpen(false);
+                      void exportBatchAs(ods, f);
+                    }}
+                  >
+                    {t('export.batch')} {f.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-[11px] text-muted">{t('export.batchHint')}</p>
+            </div>
+          )}
         </div>
       )}
     </div>

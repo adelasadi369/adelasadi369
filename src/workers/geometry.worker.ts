@@ -2,6 +2,7 @@ import * as Comlink from 'comlink';
 import { buildMesh, type VaseMesh } from '../core/geometry/mesh';
 import type { Quality } from '../core/geometry/grid';
 import { exportDesign } from '../core/export';
+import { exportBatch } from '../core/export/batch';
 import { mutate, randomize, variationCount } from '../core/params/random';
 import { normalizeParams } from '../core/params/normalize';
 import { analyze, buildDesign } from '../core/printability';
@@ -96,6 +97,11 @@ const api: GeometryApi = {
 
   async exportDesign(params, format, onProgress) {
     const f = await exportDesign(params, format, undefined, { onProgress });
+    return Comlink.transfer(f, [f.data.buffer as ArrayBuffer]);
+  },
+
+  async exportBatch(params, ods, format, onProgress) {
+    const f = await exportBatch(params, ods, format, { onProgress });
     return Comlink.transfer(f, [f.data.buffer as ArrayBuffer]);
   },
 

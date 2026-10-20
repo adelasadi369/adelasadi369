@@ -160,5 +160,8 @@
   "sleeve.teardropAfter": "After",
   "group.sleeveMesh": "Sleeve mesh",
   "export.cancel": "Cancel",
-  "viewer.voxel": "voxel"
+  "viewer.voxel": "voxel",
+  "export.batch": "Batch ZIP",
+  "export.batchSizes": "Batch: tube ODs (mm)",
+  "export.batchHint": "One ZIP: a mesh and a print card per size; the skin scales with the bore."
 }

@@ -1,4 +1,5 @@
 import type { BoreInfo, VaseMesh } from '../geometry/mesh';
+import { decimate } from '../mc/decimate';
 import { COARSE, extract, type Lattice } from '../mc/extract';
 import {
   adjacency,
@@ -57,6 +58,8 @@ export interface SleeveInfo {
   totalSamples: number;
   /** Hole map statistics (coverage, bridges, bore contact); null without holes. */
   holes: HoleStats | null;
+  /** Export decimation (S4): triangle counts before and after; absent when the mesh was not decimated. */
+  decimated?: { before: number; after: number; ms: number };
   timings: { skin: number; extract: number; post: number; total: number };
 }
 
@@ -154,22 +157,8 @@ function mesh(params: VaseParams, sdf: SleeveField, h: number, off: number, opts
   const volume = orientOutward(m);
 
   // ---- triangles lying on the bed go last as the 'bottom' surface (overhang skips them)
-  const I = m.indices;
   const T = m.triangleCount;
-  const onBed = (t: number) =>
-    P[I[t * 3] * 3 + 2] === 0 && P[I[t * 3 + 1] * 3 + 2] === 0 && P[I[t * 3 + 2] * 3 + 2] === 0;
-  const indices = new Uint32Array(T * 3);
-  let w = 0;
-  for (const bed of [false, true])
-    for (let t = 0; t < T; t++) {
-      if (onBed(t) !== bed) continue;
-      indices[w++] = I[t * 3];
-      indices[w++] = I[t * 3 + 1];
-      indices[w++] = I[t * 3 + 2];
-    }
-  let bedTris = 0;
-  for (let t = 0; t < T; t++) if (onBed(t)) bedTris++;
-  const sideTris = T - bedTris;
+  const { indices, sideTris, bedTris } = bedLast(P, m.indices, T);
   const final = { positions: P, indices, vertexCount: V, triangleCount: T };
   const normals = vertexNormals(final);
   const pick = (k: number) => {
@@ -248,4 +237,86 @@ function mesh(params: VaseParams, sdf: SleeveField, h: number, off: number, opts
       totalSamples: raw.totalSamples,
     },
   };
+}
+
+/** Triangles lying on the bed go last as the 'bottom' surface (overhang skips them). */
+function bedLast(P: Float32Array, I: Uint32Array, T: number) {
+  const onBed = (t: number) =>
+    P[I[t * 3] * 3 + 2] === 0 && P[I[t * 3 + 1] * 3 + 2] === 0 && P[I[t * 3 + 2] * 3 + 2] === 0;
+  const indices = new Uint32Array(T * 3);
+  let w = 0;
+  let bedTris = 0;
+  for (const bed of [false, true])
+    for (let t = 0; t < T; t++) {
+      if (onBed(t) !== bed) continue;
+      if (bed) bedTris++;
+      indices[w++] = I[t * 3];
+      indices[w++] = I[t * 3 + 1];
+      indices[w++] = I[t * 3 + 2];
+    }
+  return { indices, sideTris: T - bedTris, bedTris };
+}
+
+/** Largest quadric distance error of the export decimation (mm). */
+export const DECIMATE_MAX_ERROR = 0.1;
+
+/**
+ * Quadric decimation of a sleeve mesh for export (mc/decimate.ts): bore, bottom-opening and bed vertices never
+ * move (they only thin out inside their own surface, the bore within a 0.03 mm chord sag), so the bore stays within
+ * ±0.05 mm and the base flat; every collapse keeps the mesh a closed manifold. Returns a new build (same contract).
+ */
+export function decimateSleeve(b: SleeveBuild, target: number): SleeveBuild {
+  const m = b.mesh;
+  const s = m.sleeve;
+  if (target <= 0 || m.triangleCount <= target) return b;
+  const t0 = now();
+  const kind = new Uint8Array(m.vertexCount);
+  for (const v of s.boreVertices) kind[v] = 1;
+  for (const v of s.holeVertices) kind[v] = 2;
+  for (const v of s.baseVertices) kind[v] = 3;
+  const d = decimate(m, { target, kind, maxError: DECIMATE_MAX_ERROR, sag: 0.03 });
+  const V = d.mesh.vertexCount;
+  const T = d.mesh.triangleCount;
+  const P = d.mesh.positions;
+  const { indices, sideTris, bedTris } = bedLast(P, d.mesh.indices, T);
+  const normals = vertexNormals({ positions: P, indices, vertexCount: V, triangleCount: T });
+  const keep = (ids: Uint32Array) => {
+    const out: number[] = [];
+    for (const v of ids) if (d.remap[v] >= 0) out.push(d.remap[v]);
+    return Uint32Array.from(out);
+  };
+  const canonical = new Uint32Array(V);
+  for (let v = 0; v < V; v++) canonical[v] = v;
+  const mv = meshValidity({ positions: P, indices, vertexCount: V, triangleCount: T });
+  const validity: SleeveValidity = {
+    ...s.validity,
+    manifold: mv.manifold,
+    badEdges: mv.badEdges,
+    flippedEdges: mv.flippedEdges,
+    degenerate: mv.degenerate,
+    badVertices: mv.badVertices,
+    ok: s.validity.ok && mv.manifold,
+  };
+  const mesh = {
+    ...m,
+    positions: P,
+    normals,
+    indices,
+    canonical,
+    vertexCount: V,
+    triangleCount: T,
+    surfaces: [
+      { kind: 'outer' as const, firstVertex: 0, rows: 1, cols: V, fan: false, firstTri: 0, triCount: sideTris },
+      { kind: 'bottom' as const, firstVertex: 0, rows: 0, cols: 0, fan: false, firstTri: sideTris, triCount: bedTris },
+    ],
+    sleeve: {
+      ...s,
+      boreVertices: keep(s.boreVertices),
+      holeVertices: keep(s.holeVertices),
+      baseVertices: keep(s.baseVertices),
+      validity,
+      decimated: { before: d.before, after: d.after, ms: now() - t0 },
+    },
+  };
+  return { mesh, sdf: b.sdf };
 }

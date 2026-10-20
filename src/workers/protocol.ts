@@ -36,6 +36,13 @@ export interface GeometryApi {
   surprise(seed: number, base: VaseParams): Promise<VaseParams>;
   /** onProgress (0..1) is a Comlink proxy; sleeve exports report marching-cubes progress through it. */
   exportDesign(params: VaseParams, format: ExportFormat, onProgress?: (fraction: number) => void): Promise<ExportFile>;
+  /** One sleeve for several insert ODs: one ZIP with a mesh and a print card per size (S4). */
+  exportBatch(
+    params: VaseParams,
+    ods: number[],
+    format: 'stl' | '3mf',
+    onProgress?: (fraction: number) => void,
+  ): Promise<ExportFile>;
   thumbnail(params: VaseParams): Promise<MeshPayload>;
   /** 6 printable seed/mutation variants of a design (auto-fixed when needed). */
   variations(params: VaseParams, seed: number): Promise<VaseParams[]>;

@@ -223,6 +223,9 @@ function innerMap(skin: SkinMap, T: number, maxOverhang: number) {
   const dT = TAU / nT;
   const dZ = H / (nZ - 1);
   const J = Math.floor(T / dZ);
+  // at fine voxels the ball spans hundreds of cells: sample it every `sz` rows / `st` columns (≤ ~7 per radius);
+  // the skipped cells are at most a map cell away from a sampled one, far below the wall tolerance
+  const sz = Math.max(1, Math.ceil(J / 7));
   const di: number[] = [];
   const dj: number[] = [];
   const cap: number[] = [];
@@ -231,11 +234,13 @@ function innerMap(skin: SkinMap, T: number, maxOverhang: number) {
     for (let i = 0; i < nT; i++) mean += rS[j * nT + i];
     const arc = Math.max(1e-3, (mean / nT) * dT);
     const I = Math.min(nT >> 1, Math.floor(T / arc));
+    const st = Math.max(1, Math.ceil(I / 7));
     di.length = dj.length = cap.length = 0;
     for (let b = -J; b <= J; b++) {
       const jj = j + b;
-      if (jj < 0 || jj >= nZ) continue;
+      if (jj < 0 || jj >= nZ || b % sz !== 0) continue;
       for (let a = -I; a <= I; a++) {
+        if (a % st !== 0) continue;
         const s2 = (a * arc) ** 2 + (b * dZ) ** 2;
         if (s2 >= T * T) continue;
         di.push(a);

@@ -1802,6 +1802,16 @@ export const SleeveSchema = z
             'Mesh cell size of the exported file (0.3–0.6). Smaller = bigger file.',
           ],
         }),
+        decimateTarget: int(0, 2000000, 400000, {
+          fa: 'هدف کاهش مثلث‌ها',
+          en: 'Decimate to (triangles)',
+          phase: 2,
+          step: 10000,
+          tip: [
+            'فایل خروجی تا این تعداد مثلث ساده می‌شود (روش کوادریک)؛ حفره، دهانهٔ پایین و کف ثابت می‌مانند و دقت حفره ±۰٫۰۵ میلی‌متر حفظ می‌شود. ۰ = بدون کاهش.',
+            'The exported mesh is simplified down to this many triangles (quadric); the bore, bottom opening and base never move, so the bore stays within ±0.05 mm. 0 = off.',
+          ],
+        }),
         smoothing: int(0, 10, 4, {
           fa: 'هموارسازی',
           en: 'Smoothing',

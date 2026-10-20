@@ -178,7 +178,7 @@ describe('schema v3 migration (sleeve mode)', () => {
   it('accepts the sleeve output mode and its mesh defaults', () => {
     const p = normalizeParams({ print: { outputMode: 'sleeve' } });
     expect(p.print.outputMode).toBe('sleeve');
-    expect(p.sleeve.mesh).toEqual({ previewVoxel: 1.5, exportVoxel: 0.5, smoothing: 4 });
+    expect(p.sleeve.mesh).toEqual({ previewVoxel: 1.5, exportVoxel: 0.5, decimateTarget: 400000, smoothing: 4 });
     expect(normalizeParams({ sleeve: { mesh: { exportVoxel: 0.1 } } }).sleeve.mesh.exportVoxel).toBe(0.3);
   });
 });

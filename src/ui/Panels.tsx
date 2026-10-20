@@ -65,6 +65,7 @@ const VISIBLE: Record<string, Rule> = {
   'sleeve.mesh.previewVoxel': sleeve,
   'sleeve.mesh.exportVoxel': sleeve,
   'sleeve.mesh.smoothing': sleeve,
+  'sleeve.mesh.decimateTarget': sleeve,
   'print.printer.bedX': (p) => p.print.printer.preset === 'custom',
   'print.printer.bedY': (p) => p.print.printer.preset === 'custom',
   'print.printer.bedZ': (p) => p.print.printer.preset === 'custom',
@@ -419,7 +420,13 @@ function PrintPanel() {
       <InsertGroup />
       <ParamGroup
         title={t('group.sleeveMesh')}
-        paths={['sleeve.coreBlend', 'sleeve.mesh.previewVoxel', 'sleeve.mesh.exportVoxel', 'sleeve.mesh.smoothing']}
+        paths={[
+          'sleeve.coreBlend',
+          'sleeve.mesh.previewVoxel',
+          'sleeve.mesh.exportVoxel',
+          'sleeve.mesh.decimateTarget',
+          'sleeve.mesh.smoothing',
+        ]}
       />
       <ParamGroup
         title={t('group.printer')}
