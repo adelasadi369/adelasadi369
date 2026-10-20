@@ -9,6 +9,7 @@ import { analyze, buildDesign } from '../core/printability';
 import { autoFix } from '../core/printability/autofix';
 import { analyzeOverhang } from '../core/printability/overhang';
 import type { VaseParams } from '../core/params/schema';
+import { meshVoxel, sleeveVoxel } from '../core/sleeve';
 import { SLEEVE_PRESETS, VASE_PRESETS } from '../presets';
 import type { GeometryApi, MeshPayload } from './protocol';
 
@@ -33,19 +34,40 @@ function payload(m: VaseMesh, overhang: Float32Array, quality: Quality, ms: numb
   };
 }
 
+/** Last sleeve preview (key = mesh voxel + params). */
+let lastSleeve: { key: string; mesh: MeshPayload; report: Omit<ReturnType<typeof analyze>, 'vertexOverhang'> } | null =
+  null;
+
 const transferables = (p: MeshPayload) => [p.positions.buffer, p.normals.buffer, p.indices.buffer, p.overhang.buffer];
 
 const api: GeometryApi = {
   regen(params, quality) {
     const t0 = performance.now();
     if (params.print.outputMode === 'sleeve') {
-      // sleeve topology is not fixed: the full validity check runs on every regen (no topology cache)
-      const build = buildDesign(params, quality);
-      const { vertexOverhang, ...report } = analyze(build, params);
-      const s = (build.mesh as { sleeve?: { log: string[]; voxel: number } }).sleeve;
-      if (s?.log.length) console.info('[sleeve]', ...s.log);
-      const mesh = { ...payload(build.mesh, vertexOverhang, quality, performance.now() - t0), voxel: s?.voxel };
-      return Promise.resolve(Comlink.transfer({ mesh, report }, transferables(mesh)));
+      // a thin shell meshes the drag and the release preview at the same voxel (meshVoxel): the release reuses
+      // the drag's mesh and report instead of building the same sleeve twice
+      const key = `${meshVoxel(params, sleeveVoxel(params, quality))}|${JSON.stringify(params)}`;
+      if (lastSleeve?.key !== key) {
+        // sleeve topology is not fixed: the full validity check runs on every regen (no topology cache)
+        const build = buildDesign(params, quality);
+        const { vertexOverhang, ...report } = analyze(build, params);
+        const s = (build.mesh as { sleeve?: { log: string[]; voxel: number } }).sleeve;
+        if (s?.log.length) console.info('[sleeve]', ...s.log);
+        const mesh = { ...payload(build.mesh, vertexOverhang, quality, performance.now() - t0), voxel: s?.voxel };
+        lastSleeve = { key, mesh, report };
+      }
+      // transfer copies: the cached buffers stay usable for the next hit
+      const c = lastSleeve.mesh;
+      const mesh = {
+        ...c,
+        positions: c.positions.slice(),
+        normals: c.normals.slice(),
+        indices: c.indices.slice(),
+        overhang: c.overhang.slice(),
+        quality,
+        ms: performance.now() - t0,
+      };
+      return Promise.resolve(Comlink.transfer({ mesh, report: lastSleeve.report }, transferables(mesh)));
     }
     const build = buildMesh(params, quality);
     const key = topoKey(build.mesh);

@@ -54,7 +54,9 @@ const FLOOR_BLEND = 2;
 export const floorRingHeight = (p: VaseParams, zb: number) => Math.max(p.sleeve.holes.keepOutBottom, FLOOR_MIN, zb + 1);
 
 export function createSleeveField(params: VaseParams, voxel: number): SleeveField {
-  const skin = buildSkinMap(params, voxel);
+  // the drag preview reuses the release preview's skin map (rasterised at the finer of the two voxels), so a slider
+  // release only re-meshes (S4 perf)
+  const skin = buildSkinMap(params, Math.min(voxel, params.sleeve.mesh.previewVoxel));
   const H = skin.H;
   const prof = boreProfile(params, H, H);
   const R = prof.bore.radius;
@@ -78,8 +80,10 @@ export function createSleeveField(params: VaseParams, voxel: number): SleeveFiel
     H,
     R,
     zb,
-    rRef: radii.mean,
-    rOut: Math.max(radii.outer, Rc, Math.min(strands.reach, radii.outer * 1.5)),
+    // quantised (S4 perf): small skin edits (twist, effect depth) keep the cached hole map; r_ref to 1 mm moves hole
+    // sizes by ≤ 2 %, r_out rounded up to 2 mm only makes teardrop roofs steeper (safe)
+    rRef: Math.round(radii.mean),
+    rOut: 2 * Math.ceil(Math.max(radii.outer, Rc, Math.min(strands.reach, radii.outer * 1.5)) / 2),
     top,
     cap: zBody,
   });
@@ -139,7 +143,8 @@ export function createSleeveField(params: VaseParams, voxel: number): SleeveFiel
       skinD = smax(skinD, z - zBody, kTop);
       core = smax(core, z - zBody, kTop);
     }
-    let d = anyStrand ? smin(skinD, strands.at(x, y, z), strands.k) : skinD;
+    // strands beyond skin + k cannot change the smooth union: cap their search there (exact, see Strands.at)
+    let d = anyStrand ? smin(skinD, strands.at(x, y, z, skinD + strands.k), strands.k) : skinD;
     d = smin(d, core, k);
     if (top.flat) d = smax(d, z - H, kTop);
     else {

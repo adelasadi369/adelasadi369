@@ -46,8 +46,12 @@ export interface Strands {
   rMin: number;
   /** No strand material beyond this radius about the axis. */
   reach: number;
-  /** Signed distance to the union of all strands (a lower bound far from them; Infinity when none). */
-  at(x: number, y: number, z: number): number;
+  /**
+   * Signed distance to the union of all strands (a lower bound far from them; Infinity when none). With `cap`,
+   * strands farther than cap are skipped and the result is min(distance, cap): smin(a, s, k) only needs s below
+   * a + k, so passing that cap leaves the composed field unchanged.
+   */
+  at(x: number, y: number, z: number, cap?: number): number;
   /** Rounded tip zones (drip bottoms, pointed tips): short downward patches that print like tiny bridges. */
   tip(x: number, y: number, z: number): boolean;
 }
@@ -343,11 +347,51 @@ export function buildStrands(params: VaseParams, inp: StrandInputs): Strands {
     return rs[lo] + (rs[hi] - rs[lo]) * t;
   };
 
-  const at = (x0: number, y0: number, z: number) => {
-    let best = Infinity;
+  // per strand, over its segments: lowUp[g] = min box z0 of segments ≥ g, highDown[g] = max box z1 of segments ≤ g
+  const nSeg = SB.length / 6;
+  const lowUp = new Float64Array(nSeg);
+  const highDown = new Float64Array(nSeg);
+  for (let i = 0; i < list.length; i++) {
+    let m = Infinity;
+    for (let g = first[i + 1] - 1; g >= first[i]; g--) lowUp[g] = m = Math.min(m, SB[g * 6 + 2]);
+    m = -Infinity;
+    for (let g = first[i]; g < first[i + 1]; g++) highDown[g] = m = Math.max(m, SB[g * 6 + 5]);
+  }
+  const order = new Int32Array(list.length);
+  const orderD = new Float64Array(list.length);
+  /** Exact distance of one segment (squashed coordinates for ribbons; the caller divides by a). */
+  const segDist = (g: number, x: number, y: number, z: number) => {
+    const o = g * 8;
+    if (S[o + 7] < 0) {
+      // degenerate cone: the bigger end sphere
+      const r1 = S[o + 6];
+      const r2 = -S[o + 7];
+      const e = r1 >= r2 ? 0 : 3;
+      return Math.hypot(x - S[o + e], y - S[o + e + 1], z - S[o + e + 2]) - Math.max(r1, r2);
+    }
+    return roundCone(x, y, z, S[o], S[o + 1], S[o + 2], S[o + 3], S[o + 4], S[o + 5], S[o + 6], S[o + 7]);
+  };
+  const at = (x0: number, y0: number, z: number, cap = Infinity) => {
+    let best = cap;
+    // strands whose box is within reach, nearest box first (insertion sort of ≤ 24): the nearest strand sets
+    // `best` and the boxes of the others usually skip them
+    let n = 0;
     for (let i = 0; i < list.length; i++) {
       // the box of the round strand bounds its ribbon too (a ribbon only loses material radially)
-      if (boxDist(boxes, i * 6, x0, y0, z) >= best) continue;
+      const d = boxDist(boxes, i * 6, x0, y0, z);
+      if (d >= best) continue;
+      let k = n++;
+      while (k > 0 && orderD[k - 1] > d) {
+        orderD[k] = orderD[k - 1];
+        order[k] = order[k - 1];
+        k--;
+      }
+      orderD[k] = d;
+      order[k] = i;
+    }
+    for (let q = 0; q < n; q++) {
+      if (orderD[q] >= best) break;
+      const i = order[q];
       let x = x0;
       let y = y0;
       const rb = ribbonR[i];
@@ -361,18 +405,28 @@ export function buildStrands(params: VaseParams, inp: StrandInputs): Strands {
         x = x0 * f;
         y = y0 * f;
       }
-      for (let g = first[i]; g < first[i + 1]; g++) {
+      // segments rise in z: start at the first segment whose box reaches z, walk up and down, and stop each way
+      // once the boxes beyond are farther in z alone than `best` (lowUp / highDown are monotone bounds)
+      const f0 = first[i];
+      const f1 = first[i + 1];
+      let lo = f0;
+      let hi = f1;
+      while (lo < hi) {
+        const m = (lo + hi) >> 1;
+        if (highDown[m] < z) lo = m + 1;
+        else hi = m;
+      }
+      const g0 = Math.min(lo, f1 - 1);
+      for (let g = g0; g < f1; g++) {
+        if ((lowUp[g] - z) / a >= best) break;
         if (boxDist(SB, g * 6, x, y, z) / a >= best) continue;
-        const o = g * 8;
-        let d: number;
-        if (S[o + 7] < 0) {
-          // degenerate cone: the bigger end sphere
-          const r1 = S[o + 6];
-          const r2 = -S[o + 7];
-          const e = r1 >= r2 ? 0 : 3;
-          d = Math.hypot(x - S[o + e], y - S[o + e + 1], z - S[o + e + 2]) - Math.max(r1, r2);
-        } else d = roundCone(x, y, z, S[o], S[o + 1], S[o + 2], S[o + 3], S[o + 4], S[o + 5], S[o + 6], S[o + 7]);
-        if (rb) d /= a;
+        const d = segDist(g, x, y, z) / a;
+        if (d < best) best = d;
+      }
+      for (let g = g0 - 1; g >= f0; g--) {
+        if ((z - highDown[g]) / a >= best) break;
+        if (boxDist(SB, g * 6, x, y, z) / a >= best) continue;
+        const d = segDist(g, x, y, z) / a;
         if (d < best) best = d;
       }
     }
