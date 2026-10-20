@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "name": "Sleeve Silk Drape",
   "dimensions": {
     "height": 190,
@@ -250,7 +250,7 @@
       "edgeRoundness": 2,
       "minBridgeWidth": 4.8,
       "keepOutBottom": 18,
-      "keepOutTop": 8,
+      "keepOutTop": 16,
       "teardropTops": true
     },
     "topEdge": {
@@ -272,6 +272,8 @@
       "lean": 5,
       "curl": 10,
       "taper": 40,
+      "crossSection": "round",
+      "ribbonRatio": 3,
       "blend": 4
     },
     "drips": {
@@ -280,6 +282,8 @@
       "bulbSize": 8,
       "placement": "rim"
     },
+    "selfSupporting": false,
+    "skinThickness": 2.4,
     "coreBlend": 3,
     "mesh": {
       "previewVoxel": 1.5,

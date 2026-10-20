@@ -170,7 +170,8 @@ describe('schema v3 migration (sleeve mode)', () => {
     delete v2.sleeve;
     const p = normalizeParams(v2);
     expect(p.version).toBe(SCHEMA_VERSION);
-    expect(p.sleeve).toEqual(DEFAULT_PARAMS.sleeve);
+    // stored designs stay solid (v5 → v6), new ones get the thin shell
+    expect(p.sleeve).toEqual({ ...DEFAULT_PARAMS.sleeve, skinThickness: 0 });
     expect(p.print.outputMode).toBe(PRESETS[2].params.print.outputMode);
   });
 

@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "name": "Star Bloom",
   "dimensions": {
     "height": 180,
@@ -243,6 +243,8 @@
       "lean": 5,
       "curl": 10,
       "taper": 40,
+      "crossSection": "round",
+      "ribbonRatio": 3,
       "blend": 4
     },
     "drips": {
@@ -251,6 +253,8 @@
       "bulbSize": 8,
       "placement": "rim"
     },
+    "selfSupporting": false,
+    "skinThickness": 2.4,
     "coreBlend": 2,
     "mesh": {
       "previewVoxel": 1.5,

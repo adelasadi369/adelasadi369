@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "name": "Sleeve Drip",
   "dimensions": {
     "height": 150,
@@ -258,6 +258,8 @@
       "lean": 0,
       "curl": 0,
       "taper": 10,
+      "crossSection": "round",
+      "ribbonRatio": 3,
       "blend": 6
     },
     "drips": {
@@ -266,6 +268,8 @@
       "bulbSize": 10,
       "placement": "fingers"
     },
+    "selfSupporting": false,
+    "skinThickness": 0,
     "coreBlend": 3,
     "mesh": {
       "previewVoxel": 1.5,

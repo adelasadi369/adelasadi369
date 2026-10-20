@@ -19,6 +19,14 @@ export const DRAG_VOXEL = 2;
 export const sleeveVoxel = (p: VaseParams, quality: string) =>
   quality === 'low' ? DRAG_VOXEL : p.sleeve.mesh.previewVoxel;
 
+/**
+ * Voxel actually meshed. With a thin shell the skin and the free-standing core tube are both thin walls, and each
+ * needs ≥ 1.5 samples across, or marching cubes aliases the hole bridges into loose flakes (measured: T 2.4 at
+ * 2 mm leaves islands of up to 3 % of the volume, at min(T, coreWall) / 1.5 none).
+ */
+export const meshVoxel = (p: VaseParams, voxel: number) =>
+  p.sleeve.skinThickness > 0 ? Math.min(voxel, Math.min(p.sleeve.skinThickness, p.insert.coreWall) / 1.5) : voxel;
+
 /** Sub-voxel lattice offsets: the default, then the deterministic retry. Never 0 (no sample on the axis). */
 const OFFSETS = [0.5, 0.3];
 
@@ -78,8 +86,9 @@ export function sleeveLattice(f: SleeveField, h: number, off: number): Lattice {
 }
 
 /** Deterministic sleeve mesh: SDF → marching cubes → snapping → Taubin → islands → validity (one retry). */
-export function buildSleeveMesh(params: VaseParams, voxel: number, opts: SleeveOptions = {}): SleeveBuild {
+export function buildSleeveMesh(params: VaseParams, requested: number, opts: SleeveOptions = {}): SleeveBuild {
   const t0 = now();
+  const voxel = meshVoxel(params, requested);
   const sdf = createSleeveField(params, voxel);
   const tSkin = now() - t0;
   const log: string[] = [];

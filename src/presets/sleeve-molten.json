@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "name": "Sleeve Molten",
   "dimensions": {
     "height": 150,
@@ -155,8 +155,8 @@
       "id": "sleeve-molten-0",
       "enabled": true,
       "start": 0,
-      "end": 100,
-      "fade": 14,
+      "end": 82,
+      "fade": 24,
       "style": "blobs",
       "amount": 8,
       "scale": 55,
@@ -258,6 +258,8 @@
       "lean": 5,
       "curl": 10,
       "taper": 40,
+      "crossSection": "round",
+      "ribbonRatio": 3,
       "blend": 4
     },
     "drips": {
@@ -266,6 +268,8 @@
       "bulbSize": 8,
       "placement": "rim"
     },
+    "selfSupporting": false,
+    "skinThickness": 3.2,
     "coreBlend": 4,
     "mesh": {
       "previewVoxel": 1.5,

@@ -70,7 +70,9 @@ export function measureSleeveBore(b: SleeveBuild): BoreMeasure & { samples: numb
 
 /**
  * Thinnest wall: from a subset of vertices march inward along −n through the SDF until leaving the material.
- * Returns the minimum and the height where it occurs.
+ * Returns the thinnest wall and the height where it occurs, ignoring the thinnest 0.5 % of samples: the folds of a
+ * thin draped shell (S4) leave isolated sub-millimetre pockets where a vertex normal skims the shell, which a slicer
+ * fills or skips; a real thin region (e.g. a bare 1.2 mm core tube) covers far more samples.
  */
 export function minWall(b: SleeveBuild, maxSamples = 3000): { thickness: number; z: number } {
   const { mesh, sdf } = b;
@@ -80,8 +82,7 @@ export function minWall(b: SleeveBuild, maxSamples = 3000): { thickness: number;
   for (const v of mesh.sleeve.baseVertices) skip[v] = 1;
   const stride = Math.max(1, Math.ceil(mesh.vertexCount / maxSamples));
   const voxel = mesh.sleeve.voxel;
-  let best = Infinity;
-  let bestZ = 0;
+  const found: { s: number; z: number }[] = [];
   for (let v = 0; v < mesh.vertexCount; v += stride) {
     if (skip[v]) continue;
     const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2]; // prettier-ignore
@@ -101,13 +102,12 @@ export function minWall(b: SleeveBuild, maxSamples = 3000): { thickness: number;
       }
     }
     if (entry < 0) continue;
-    s -= entry;
-    if (s < best) {
-      best = s;
-      bestZ = z;
-    }
+    found.push({ s: s - entry, z });
   }
-  return { thickness: best, z: bestZ };
+  if (!found.length) return { thickness: Infinity, z: 0 };
+  found.sort((a, c) => a.s - c.s);
+  const pick = found[Math.floor(found.length * 0.005)];
+  return { thickness: pick.s, z: pick.z };
 }
 
 export function sleeveStats(

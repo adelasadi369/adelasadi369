@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "name": "Sleeve Fingers",
   "dimensions": {
     "height": 180,
@@ -248,7 +248,7 @@
     },
     "fingers": {
       "count": 6,
-      "width": 22,
+      "width": 28,
       "widthVariation": 35,
       "heightMin": 65,
       "heightMax": 100,
@@ -258,6 +258,8 @@
       "lean": 4,
       "curl": 9,
       "taper": 25,
+      "crossSection": "ribbon",
+      "ribbonRatio": 4.5,
       "blend": 8
     },
     "drips": {
@@ -266,6 +268,8 @@
       "bulbSize": 8,
       "placement": "rim"
     },
+    "selfSupporting": false,
+    "skinThickness": 2.4,
     "coreBlend": 3,
     "mesh": {
       "previewVoxel": 1.5,

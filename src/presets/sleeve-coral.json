@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "name": "Sleeve Coral",
   "dimensions": {
     "height": 160,
@@ -258,6 +258,8 @@
       "lean": 5,
       "curl": 10,
       "taper": 40,
+      "crossSection": "round",
+      "ribbonRatio": 3,
       "blend": 4
     },
     "drips": {
@@ -266,6 +268,8 @@
       "bulbSize": 8,
       "placement": "rim"
     },
+    "selfSupporting": false,
+    "skinThickness": 0,
     "coreBlend": 2.5,
     "mesh": {
       "previewVoxel": 1.5,

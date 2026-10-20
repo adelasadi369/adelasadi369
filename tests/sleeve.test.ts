@@ -46,9 +46,10 @@ describe('sleeve engine', () => {
     // the field is material on the axis through the floor, and the bore starts above it
     for (const z of [0.3, 1, 1.7]) expect(b.sdf.at(0, 0, z)).toBeLessThan(0);
     expect(b.sdf.at(0, 0, 3)).toBeGreaterThan(0);
-    // a slice through the floor is one solid disc (one contour), above it an annulus (two)
+    // a slice through the floor is one solid disc (one contour), above it (inside the shell's floor ring) an annulus
     expect(slice(b.mesh, 1).loops.length).toBe(1);
-    expect(slice(b.mesh, 10).loops.length).toBe(2);
+    expect(b.sdf.zFloor).toBeGreaterThan(5);
+    expect(slice(b.mesh, 5).loops.length).toBe(2);
     expect(b.mesh.sleeve.holeVertices.length).toBe(0);
   });
 

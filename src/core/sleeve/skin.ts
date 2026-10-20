@@ -117,7 +117,6 @@ function rasterise(params: VaseParams, voxel: number): SkinMap {
       if (v + off > reach) reach = v + off;
     }
   }
-  const dT = TAU / nT;
   const dZ = H / (nZ - 1);
   // self-supporting (sleeve-spec §4.9): sweeping up each column, r_j ≤ r_{j−1} + dz·tan(maxOverhang − 2°); the
   // overhang of ρ = r(θ, z) is atan(r_z / sqrt(1 + (r_θ / r)²)) ≤ atan(r_z), so this bounds every underside
@@ -129,6 +128,14 @@ function rasterise(params: VaseParams, voxel: number): SkinMap {
         if (r[j * nT + i] > lim) r[j * nT + i] = lim;
       }
   }
+  lipschitzMap(r, L, nT, nZ, H);
+  return { field, H, nT, nZ, r, L, cx, cy, bent, reach };
+}
+
+/** L = 1 / sqrt(1 + (r_θ / r)² + r_z²) of a periodic radius map (central differences), written into `out`. */
+export function lipschitzMap(r: Float32Array, out: Float32Array, nT: number, nZ: number, H: number) {
+  const dT = TAU / nT;
+  const dZ = H / (nZ - 1);
   for (let j = 0; j < nZ; j++) {
     const jp = Math.min(nZ - 1, j + 1);
     const jm = Math.max(0, j - 1);
@@ -136,9 +143,8 @@ function rasterise(params: VaseParams, voxel: number): SkinMap {
       const o = j * nT + i;
       const rt = (r[j * nT + ((i + 1) % nT)] - r[j * nT + ((i - 1 + nT) % nT)]) / (2 * dT);
       const rz = (r[jp * nT + i] - r[jm * nT + i]) / ((jp - jm) * dZ);
-      const g = rt / r[o];
-      L[o] = 1 / Math.sqrt(1 + g * g + rz * rz);
+      const g = rt / Math.max(r[o], 1e-3);
+      out[o] = 1 / Math.sqrt(1 + g * g + rz * rz);
     }
   }
-  return { field, H, nT, nZ, r, L, cx, cy, bent, reach };
 }

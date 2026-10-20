@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 
-export const SCHEMA_VERSION = 5 as const;
+export const SCHEMA_VERSION = 6 as const;
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -1368,6 +1368,10 @@ export const InsertSchema = z
 //     See docs/sleeve-integration.md §2–§4. Holes and top edge since S2b; fingers, drips, more hole modes since S3.
 // ---------------------------------------------------------------------------
 
+/** Thin draped shell (S4): 0 = solid sleeve, otherwise SKIN_THICKNESS_MIN … SKIN_THICKNESS_MAX mm (normalize snaps). */
+export const SKIN_THICKNESS_MIN = 1.6;
+export const SKIN_THICKNESS_MAX = 6;
+
 export const HOLE_MODES = ['none', 'organicNoise', 'ellipses', 'voronoi', 'foldGaps'] as const;
 
 const SleeveHolesSchema = z
@@ -1544,6 +1548,7 @@ const SleeveTopEdgeSchema = z
   .prefault({});
 
 export const FINGER_TIPS = ['round', 'pointed', 'dripBulb'] as const;
+export const FINGER_SECTIONS = ['round', 'ribbon'] as const;
 
 const SleeveFingersSchema = z
   .object({
@@ -1657,6 +1662,27 @@ const SleeveFingersSchema = z
         'How much thinner toward the tip; never below two print lines.',
       ],
     }),
+    crossSection: enm(FINGER_SECTIONS, 'round', {
+      fa: 'مقطع انگشتی',
+      en: 'Finger cross-section',
+      phase: 2,
+      tip: [
+        'گرد = رشتهٔ استوانه‌ای؛ نواری = پهن و تخت روی لوله (مثل پارچه). نسبت پهنا به ضخامت را «نسبت نوار» تعیین می‌کند.',
+        'Round = a cylindrical strand; Ribbon = wide and flat against the tube (fabric-like). "Ribbon ratio" sets width:thickness.',
+      ],
+      options: { round: t('گرد', 'Round'), ribbon: t('نواری (تخت)', 'Ribbon (flat)') },
+    }),
+    ribbonRatio: num(1.5, 6, 3, {
+      fa: 'نسبت نوار',
+      en: 'Ribbon ratio',
+      phase: 2,
+      unit: 'x',
+      step: 0.1,
+      tip: [
+        'نسبت پهنای انگشتی (دور لوله) به ضخامتش (شعاعی). ضخامت هرگز زیر دو خط چاپ نمی‌شود.',
+        'Finger width (around the tube) to thickness (radial). The thickness never drops below two print lines.',
+      ],
+    }),
     blend: num(0, 12, 4, {
       fa: 'نرمی اتصال انگشتی',
       en: 'Finger blend',
@@ -1726,6 +1752,18 @@ export const SleeveSchema = z
       tip: [
         'روشن: پوسته هیچ‌جا از زاویهٔ آویز مجاز تندتر به بیرون نمی‌رود (شعاع در هر میلی‌متر بالا رفتن حداکثر tan زاویه بیشتر می‌شود)، پس بدون ساپورت چاپ می‌شود؛ بهایش این است که برآمدگی‌ها و چین‌های تند کوتاه می‌شوند تا حداکثر با همان زاویه پهن شوند (فرم آرام‌تر و باریک‌تر). انگشتی‌ها و قطره‌ها همیشه این قاعده را رعایت می‌کنند. خاموش: فرم کامل، شاید ساپورت لازم شود.',
         'On: the skin never grows outward faster than the max overhang (radius gain per mm of height ≤ tan of the angle), so it prints without supports; the trade-off is that steep bulges and folds are trimmed back so they widen at most at that angle (calmer, slimmer shapes). Fingers and drips always follow this rule. Off: the full shape, which may need supports.',
+      ],
+    }),
+    skinThickness: num(0, SKIN_THICKNESS_MAX, 2.4, {
+      fa: 'ضخامت پوسته',
+      en: 'Skin thickness',
+      basic: true,
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: [
+        'پوستهٔ نازک مثل پارچه با فاصله دور لوله؛ فاصلهٔ بین پوسته و هسته در لبهٔ بالا باز است و در پایین با یک حلقهٔ کف بسته می‌شود. ۰ = تو‌پر از حفره تا پوسته (کندتر چاپ می‌شود و فیلامنت بیشتری می‌برد). حداقل ۱٫۶.',
+        'A thin fabric-like shell standing off the tube: the gap between shell and core is open at the top edge and closed at the bottom by a floor ring. 0 = solid from the bore to the skin (more filament, longer print). Minimum 1.6.',
       ],
     }),
     coreBlend: num(0, 8, 2, {
