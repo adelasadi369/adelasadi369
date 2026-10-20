@@ -163,5 +163,14 @@
   "viewer.voxel": "voxel",
   "export.batch": "Batch ZIP",
   "export.batchSizes": "Batch: tube ODs (mm)",
-  "export.batchHint": "One ZIP: a mesh and a print card per size; the skin scales with the bore."
+  "export.batchHint": "One ZIP: a mesh and a print card per size; the skin scales with the bore.",
+  "viewer.insert": "Tube",
+  "viewer.goldMask": "Gold plating",
+  "viewer.goldEdges": "Edges and tips",
+  "viewer.goldWhole": "Whole",
+  "viewer.color2": "Colour 2",
+  "viewer.snapshot": "PNG",
+  "viewer.snapshotBg": "Snapshot background",
+  "viewer.bgWhite": "White",
+  "viewer.bgTransparent": "Transparent"
 }

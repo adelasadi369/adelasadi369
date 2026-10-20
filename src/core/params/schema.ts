@@ -2036,6 +2036,17 @@ const QUALITY_LABELS = {
   ultra: t('خیلی زیاد', 'Ultra'),
 };
 
+/** Viewer looks (render only, never exported). dualSilk and gold since S4. */
+export const VIEW_MATERIALS = ['matte', 'silk', 'gloss', 'translucent', 'dualSilk', 'gold'] as const;
+export const VIEW_MATERIAL_LABELS = {
+  matte: t('مات', 'Matte'),
+  silk: t('ابریشمی', 'Silk'),
+  gloss: t('براق', 'Gloss'),
+  translucent: t('نیمه‌شفاف', 'Translucent'),
+  dualSilk: t('ابریشمی دورنگ', 'Dual-colour silk'),
+  gold: t('آب طلا', 'Gold-plated'),
+};
+
 export const RenderSchema = z
   .object({
     previewQuality: enm(QUALITIES, 'medium', {
@@ -2050,16 +2061,34 @@ export const RenderSchema = z
       tip: ['تراکم مش فایل خروجی.', 'Exported mesh density.'],
       options: QUALITY_LABELS,
     }),
-    viewMaterial: enm(['matte', 'silk', 'gloss', 'translucent'] as const, 'matte', {
+    viewMaterial: enm(VIEW_MATERIALS, 'matte', {
       fa: 'جنس نمایش',
       en: 'View material',
       tip: ['فقط ظاهر نمایشگر.', 'Viewer appearance only.'],
-      options: {
-        matte: t('مات', 'Matte'),
-        silk: t('ابریشمی', 'Silk'),
-        gloss: t('براق', 'Gloss'),
-        translucent: t('نیمه‌شفاف', 'Translucent'),
+      options: VIEW_MATERIAL_LABELS,
+    }),
+    color2: meta(
+      z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/)
+        .default('#2c5fd4'),
+      {
+        fa: 'رنگ دوم (ابریشمی دورنگ)',
+        en: 'Second colour (dual silk)',
+        tip: [
+          'رنگی که فیلامنت ابریشمی دورنگ با تغییر زاویهٔ دید به آن می‌رسد. فقط نمایش.',
+          'The colour a dual-colour silk filament shifts to as the viewing angle changes. Display only.',
+        ],
       },
+    ),
+    goldMask: enm(['whole', 'edges'] as const, 'edges', {
+      fa: 'پوشش طلایی',
+      en: 'Gold plating',
+      tip: [
+        'تمام بدنه، یا فقط لبه‌ها و نوک‌ها (از روی انحنای سطح). فقط نمایش.',
+        'The whole body, or only edges and tips (from the surface curvature). Display only.',
+      ],
+      options: { whole: t('کامل', 'Whole'), edges: t('لبه‌ها و نوک‌ها', 'Edges and tips') },
     }),
     color: meta(
       z

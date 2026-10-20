@@ -36,6 +36,8 @@ export interface ViewerState {
   clip: number | null;
   /** Sleeve holes: preview the openings without teardrop tops ("before"); params and exports are untouched. */
   teardropBefore: boolean;
+  /** Render-only glass / steel tube in the bore (S4); never exported. */
+  insert: boolean;
 }
 
 export interface FixState {
@@ -224,7 +226,7 @@ export const useStore = create<Store>((set, get) => {
     lang: prefs.lang,
     level: prefs.level,
     tab: 'shape',
-    viewer: { heatmap: false, layers: false, dims: true, clip: null, teardropBefore: false },
+    viewer: { heatmap: false, layers: false, dims: true, clip: null, teardropBefore: false, insert: true },
     fix: { status: 'idle', diff: [], before: 0, after: 0, prev: null },
     toast: null,
     exporting: false,
