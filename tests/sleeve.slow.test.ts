@@ -66,7 +66,13 @@ describe('cross-check with the S1 shell + bore liner', () => {
     (id) => {
       const preset = PRESETS.find((x) => x.id === id)!.params;
       // like for like: flat rim and no outer base chamfer on the shell side, same insert and chamfers
-      const common = { ...preset, rim: { ...preset.rim, round: false }, base: { ...preset.base, chamfer: 0 } };
+      // the liner is solid from the bore out, so compare with the solid sleeve (skinThickness 0)
+      const common = {
+        ...preset,
+        rim: { ...preset.rim, round: false },
+        base: { ...preset.base, chamfer: 0 },
+        sleeve: { ...preset.sleeve, skinThickness: 0 },
+      };
       const sleeve = sleeveParams(common);
       const shell = normalizeParams({
         ...common,

@@ -465,6 +465,7 @@ opening term at all.
 core radius, strand reach, `+ max(coreBlend, fingers.blend)/4`), offset by `0.5·h` on x, y and z, so no sample lies on the axis or on z = 0 / z = H.
 
 **Marching cubes** (`mc/`):
+
 - Case table generated from face rules: on each face, crossing edges are joined so inside corners stay apart
   (ambiguous faces), segments chain into loops (exit on one face = entry on the other), and each loop is fanned
   from an apex none of whose diagonals lies in a cube face (otherwise two cubes could share a face diagonal).
@@ -475,6 +476,7 @@ core radius, strand reach, `+ max(coreBlend, fingers.blend)/4`), offset by `0.5�
   sign of a corner value (they never bracket the surface). Identical output to evaluating every sample (tested).
 
 **Post-processing** (`sleeve/index.ts`, `mc/post.ts`):
+
 1. Islands: union-find; keep the largest-volume component, report the removed volume and fraction.
 2. Snapping (normals from the raw mesh): `n·r̂ < −0.7` and `|ρ − R(φ, z)| < 0.75·h` ⇒ `ρ := R(φ, z)` for `z > z_b`,
    `ρ := r_hole` below it; `|z| < 0.5·h` and `n_z < −0.7` ⇒ `z := 0`. Snapped vertices are locked.
@@ -517,11 +519,11 @@ skin map, so drag, release and export share one hole map. Holes are radial
 through-holes. Each step uses the metric where its constraint is tightest (an anisotropic distance transform,
 exact Felzenszwalb, periodic in φ):
 
-| Step | Metric (horizontal mm per radian) | Why |
-| --- | --- | --- |
-| noise, size, coverage | `r_ref` (mean skin radius) | sizes as seen on the skin |
-| teardrop slope | `r_out` (outermost material radius) | radial roofs are steeper further in |
-| bridges, final `g` | `R` (bore radius) | bridges between radial holes are thinnest there; `g` is 1-Lipschitz in 3D for ρ ≥ R, so the narrow band stays valid |
+| Step                  | Metric (horizontal mm per radian)   | Why                                                                                                                 |
+| --------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| noise, size, coverage | `r_ref` (mean skin radius)          | sizes as seen on the skin                                                                                           |
+| teardrop slope        | `r_out` (outermost material radius) | radial roofs are steeper further in                                                                                 |
+| bridges, final `g`    | `R` (bore radius)                   | bridges between radial holes are thinnest there; `g` is 1-Lipschitz in 3D for ρ ≥ R, so the narrow band stays valid |
 
 Pipeline per threshold τ:
 
@@ -596,12 +598,12 @@ Every mode only fills the field `n` thresholded in §13b, so teardrops, islands,
 finisher and the coverage search are shared. Surface coordinates `u = (φ − z·tan(angle)/r_ref)·r_ref` (periodic,
 sheared) and `v = z / verticalStretch`.
 
-| Mode | Field | Notes |
-| --- | --- | --- |
-| `organicNoise` | one-octave simplex + size-variation term | S2b, one octave since S3 |
-| `ellipses` | `min_i |(u, v) − c_i| / a_i` | seeded dart-throwing Poisson disk, spacing 1.6 × size; `a_i = size/2 · (1 + var·(u − ½))` |
-| `voronoi` | `−(F₂ − F₁)` | Poisson sites, spacing = size; cell centres open first, so holes are shrunken cells and bridges follow cell edges |
-| `foldGaps` | `(r − row mean)/row spread + 0.6·simplex` | skin radius from the field on a 256 × ≤ 160 grid about the slice centre (bend ignored); the noise breaks each valley into slits |
+| Mode           | Field                                     | Notes                                                                                                                           |
+| -------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `organicNoise` | one-octave simplex + size-variation term  | S2b, one octave since S3                                                                                                        |
+| `ellipses`     | `min_i                                    | (u, v) − c_i                                                                                                                    | / a_i` | seeded dart-throwing Poisson disk, spacing 1.6 × size; `a_i = size/2 · (1 + var·(u − ½))` |
+| `voronoi`      | `−(F₂ − F₁)`                              | Poisson sites, spacing = size; cell centres open first, so holes are shrunken cells and bridges follow cell edges               |
+| `foldGaps`     | `(r − row mean)/row spread + 0.6·simplex` | skin radius from the field on a 256 × ≤ 160 grid about the slice centre (bend ignored); the noise breaks each valley into slits |
 
 ### 13e. Self-supporting skin (`sleeve.selfSupporting`)
 
@@ -620,3 +622,48 @@ minBridgeWidth) with `cost = 0.3·[thin bridges] + max(0, 0.4 − boreContact) +
 its neutral value; the best knob steps 25 % toward neutral while it helps (a knob whose first step fails is skipped
 until another moves); decisions use the 2 mm drag voxel; at most 8 steps.
 
+### 13g. Thin draped shell (S4, `sleeve.skinThickness` T > 0)
+
+The skin becomes a shell of thickness T standing off the core tube; the gap is open at the top edge and closed by a
+floor ring at the bottom. Composed before the strand union and the z_body cap (so a cap never closes the gap):
+
+```
+r_in(θ, z) = min over |s| < T of r(θ + Δθ, z + Δz) − √(T² − s²),  s² = (r̄_row·Δθ)² + Δz²     ball erosion of the map
+r_in(j)    = min(r_in(j), r_in(j + 1) + dz·tan(α − 2°))                                     swept down: self-supporting
+inner      = (r_in(θ_c, z) − ρ_c) · L_in                    L_in = Lipschitz map of r_in (as §13)
+gap        = (inner + ρ − Rc − G) / 2,   G = max(T, coreBlend)     closes gaps < G (smin would web them)
+inner      = smin(min(inner, gap), z − z_floor, 2)            z_floor = max(keepOutBottom, 3, z_b + 1)
+skin       = max(d_skin, inner)                               then §13 as before (strands, core, top, holes, base, bore)
+```
+
+- The erosion keeps every shell point within T of the outer face along the normal; a radial offset `r − T/L` leaves
+  fins under steep rib flanks, and `−d_skin − T` is not 1-Lipschitz T mm inside a ribbed skin (the narrow band then
+  misses the inner face). At fine voxels the ball is sampled every `⌈radius/7⌉` cells.
+- The downward sweep thickens the shell under an inward lean instead of letting the inner face hang over the gap
+  (supports could never be removed from there); the outer face is untouched.
+- Rim and hole rounding are capped at T/2 (a wider smooth max necks the wall).
+- Meshing voxel: `h ≤ min(T, coreWall) / 1.5` (`meshVoxel`), so the shell and the free-standing core tube each get
+  ≥ 1.5 samples across and hole bridges never alias into loose flakes (measured: 2 mm at T = 2.4 left islands up to
+  3 % of the volume). The minimum-wall check ignores the thinnest 0.5 % of its samples (normals skimming a fold).
+- Holes are radial in (φ, z), so they cut shell and core alike; the bore is still exact and last.
+
+### 13h. Ribbon fingers (S4, `sleeve.fingers.crossSection = 'ribbon'`)
+
+A ribbon is the round strand squashed radially by `a = min(ribbonRatio, ρ_tip / r_min)` (half-thickness ≥ r_min):
+`ρ′ = ρ_p(z) + a·(ρ − ρ_p(z))` about the path radius ρ_p(z), distance = roundCone(p′) / a (a 1-Lipschitz lower
+bound). Its centre sits at `max(R + 0.6ρ/a, r_skin(φ, min(z, z_body)) − ρ/a)`, so the outer face follows the skin up
+to z_body and the free part continues as a tongue of the shell; only the free part is tilt-limited.
+
+Strand evaluation (S4 perf): strands are visited nearest box first; within a strand the segments (rising in z) are
+walked up and down from the query height and stop once monotone z bounds exceed the best distance; the search is
+capped at `skin + k`, since `smin(skin, s, k) = skin` for `s ≥ skin + k` (the field is unchanged).
+
+### 13i. Export decimation (S4, `mc/decimate.ts`)
+
+Quadric edge collapse (Garland–Heckbert, unit face planes) toward `sleeve.mesh.decimateTarget` (0 = off) with a
+quadric error cap of 0.1 mm. A collapse needs the link condition (exactly two common neighbours), no face turning
+
+> 72° or into a sliver, and at most 20 faces per vertex. Snapped vertices (bore, bottom opening, bed) never move:
+> a free vertex may collapse onto one; a snapped vertex may only merge into a neighbour of its own kind from the
+> interior of that surface, and on the bore / opening every new all-snapped facet stays within 0.03 mm sag of its
+> vertices' radius, so the bore stays within ±0.05 mm and the base flat. The result is checked again (manifold).

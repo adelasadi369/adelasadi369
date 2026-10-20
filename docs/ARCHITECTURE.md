@@ -187,9 +187,27 @@ the UI (labels, tooltips, units, steps, Basic/Advanced, phase gating) and
 - **Sleeves** export the SDF mesh at `sleeve.mesh.exportVoxel` (0.3–0.6 mm) in the export worker; progress
   comes back through a Comlink callback and Cancel terminates the export worker (a new one spawns on demand).
   3MF metadata uses the sleeve slicer profile (no spiral, 2–3 walls, tree supports on the build plate only).
+- **Sleeve decimation** (S4): the export mesh is decimated toward `sleeve.mesh.decimateTarget` (default 400k
+  triangles; quadric, bore / base locked, GEOMETRY.md §13i). sleeve-silk-drape at 0.5 mm: 1.52M → 400k triangles,
+  STL 76.0 → 20.0 MB.
+- **Batch export** (S4, `export/batch.ts`, worker `exportBatch`): one sleeve for several insert ODs → one ZIP with
+  `D<od>/<name>.stl|3mf` and `D<od>/print-card.txt` per size (fit, measured bore deviation, weight, time, slicer
+  settings, en + fa) plus the design JSON. The skin scales radially with R_bore (diameters, finger width, bend
+  offset × R_bore(od) / R_bore(design)); height, holes, rim and effects stay in mm.
 - **Fit Test Ring** (`format: 'fitRing'`): binary STL of the bottom 10 mm of the bore
   (`buildFitTestRing`), named `fit-ring_D<target Ø>_hc<holeCompensation>.stl`.
 - **Spiral G-code** (P3) is sampled straight from `r(θ, z)`, not the mesh.
+
+## 8b. Viewer previews (S4, render only)
+
+- **Tube** toggle (bore designs): a lathe tube of the insert OD and length on the bore bottom, clear glass
+  (transmission) or brushed steel; it is a viewer object only and never reaches a build or an export.
+- `render.viewMaterial` adds `dualSilk` (fragment shift toward `render.color2` with the view-space normal) and
+  `gold` (`render.goldMask`: whole, or edges and tips from a per-vertex convexity mask computed on the main thread).
+  A procedural `RoomEnvironment` (PMREM, no network) gives metals, glass and silk something to reflect.
+- **PNG snapshot**: 1080 × 1080, white or transparent background, bed / grid / dimension lines hidden.
+- Worker: a sleeve preview is cached by (mesh voxel, params); thin shells mesh drag and release at the same voxel,
+  so the release reuses the drag's mesh and report (copies are transferred).
 
 ## 9. AI module (Phase 2, implemented)
 
