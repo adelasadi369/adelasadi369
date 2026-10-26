@@ -1,4 +1,4 @@
-import { buildMotifMap } from '../../motif/map';
+import { buildMotifMap, reliefCap } from '../../motif/map';
 import type { Effect } from '../../params/schema';
 import type { EffectCtx, OffsetFn } from './types';
 
@@ -16,7 +16,7 @@ export function motifOffset(
   ctx: EffectCtx,
 ): { offset: OffsetFn; repetitions: number; periodic: boolean } {
   const p = ctx.params;
-  const map = p ? buildMotifMap(p, ctx.height, ctx.refRadius, Math.max(1.5, e.softness * 2 + 0.5)) : null;
+  const map = p ? buildMotifMap(p, ctx.height, ctx.refRadius, reliefCap(e.softness), ctx.radiusAt) : null;
   if (!map || !p) return { offset: () => 0, repetitions: 0, periodic: false };
   const soft = Math.max(0.05, e.softness);
   const H = ctx.height;
@@ -31,6 +31,7 @@ export function motifOffset(
       : e.relief === 'both'
         ? (th, _c, _s, t) => D * (shape(map.at(th, t * H)) * map.levelAt(th, t * H) - 0.5)
         : (th, _c, _s, t) => D * shape(map.at(th, t * H)) * map.levelAt(th, t * H);
-  const repeat = p.motif.placement === 'repeat' || p.motif.source === 'persian';
+  const persian = p.motif.source === 'persian';
+  const repeat = persian ? p.motif.persian.sizing === 'repeatCount' : p.motif.placement === 'repeat';
   return { offset, repetitions: repeat ? p.motif.repeatsAround : 0, periodic: repeat };
 }

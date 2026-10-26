@@ -1900,6 +1900,132 @@ const ShapeBlobSchema = z
   })
   .prefault({});
 
+export const PERSIAN_PRESETS = ['custom', 'khatam', 'shamseh8', 'shamseh10', 'girih10', 'star12'] as const;
+export const PERSIAN_TILINGS = [
+  '4.4.4.4',
+  '6.6.6',
+  '4.8.8',
+  '3.12.12',
+  '4.6.12',
+  'girih-decagons',
+  'girih-hexagons',
+  'girih-rhombi',
+] as const;
+
+const PersianSchema = z
+  .object({
+    preset: enm(PERSIAN_PRESETS, 'khatam', {
+      fa: 'نقش ایرانی',
+      en: 'Persian pattern',
+      basic: true,
+      phase: 2,
+      tip: [
+        'خاتم (ستارهٔ هشت‌پر)، شمسهٔ هشت و ده‌پر، گره ده‌تایی، ستارهٔ دوازده‌پر؛ یا «سفارشی» برای انتخاب کاشی‌بندی و زاویه.',
+        'Khatam (8-point star), 8- and 10-fold shamseh rosettes, 10-fold girih, 12-fold star; or Custom to pick the tiling and angle.',
+      ],
+      options: {
+        custom: t('سفارشی', 'Custom'),
+        khatam: t('خاتم (ستارهٔ هشت‌پر)', 'Khatam (8-point star)'),
+        shamseh8: t('شمسهٔ هشت‌پر', 'Shamseh, 8-fold'),
+        shamseh10: t('شمسهٔ ده‌پر', 'Shamseh, 10-fold'),
+        girih10: t('گره ده‌تایی', 'Girih, 10-fold'),
+        star12: t('ستارهٔ دوازده‌پر', '12-fold star'),
+      },
+    }),
+    tiling: enm(PERSIAN_TILINGS, '4.8.8', {
+      fa: 'کاشی‌بندی',
+      en: 'Tiling',
+      phase: 2,
+      tip: [
+        'شبکهٔ چندضلعی‌هایی که نقش از آن ساخته می‌شود (روش «چندضلعی‌های در تماس» هنکین)، یا کاشی‌های گره.',
+        "The polygon tiling the pattern grows from (Hankin's polygons-in-contact method), or girih tiles.",
+      ],
+      options: {
+        '4.4.4.4': t('مربع ۴.۴.۴.۴', 'Squares 4.4.4.4'),
+        '6.6.6': t('شش‌ضلعی ۶.۶.۶', 'Hexagons 6.6.6'),
+        '4.8.8': t('هشت‌ضلعی و مربع ۴.۸.۸', 'Octagons + squares 4.8.8'),
+        '3.12.12': t('دوازده‌ضلعی و مثلث ۳.۱۲.۱۲', 'Dodecagons + triangles 3.12.12'),
+        '4.6.12': t('دوازده، شش و چهارضلعی ۴.۶.۱۲', 'Dodecagons, hexagons, squares 4.6.12'),
+        'girih-decagons': t('گره: ده‌ضلعی‌ها', 'Girih: decagons'),
+        'girih-hexagons': t('گره: شش‌ضلعی کشیده', 'Girih: elongated hexagons'),
+        'girih-rhombi': t('گره: لوزی', 'Girih: rhombi'),
+      },
+    }),
+    contactAngle: num(20, 85, 67.5, {
+      fa: 'زاویهٔ تماس',
+      en: 'Contact angle',
+      phase: 2,
+      unit: 'deg',
+      step: 0.5,
+      tip: [
+        'زاویهٔ خطوط با ضلع کاشی در وسط آن. کمتر = ستاره‌های تیزتر، بیشتر = گل‌های بازتر.',
+        'Angle of the lines to each tile edge at its midpoint. Lower = sharper stars, higher = more open rosettes.',
+      ],
+    }),
+    offset: num(0, 0.3, 0, {
+      fa: 'فاصلهٔ دو خط',
+      en: 'Line offset',
+      phase: 2,
+      step: 0.01,
+      tip: [
+        '۰ = یک خط از وسط ضلع؛ بیشتر = دو خط موازی (حالت شمسه).',
+        '0 = one line through each edge midpoint; above = two parallel lines (rosette style).',
+      ],
+    }),
+    strapWidth: num(0.8, 12, 3, {
+      fa: 'پهنای نوار',
+      en: 'Strap width',
+      basic: true,
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: [
+        'پهنای نوارهای نقش. هرگز کمتر از دو خط چاپ و (برای بازشوهای غلاف) کمتر از کمینهٔ پل نمی‌شود.',
+        'Width of the pattern straps. Never below two print lines, nor (for sleeve openings) the minimum bridge width.',
+      ],
+    }),
+    interlace: bool(false, {
+      fa: 'گره‌خوردگی رو و زیر',
+      en: 'Interlace',
+      phase: 2,
+      tip: [
+        'در تقاطع‌ها یک نوار پله‌وار زیر دیگری می‌رود (فقط برجسته).',
+        'At crossings one strap steps down under the other (relief only).',
+      ],
+    }),
+    sizing: enm(['repeatCount', 'cellSize'] as const, 'repeatCount', {
+      fa: 'اندازه با تغییر شعاع',
+      en: 'Sizing',
+      phase: 2,
+      tip: [
+        'تعداد تکرار ثابت (خانه‌ها با شعاع کوچک و بزرگ می‌شوند)، یا اندازهٔ خانهٔ ثابت (تعداد تکرار با شعاع عوض می‌شود، با نوار گذار نرم).',
+        'Constant repeat count (cells shrink and grow with the radius), or constant cell size (the repeat count changes with the radius, with smooth transition bands).',
+      ],
+      options: { repeatCount: t('تکرار ثابت', 'Constant repeats'), cellSize: t('خانهٔ ثابت', 'Constant cell size') },
+    }),
+    cellSize: num(10, 150, 36, {
+      fa: 'اندازهٔ خانه',
+      en: 'Cell size',
+      phase: 2,
+      unit: 'mm',
+      step: 1,
+      tip: [
+        'طول یک دورهٔ نقش روی سطح (حالت خانهٔ ثابت).',
+        'Length of one pattern period on the surface (constant cell size).',
+      ],
+    }),
+    autoRotate: bool(false, {
+      fa: 'چرخش خودکار',
+      en: 'Auto-rotate',
+      phase: 2,
+      tip: [
+        'جهتی از شبکه را برمی‌گزیند که کمترین لبهٔ افقی را دارد (سقف خانه‌ها بدون ساپورت چاپ شوند).',
+        'Picks the lattice direction with the fewest horizontal edges, so cell tops print without supports.',
+      ],
+    }),
+  })
+  .prefault({});
+
 export const MotifSchema = z
   .object({
     source: enm(MOTIF_SOURCES, 'none', {
@@ -1919,6 +2045,7 @@ export const MotifSchema = z
       },
     }),
     svg: ShapeBlobSchema,
+    persian: PersianSchema,
     placement: enm(['repeat', 'single'] as const, 'repeat', {
       fa: 'چیدمان',
       en: 'Placement',

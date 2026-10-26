@@ -9,6 +9,8 @@ export interface EffectCtx {
   maxOverhang: number;
   /** Full params, for effects that read another block (the motif relief reads `motif`). */
   params?: VaseParams;
+  /** Profile radius (mm) at height z, for patterns sized to the local circumference. */
+  radiusAt?: (z: number) => number;
 }
 
 /** Radial offset in mm at warped angle θw, height fraction t (z = t·H). */

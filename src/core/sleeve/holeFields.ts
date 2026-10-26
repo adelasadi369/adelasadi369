@@ -22,6 +22,8 @@ export interface HoleFieldGrid {
   dphi: number;
   dz: number;
   rRef: number;
+  /** Bore radius: bridges are measured there. */
+  R?: number;
   allowed: Uint8Array;
 }
 
@@ -42,7 +44,17 @@ export function holeField(params: VaseParams, g: HoleFieldGrid): Float64Array {
   if (hp.mode === 'pattern') {
     // the Motif block (motif/map.ts) at this map's radius: SVG / text shapes open inside, Persian cells open
     // outside the straps; open where the field is < 0 (holes.ts uses a fixed threshold for this mode)
-    const map = buildMotifMap(params, (nz - 1) * dz, rRef);
+    const H = (nz - 1) * dz;
+    const prof = compileField(params).profile;
+    // straps are bridges, measured at the bore radius: widen them by r_ref / R so they hold minBridgeWidth there
+    const map = buildMotifMap(
+      params,
+      H,
+      rRef,
+      3,
+      (z) => prof.R(Math.min(1, Math.max(0, z / H))),
+      Math.max(1, rRef / (g.R ?? rRef)),
+    );
     if (!map) return field.fill(1);
     const sgn = map.holesAreCells ? -1 : 1;
     for (let j = 0; j < nz; j++)

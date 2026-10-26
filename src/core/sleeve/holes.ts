@@ -137,7 +137,7 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
   }
 
   // ---- hole field for the mode (holeFields.ts); lower = opens first
-  const field = holeField(params, { nx, nz, dphi, dz, rRef, allowed });
+  const field = holeField(params, { nx, nz, dphi, dz, rRef, R, allowed });
   const sorted: number[] = [];
   for (let c = 0; c < n; c++) if (allowed[c]) sorted.push(field[c]);
   sorted.sort((a, b) => a - b);

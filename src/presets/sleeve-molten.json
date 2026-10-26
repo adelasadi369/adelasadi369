@@ -286,6 +286,17 @@
       "hash": "",
       "points": 0
     },
+    "persian": {
+      "preset": "khatam",
+      "tiling": "4.8.8",
+      "contactAngle": 67.5,
+      "offset": 0,
+      "strapWidth": 3,
+      "interlace": false,
+      "sizing": "repeatCount",
+      "cellSize": 36,
+      "autoRotate": false
+    },
     "placement": "repeat",
     "repeatsAround": 8,
     "repeatsUp": 1,

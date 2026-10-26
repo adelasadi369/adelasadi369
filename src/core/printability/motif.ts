@@ -1,13 +1,11 @@
-import { buildMotifMap, type MotifMap } from '../motif/map';
+import { compileField } from '../geometry/field';
+import { buildMotifMap, reliefCap, type MotifMap } from '../motif/map';
 import type { I18nText, VaseParams } from '../params/schema';
 import type { Issue } from './types';
 
 const t = (fa: string, en: string): I18nText => ({ fa, en });
 const f1 = (x: number) => x.toFixed(1);
 const DEG = Math.PI / 180;
-
-/** Cap of the relief map (mm): the same value the motif effect uses, so both read one cached map. */
-export const reliefCap = (softness: number) => Math.max(1.5, softness * 2 + 0.5);
 
 /**
  * Share of the motif thinner than `width`: a morphological opening on the map (erode to d ≤ −width/2, dilate back by
@@ -57,11 +55,14 @@ export function thinShare(map: MotifMap, width: number): { share: number; width:
 export function motifIssues(p: VaseParams, H: number): Issue[] {
   const out: Issue[] = [];
   if (p.motif.source === 'none') return out;
+  // the same radius function the relief effect gets (cell-size Persian patterns follow the profile)
+  const prof = compileField(p).profile;
+  const radiusAt = (z: number) => prof.R(Math.min(1, Math.max(0, z / H)));
   const lw = p.print.lineWidth;
   const sleeve = p.print.outputMode === 'sleeve';
   p.effects.forEach((e, k) => {
     if (e.type !== 'motif' || !e.enabled) return;
-    const map = buildMotifMap(p, H, p.dimensions.maxDiameter / 2, reliefCap(e.softness));
+    const map = buildMotifMap(p, H, p.dimensions.maxDiameter / 2, reliefCap(e.softness), radiusAt);
     if (!map) return;
     // engraving into a thin wall: shells, and sleeves with a draped skin
     const wall = sleeve ? p.sleeve.skinThickness : p.print.outputMode === 'shell' ? p.print.wallThickness : 0;
