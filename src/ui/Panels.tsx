@@ -10,6 +10,7 @@ import { useT } from './hooks';
 import { PolarEditor } from './PolarEditor';
 import { ProfileEditor } from './ProfileEditor';
 import { SvgImportButton } from './SvgImportButton';
+import { MotifPanelBody } from './MotifPanel';
 
 type Rule = (p: VaseParams) => boolean;
 const NO_BELLY = ['straight', 'taper', 'concave', 'hourglass', 'flaredTrumpet'];
@@ -447,11 +448,21 @@ function PrintPanel() {
   );
 }
 
+function MotifPanel() {
+  const t = useT();
+  return (
+    <Group title={t('tab.motif')}>
+      <MotifPanelBody Params={Params} />
+    </Group>
+  );
+}
+
 const PANELS: Record<TabId, () => ReactNode> = {
   shape: ShapePanel,
   section: SectionPanel,
   twist: TwistPanel,
   surface: EffectStack,
+  motif: MotifPanel,
   rimBase: RimBasePanel,
   print: PrintPanel,
   ai: AiPanel,

@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
-import { polylinesToPolar } from '../core/geometry/svgPolar';
+import { polylinesToPolar, type Pt } from '../core/geometry/svgPolar';
 import { useStore } from '../state/store';
 import { useT, useTxt } from './hooks';
-import { svgToPolylines } from './svgImport';
+import { parseSvg } from '../svg/parse';
 
 export function SvgImportButton({ which }: { which: 'bottom' | 'top' }) {
   const t = useT();
@@ -13,9 +13,14 @@ export function SvgImportButton({ which }: { which: 'bottom' | 'top' }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const onFile = async (f: File) => {
-    const res = polylinesToPolar(svgToPolylines(await f.text()));
+    // parsed as data only (no DOM): scripts, images and references never load
+    const closed = parseSvg(await f.text()).polylines.filter((p) => p.closed);
+    const rings = closed.map((p) =>
+      Array.from({ length: p.pts.length / 2 }, (_, k): Pt => [p.pts[2 * k], p.pts[2 * k + 1]]),
+    );
+    const res = polylinesToPolar(rings);
     if (!res.ok) return setError(txt(res.message));
-    setError(null);
+    setError(res.warning ? txt(res.warning) : null);
     const sec = {
       ...params.section[which],
       shape: 'svg' as const,

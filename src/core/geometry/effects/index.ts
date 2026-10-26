@@ -3,6 +3,7 @@ import { facetsModifier } from './facets';
 import { glitchModifier } from './glitch';
 import { windowMask } from './mask';
 import { organicOffset } from './organic';
+import { motifOffset } from './motif';
 import { noiseOffset } from './noise';
 import { ribsOffset } from './ribs';
 import { stepsModifier } from './steps';
@@ -122,6 +123,22 @@ export function compileEffect(e: Effect, ctx: EffectCtx, prev: PrevEval): Compil
         periodic: false,
         depth: 0,
         inward: e.maxOffset,
+      };
+    }
+    case 'motif': {
+      const m = motifOffset(e, ctx);
+      // ≈ 0.8 mm columns and rows, so the relief edges are resolved on the grid path
+      const circ = 2 * Math.PI * ctx.refRadius;
+      const reps = Math.max(1, m.repetitions);
+      return {
+        ...common,
+        offset: m.offset,
+        repetitions: m.repetitions,
+        periodic: m.periodic,
+        samplesPerRep: Math.ceil(circ / reps / 0.8),
+        verticalCycles: ctx.height / 6.4,
+        depth: e.depth,
+        inward: e.relief === 'raised' ? 0 : e.relief === 'both' ? e.depth / 2 : e.depth,
       };
     }
     default:

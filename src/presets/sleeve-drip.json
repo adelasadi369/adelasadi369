@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "name": "Sleeve Drip",
   "dimensions": {
     "height": 150,
@@ -274,8 +274,29 @@
     "mesh": {
       "previewVoxel": 1.5,
       "exportVoxel": 0.5,
+      "decimateTarget": 400000,
       "smoothing": 4
     }
+  },
+  "motif": {
+    "source": "none",
+    "svg": {
+      "name": "",
+      "data": "",
+      "hash": "",
+      "points": 0
+    },
+    "placement": "repeat",
+    "repeatsAround": 8,
+    "repeatsUp": 1,
+    "bandStart": 0,
+    "bandEnd": 100,
+    "fill": 85,
+    "angle": 0,
+    "height": 50,
+    "size": 40,
+    "rotation": 0,
+    "strokeWidth": 1.6
   },
   "print": {
     "outputMode": "sleeve",
@@ -304,6 +325,8 @@
     "previewQuality": "medium",
     "exportQuality": "high",
     "viewMaterial": "silk",
+    "color2": "#2c5fd4",
+    "goldMask": "edges",
     "color": "#c9a227"
   }
 }

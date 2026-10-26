@@ -6,7 +6,17 @@ import { useStore } from '../state/store';
 import { ParamControl } from './controls/ParamControl';
 import { useT } from './hooks';
 
-const ADDABLE: Effect['type'][] = ['ribs', 'waves', 'noise', 'organic', 'texture', 'facets', 'steps', 'glitch'];
+const ADDABLE: Effect['type'][] = [
+  'ribs',
+  'waves',
+  'noise',
+  'organic',
+  'texture',
+  'facets',
+  'steps',
+  'glitch',
+  'motif',
+];
 const WINDOW = ['start', 'end', 'fade'];
 const HIDDEN = ['id', 'type', 'enabled', ...WINDOW];
 

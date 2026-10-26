@@ -35,6 +35,8 @@ const MIGRATIONS: Record<number, (p: Raw) => void> = {
     const sl = isObj(p.sleeve) ? p.sleeve : (p.sleeve = {});
     if (sl.skinThickness === undefined) sl.skinThickness = 0;
   },
+  // v6 → v7: `motif` block (SVG / Persian / text, off by default), 'motif' effect, hole mode 'pattern'; nothing to rewrite.
+  6: () => {},
 };
 
 /**

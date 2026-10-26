@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "name": "Lattice Teardrop",
   "dimensions": {
     "height": 190,
@@ -275,8 +275,29 @@
     "mesh": {
       "previewVoxel": 1.5,
       "exportVoxel": 0.5,
+      "decimateTarget": 400000,
       "smoothing": 4
     }
+  },
+  "motif": {
+    "source": "none",
+    "svg": {
+      "name": "",
+      "data": "",
+      "hash": "",
+      "points": 0
+    },
+    "placement": "repeat",
+    "repeatsAround": 8,
+    "repeatsUp": 1,
+    "bandStart": 0,
+    "bandEnd": 100,
+    "fill": 85,
+    "angle": 0,
+    "height": 50,
+    "size": 40,
+    "rotation": 0,
+    "strokeWidth": 1.6
   },
   "print": {
     "outputMode": "shell",
@@ -305,6 +326,8 @@
     "previewQuality": "medium",
     "exportQuality": "high",
     "viewMaterial": "matte",
+    "color2": "#2c5fd4",
+    "goldMask": "edges",
     "color": "#d7c6a5"
   }
 }

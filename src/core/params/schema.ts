@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 
-export const SCHEMA_VERSION = 6 as const;
+export const SCHEMA_VERSION = 7 as const;
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -949,6 +949,39 @@ export const DisplacementSchema = z.object({
   }),
 });
 
+export const MotifEffectSchema = z.object({
+  type: z.literal('motif'),
+  ...windowFields,
+  relief: enm(['raised', 'engraved', 'both'] as const, 'raised', {
+    fa: 'برجسته / حکاکی',
+    en: 'Relief',
+    basic: true,
+    tip: [
+      'نقش بخش «موتیف» برجسته، حکاکی، یا هر دو (نقش بالا، زمینه پایین؛ در نقش‌های ایرانی: نوارها برجسته و خانه‌ها گود).',
+      'The Motif block raised, engraved, or both (motif up and background down; Persian patterns: straps up, cells recessed).',
+    ],
+    options: { raised: t('برجسته', 'Raised'), engraved: t('حکاکی', 'Engraved'), both: t('هر دو', 'Both') },
+  }),
+  depth: num(0.2, 6, 1.2, {
+    fa: 'عمق نقش',
+    en: 'Relief depth',
+    unit: 'mm',
+    step: 0.1,
+    basic: true,
+    tip: [
+      'ارتفاع برجستگی یا عمق حکاکی. در حالت پوسته نباید از ضخامت دیواره بیشتر شود.',
+      'Height of the relief or depth of the engraving. In shell modes it must stay below the wall thickness.',
+    ],
+  }),
+  softness: num(0, 3, 0.4, {
+    fa: 'نرمی لبهٔ نقش',
+    en: 'Edge softness',
+    unit: 'mm',
+    step: 0.1,
+    tip: ['پهنای شیب لبهٔ نقش. ۰ = لبهٔ تیز.', 'Width of the relief edge ramp. 0 = crisp edge.'],
+  }),
+});
+
 export const EffectSchema = z.discriminatedUnion('type', [
   RibsSchema,
   WavesSchema,
@@ -959,6 +992,7 @@ export const EffectSchema = z.discriminatedUnion('type', [
   StepsSchema,
   GlitchSchema,
   DisplacementSchema,
+  MotifEffectSchema,
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = Effect['type'];
@@ -1372,7 +1406,7 @@ export const InsertSchema = z
 export const SKIN_THICKNESS_MIN = 1.6;
 export const SKIN_THICKNESS_MAX = 6;
 
-export const HOLE_MODES = ['none', 'organicNoise', 'ellipses', 'voronoi', 'foldGaps'] as const;
+export const HOLE_MODES = ['none', 'organicNoise', 'ellipses', 'voronoi', 'foldGaps', 'pattern'] as const;
 
 const SleeveHolesSchema = z
   .object({
@@ -1382,8 +1416,8 @@ const SleeveHolesSchema = z
       basic: true,
       phase: 2,
       tip: [
-        'سوراخ‌هایی در غلاف که لولهٔ داخل را نشان می‌دهند. «نویز ارگانیک» = لکه‌های نرم؛ «بیضی‌ها» = بیضی‌های پراکنده با فاصلهٔ یکنواخت؛ «مرجانی» = سلول‌های کوچک‌شدهٔ ورونوی؛ «شکاف بین چین‌ها» = بازشو در دره‌های پوسته.',
-        'Openings in the sleeve that show the tube inside. Organic noise = soft blobs; Ellipses = evenly spaced ovals; Voronoi coral = shrunken cells; Fold gaps = openings in the skin valleys.',
+        'سوراخ‌هایی در غلاف که لولهٔ داخل را نشان می‌دهند. «نویز ارگانیک» = لکه‌های نرم؛ «بیضی‌ها» = بیضی‌های پراکنده با فاصلهٔ یکنواخت؛ «مرجانی» = سلول‌های کوچک‌شدهٔ ورونوی؛ «شکاف بین چین‌ها» = بازشو در دره‌های پوسته؛ «نقش» = بخش موتیف (شکل‌های SVG بریده می‌شوند، در نقش‌های ایرانی خانه‌ها باز و نوارها پل‌اند؛ سهم سوراخ نادیده گرفته می‌شود).',
+        'Openings in the sleeve that show the tube inside. Organic noise = soft blobs; Ellipses = evenly spaced ovals; Voronoi coral = shrunken cells; Fold gaps = openings in the skin valleys; Motif pattern = the Motif block (SVG shapes cut through, Persian pattern cells open with the straps as bridges; coverage is ignored).',
       ],
       options: {
         none: t('بدون سوراخ', 'None'),
@@ -1391,6 +1425,7 @@ const SleeveHolesSchema = z
         ellipses: t('بیضی‌ها', 'Ellipses'),
         voronoi: t('مرجانی (ورونوی)', 'Voronoi coral'),
         foldGaps: t('شکاف بین چین‌ها', 'Fold gaps'),
+        pattern: t('نقش (موتیف)', 'Motif pattern'),
       },
     }),
     coverage: num(0, 50, 15, {
@@ -1828,6 +1863,156 @@ export const SleeveSchema = z
   .prefault({});
 
 // ---------------------------------------------------------------------------
+// G4) Motif (SVG shapes, Persian patterns, text): one 2D source + placement, used by the 'motif' relief effect and by
+//     the sleeve hole mode 'pattern'. The core only ever sees polylines (src/core/motif/blob.ts), never SVG text.
+// ---------------------------------------------------------------------------
+
+export const MOTIF_SOURCES = ['none', 'svg', 'persian', 'text'] as const;
+
+const ShapeBlobSchema = z
+  .object({
+    name: meta(z.string().max(120).default(''), {
+      fa: 'نام فایل',
+      en: 'File name',
+      phase: 3,
+      tip: ['فایل واردشده.', 'Imported file.'],
+    }),
+    /** lz-string blob of sanitised, flattened polylines (motif/blob.ts); '' = none. Never raw SVG. */
+    data: meta(z.string().max(65536).default(''), {
+      fa: 'داده‌های شکل',
+      en: 'Shape data',
+      phase: 3,
+      tip: ['خطوط فشرده‌شدهٔ شکل (ویرایش نمی‌شود).', 'Compressed shape polylines (not editable).'],
+    }),
+    hash: meta(
+      z
+        .string()
+        .regex(/^[0-9a-f]{0,8}$/)
+        .default(''),
+      { fa: 'شناسهٔ محتوا', en: 'Content hash', phase: 3, tip: ['FNV-1a داده‌ها.', 'FNV-1a of the data.'] },
+    ),
+    points: meta(z.number().int().min(0).max(20000).default(0), {
+      fa: 'تعداد نقاط',
+      en: 'Points',
+      phase: 3,
+      tip: ['تعداد نقاط شکل.', 'Number of shape points.'],
+    }),
+  })
+  .prefault({});
+
+export const MotifSchema = z
+  .object({
+    source: enm(MOTIF_SOURCES, 'none', {
+      fa: 'منبع نقش',
+      en: 'Motif source',
+      basic: true,
+      phase: 2,
+      tip: [
+        'شکل نقش: فایل SVG، نقش هندسی ایرانی (گره، شمسه، خاتم) یا متن فارسی. با افکت «نقش» برجسته/حکاکی می‌شود و در غلاف با «سوراخ: نقش» بریده می‌شود.',
+        'The motif: an SVG file, a Persian geometric pattern (girih, shamseh, khatam) or Persian text. Shown as relief by the "Motif" effect and, on sleeves, cut by hole pattern "Motif pattern".',
+      ],
+      options: {
+        none: t('هیچ', 'None'),
+        svg: t('فایل SVG', 'SVG file'),
+        persian: t('نقش ایرانی', 'Persian pattern'),
+        text: t('متن', 'Text'),
+      },
+    }),
+    svg: ShapeBlobSchema,
+    placement: enm(['repeat', 'single'] as const, 'repeat', {
+      fa: 'چیدمان',
+      en: 'Placement',
+      basic: true,
+      phase: 2,
+      tip: [
+        'تکرار دور بدنه (بی‌درز) یا یک نقش تکی (مثلاً خوشنویسی یا ترنج) در زاویه و ارتفاع دلخواه.',
+        'Repeat around the body (seamless), or one single motif (e.g. calligraphy or a medallion) at an angle and height.',
+      ],
+      options: { repeat: t('تکرار', 'Repeat'), single: t('تکی', 'Single') },
+    }),
+    repeatsAround: int(1, 48, 8, {
+      fa: 'تکرار دور بدنه',
+      en: 'Repeats around',
+      basic: true,
+      phase: 2,
+      step: 1,
+      tip: ['تعداد تکرار در یک دور (عدد صحیح، پس درز ندارد).', 'Repeats per turn (an integer, so there is no seam).'],
+    }),
+    repeatsUp: num(0.25, 24, 1, {
+      fa: 'تکرار در ارتفاع',
+      en: 'Repeats up',
+      phase: 2,
+      step: 0.25,
+      tip: ['تعداد ردیف‌ها در نوار نقش (شکل SVG و متن).', 'Rows inside the motif band (SVG and text).'],
+    }),
+    bandStart: pct(0, {
+      fa: 'شروع نوار نقش',
+      en: 'Band start',
+      phase: 2,
+      tip: ['پایین نوار تکرار، درصد ارتفاع.', 'Bottom of the repeat band, % of height.'],
+    }),
+    bandEnd: pct(100, {
+      fa: 'پایان نوار نقش',
+      en: 'Band end',
+      phase: 2,
+      tip: ['بالای نوار تکرار، درصد ارتفاع.', 'Top of the repeat band, % of height.'],
+    }),
+    fill: num(10, 100, 85, {
+      fa: 'اندازه در خانه',
+      en: 'Size in cell',
+      phase: 2,
+      unit: '%',
+      step: 1,
+      tip: ['اندازهٔ هر نقش نسبت به خانهٔ تکرارش.', 'Size of each motif relative to its repeat cell.'],
+    }),
+    angle: num(-180, 180, 0, {
+      fa: 'زاویهٔ نقش',
+      en: 'Angle',
+      phase: 2,
+      unit: 'deg',
+      step: 1,
+      tip: [
+        'جای نقش تکی دور بدنه (یا جابه‌جایی فاز تکرار).',
+        'Where the single motif sits around the body (or the repeat phase).',
+      ],
+    }),
+    height: pct(50, {
+      fa: 'ارتفاع نقش تکی',
+      en: 'Single height',
+      phase: 2,
+      tip: ['مرکز نقش تکی، درصد ارتفاع.', 'Centre of the single motif, % of height.'],
+    }),
+    size: num(5, 250, 40, {
+      fa: 'اندازهٔ نقش تکی',
+      en: 'Single size',
+      phase: 2,
+      unit: 'mm',
+      step: 1,
+      tip: ['بلندترین ضلع نقش تکی روی سطح.', 'Longest side of the single motif on the surface.'],
+    }),
+    rotation: num(-180, 180, 0, {
+      fa: 'چرخش نقش',
+      en: 'Rotation',
+      phase: 2,
+      unit: 'deg',
+      step: 1,
+      tip: ['چرخش نقش روی سطح.', 'Rotation of the motif on the surface.'],
+    }),
+    strokeWidth: num(0.4, 10, 1.6, {
+      fa: 'پهنای خطوط باز',
+      en: 'Open-line width',
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: [
+        'پهنای خطوط باز SVG (مسیرهای بسته پر می‌شوند). هرگز کمتر از دو خط چاپ نمی‌شود.',
+        'Width given to open SVG lines (closed paths are filled). Never below two print lines.',
+      ],
+    }),
+  })
+  .prefault({});
+
+// ---------------------------------------------------------------------------
 // H) Output & print
 // ---------------------------------------------------------------------------
 
@@ -2132,6 +2317,7 @@ export const VaseParamsSchema = z
     base: BaseSchema,
     insert: InsertSchema,
     sleeve: SleeveSchema,
+    motif: MotifSchema,
     print: PrintSchema,
     random: RandomSchema,
     render: RenderSchema,

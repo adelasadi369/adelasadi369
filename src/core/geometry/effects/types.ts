@@ -1,3 +1,5 @@
+import type { VaseParams } from '../../params/schema';
+
 /** Context shared by offset effects. */
 export interface EffectCtx {
   height: number;
@@ -5,6 +7,8 @@ export interface EffectCtx {
   refRadius: number;
   /** Printer overhang limit in degrees (modifiers size their ramps with it). */
   maxOverhang: number;
+  /** Full params, for effects that read another block (the motif relief reads `motif`). */
+  params?: VaseParams;
 }
 
 /** Radial offset in mm at warped angle θw, height fraction t (z = t·H). */

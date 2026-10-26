@@ -95,6 +95,7 @@ export function buildHoleMap(params: VaseParams, inp: HoleInputs): HoleMap | nul
     inp.rOut,
     inp.cap ?? inp.H,
     h.mode === 'foldGaps' ? skinKey(params, -1) : 0,
+    h.mode === 'pattern' ? [params.motif, params.print.lineWidth] : 0,
   ]);
   if (cache?.key === key) return cache.map;
   const map = build(params, inp);
@@ -366,7 +367,10 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
   };
 
   // ---- specks: threshold components narrower than 0.4 × size (a disc of that diameter, at r_ref) read as noise
-  const minCells = (Math.PI * (0.2 * hp.size) ** 2) / (dphi * rRef * dz);
+  // motif patterns: the cells are drawn, so only crumbs below one line width (radius) count as specks
+  const pattern = hp.mode === 'pattern';
+  const speck = pattern ? 5 * params.print.lineWidth : hp.size;
+  const minCells = (Math.PI * (0.2 * speck) ** 2) / (dphi * rRef * dz);
   const dropSpecks = (S: Uint8Array): Uint8Array => {
     const { labels, area } = label(g2, S, true);
     const out = S.slice();
@@ -374,9 +378,9 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
     return out;
   };
 
-  const run = (frac: number) => {
+  const run = (frac: number, fixed?: number) => {
     const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor(frac * sorted.length)));
-    const tau = frac <= 0 ? -Infinity : frac >= 1 ? Infinity : sorted[idx];
+    const tau = fixed ?? (frac <= 0 ? -Infinity : frac >= 1 ? Infinity : sorted[idx]);
     let S: Uint8Array = new Uint8Array(n);
     for (let c = 0; c < n; c++) if (allowed[c] && field[c] < tau) S[c] = 1;
     S = dropSpecks(S);
@@ -411,7 +415,7 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
     return { S, tau, coverage: side ? open / side : 0, merged, dropped, islands, br };
   };
 
-  const target = hp.coverage / 100;
+  let target = hp.coverage / 100;
   // threshold search: multiplicative until bracketed, then bisection; keep the closest run on each side
   let frac = Math.min(1, (target * side) / Math.max(1, sorted.length));
   let lo = 0;
@@ -419,7 +423,13 @@ function build(params: VaseParams, inp: HoleInputs): HoleMap {
   let below: ReturnType<typeof run> | null = null;
   let above: ReturnType<typeof run> | null = null;
   let iterations = 0;
-  while (iterations < MAX_ITER) {
+  // motif patterns open exactly their cells (field < 0): no coverage search; the result's coverage is reported
+  if (pattern) {
+    above = run(0, 0);
+    target = above.coverage;
+    iterations = 1;
+  }
+  while (!pattern && iterations < MAX_ITER) {
     const cur = run(frac);
     iterations++;
     if (cur.coverage < target) {

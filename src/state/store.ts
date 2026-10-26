@@ -20,13 +20,13 @@ import { listPrinterProfiles, savePrinterProfile } from '../persist/db';
 import { applyImageAnalysis, applyProposal, applyRefine, applySilhouette } from '../ai/apply';
 import { aiDesign, aiImage, aiRefine } from '../ai/client';
 import type { ParamChange } from '../core/printability/types';
-import type { Lang } from '../i18n';
+import { translate, type Lang } from '../i18n';
 import { PRESETS } from '../presets';
 import type { RegenResult } from '../workers/protocol';
 import { getExportWorker, previewWorker, RegenScheduler, terminateExportWorker } from './engine';
 
-export type TabId = 'shape' | 'section' | 'twist' | 'surface' | 'rimBase' | 'print' | 'ai';
-export const TABS: TabId[] = ['shape', 'section', 'twist', 'surface', 'rimBase', 'print', 'ai'];
+export type TabId = 'shape' | 'section' | 'twist' | 'surface' | 'motif' | 'rimBase' | 'print' | 'ai';
+export const TABS: TabId[] = ['shape', 'section', 'twist', 'surface', 'motif', 'rimBase', 'print', 'ai'];
 
 export interface ViewerState {
   heatmap: boolean;
@@ -154,6 +154,8 @@ const shared = sharedParams();
 const prefs = loadPrefs();
 /** Identity of the running export; replaced on cancel so late results are dropped. */
 let exportToken: object = {};
+/** Share tokens above this length drop the imported SVG shape (saved designs keep it). */
+const SHARE_URL_LIMIT = 8000;
 
 export const useStore = create<Store>((set, get) => {
   const push = (prev: VaseParams) => {
@@ -333,7 +335,13 @@ export const useStore = create<Store>((set, get) => {
       set({ exporting: false, exportProgress: null });
     },
     async shareLink() {
-      const url = `${location.origin}${location.pathname}#d=${encodeShare(get().params)}`;
+      // imported shapes ride along only while the link stays short enough for every browser and chat app
+      let token = encodeShare(get().params);
+      if (token.length > SHARE_URL_LIMIT && get().params.motif.svg.data) {
+        token = encodeShare(setPath(get().params, 'motif.svg', { name: '', data: '', hash: '', points: 0 }));
+        get().showToast(translate(get().lang, 'share.svgTooBig'));
+      }
+      const url = `${location.origin}${location.pathname}#d=${token}`;
       history.replaceState(null, '', url);
       try {
         await navigator.clipboard.writeText(url);
