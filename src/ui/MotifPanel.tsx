@@ -57,6 +57,7 @@ export function motifVisible(path: string, p: VaseParams): boolean {
       !SINGLE_ONLY.has(path) && !REPEAT_ONLY.has(path) && path !== 'motif.strokeWidth' && path !== 'motif.placement'
     );
   if (path === 'motif.strokeWidth') return m.source === 'svg';
+  if (path === 'motif.fill' && m.source === 'text') return m.placement === 'repeat';
   if (SINGLE_ONLY.has(path)) return m.placement === 'single';
   if (REPEAT_ONLY.has(path)) return m.placement === 'repeat';
   return true;
@@ -247,6 +248,71 @@ function SvgImport() {
   );
 }
 
+let fontPromise: Promise<import('opentype.js').Font> | null = null;
+/** Vazirmatn (OFL, public/fonts) parsed once, on first use; opentype.js is loaded lazily with it. */
+function loadFont() {
+  fontPromise ??= (async () => {
+    const [{ default: opentype }, buf] = await Promise.all([
+      import('opentype.js'),
+      fetch(`${import.meta.env.BASE_URL}fonts/Vazirmatn-Regular.ttf`).then((r) => r.arrayBuffer()),
+    ]);
+    return opentype.parse(buf);
+  })();
+  return fontPromise;
+}
+
+/** Persian / Latin text → shaped outline (src/text/outline.ts) → the same motif blob as an SVG shape. */
+function TextMotif() {
+  const t = useT();
+  const params = useStore((s) => s.params);
+  const replace = useStore((s) => s.replace);
+  const [value, setValue] = useState(params.motif.text.value);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const apply = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const { textOutline } = await import('../text/outline');
+      const polys = textOutline(await loadFont(), value.trim());
+      const enc = encodeShapes(polys);
+      if (!enc.ok) return setErr(t(enc.reason === 'empty' ? 'svg.empty' : 'svg.tooBig'));
+      let p = setPath(params, 'motif.source', 'text');
+      p = setPath(p, 'motif.text', { value: value.trim(), data: enc.data, hash: enc.hash, points: enc.points });
+      if (params.motif.source !== 'text') p = setPath(p, 'motif.placement', 'single');
+      replace(p);
+    } catch {
+      setErr(t('text.fontError'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-1.5 py-1">
+      <div className="flex gap-2">
+        <input
+          dir="auto"
+          value={value}
+          maxLength={200}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={t('text.placeholder')}
+          className="min-w-0 flex-1 rounded-md border border-line bg-paper px-2 py-1 text-sm"
+        />
+        <button
+          type="button"
+          disabled={busy || !value.trim()}
+          onClick={() => void apply()}
+          className="rounded-md bg-ink px-3 py-1 text-sm text-white disabled:opacity-40"
+        >
+          {t('svg.apply')}
+        </button>
+      </div>
+      <p className="text-[11px] leading-5 text-muted">{t('text.hint')}</p>
+      {err && <p className="rounded-lg bg-[#fbeceb] p-2 text-xs text-err">{err}</p>}
+    </div>
+  );
+}
+
 /** Use the current motif: as relief (adds a Motif effect) or, on sleeves, as openings (hole pattern). */
 function MotifUse() {
   const t = useT();
@@ -294,6 +360,8 @@ export function MotifPanelBody({ Params }: { Params: (props: { paths: string[] }
     <>
       <h4 className="mt-1 text-[11px] font-semibold text-muted">{t('group.svg')}</h4>
       <SvgImport />
+      <h4 className="mt-2 text-[11px] font-semibold text-muted">{t('group.text')}</h4>
+      <TextMotif />
       <h4 className="mt-2 text-[11px] font-semibold text-muted">{t('group.motif')}</h4>
       <Params paths={MOTIF_PATHS.filter((p) => motifVisible(p, params))} />
       <MotifUse />

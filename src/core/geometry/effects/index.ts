@@ -4,6 +4,7 @@ import { glitchModifier } from './glitch';
 import { windowMask } from './mask';
 import { organicOffset } from './organic';
 import { motifOffset } from './motif';
+import { muqarnasOffset } from './muqarnas';
 import { noiseOffset } from './noise';
 import { ribsOffset } from './ribs';
 import { stepsModifier } from './steps';
@@ -141,6 +142,18 @@ export function compileEffect(e: Effect, ctx: EffectCtx, prev: PrevEval): Compil
         inward: e.relief === 'raised' ? 0 : e.relief === 'both' ? e.depth / 2 : e.depth,
       };
     }
+    case 'muqarnas':
+      return {
+        ...common,
+        // the collar places itself (rim or base band); the effect window does not fade it
+        mask: () => 1,
+        offset: muqarnasOffset(e, ctx),
+        repetitions: e.cells,
+        samplesPerRep: 20,
+        verticalCycles: ctx.height / 6,
+        depth: e.nicheDepth,
+        inward: e.nicheDepth,
+      };
     default:
       return { ...common, offset: () => 0, unsupported: true };
   }

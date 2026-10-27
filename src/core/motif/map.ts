@@ -87,6 +87,11 @@ const factories: Partial<Record<VaseParams['motif']['source'], ProtoFactory>> = 
     };
   },
   persian: persianProto,
+  text: (p) => {
+    const set = decodeShapes(p.motif.text.data);
+    if (!set.shapes.length) return null;
+    return { w: set.w, h: set.h, halfMm: p.print.lineWidth, make: (half) => shapeSource(set, half) };
+  },
 };
 /** Register a motif kind (persian/, text) without a circular import. */
 export function registerMotifSource(kind: VaseParams['motif']['source'], f: ProtoFactory) {

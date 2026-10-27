@@ -11,6 +11,7 @@ import { PolarEditor } from './PolarEditor';
 import { ProfileEditor } from './ProfileEditor';
 import { SvgImportButton } from './SvgImportButton';
 import { MotifPanelBody } from './MotifPanel';
+import { PersianForms } from './PersianForms';
 
 type Rule = (p: VaseParams) => boolean;
 const NO_BELLY = ['straight', 'taper', 'concave', 'hourglass', 'flaredTrumpet'];
@@ -275,6 +276,7 @@ function ShapePanel() {
       <SleeveGroup />
       <Group title={t('group.profile')}>
         <Params paths={['profile.preset']} />
+        <PersianForms />
         <ProfileEditor />
         <Params paths={['profile.strength', 'profile.waveCycles', 'profile.waveAmplitude']} />
       </Group>

@@ -982,6 +982,62 @@ export const MotifEffectSchema = z.object({
   }),
 });
 
+export const MuqarnasSchema = z.object({
+  type: z.literal('muqarnas'),
+  ...windowFields,
+  position: enm(['rim', 'base'] as const, 'rim', {
+    fa: 'جای مقرنس',
+    en: 'Position',
+    basic: true,
+    tip: ['نوار مقرنس زیر لبهٔ بالا یا روی کف.', 'The muqarnas band under the rim or at the base.'],
+    options: { rim: t('لبهٔ بالا', 'Rim'), base: t('کف', 'Base') },
+  }),
+  tiers: int(1, 6, 3, {
+    fa: 'تعداد طبقه',
+    en: 'Tiers',
+    basic: true,
+    step: 1,
+    tip: ['طبقه‌های طاقچه؛ هر طبقه نیم خانه جابه‌جا می‌شود.', 'Tiers of niches; each tier is shifted by half a cell.'],
+  }),
+  cells: int(4, 48, 16, {
+    fa: 'طاقچه در هر طبقه',
+    en: 'Cells per tier',
+    basic: true,
+    step: 1,
+    tip: ['تعداد طاقچه‌ها دور بدنه در هر طبقه.', 'Niches around the body in each tier.'],
+  }),
+  nicheDepth: num(0.5, 10, 3, {
+    fa: 'عمق طاقچه',
+    en: 'Niche depth',
+    unit: 'mm',
+    step: 0.1,
+    tip: ['عمق نیم‌گنبد هر طاقچه.', 'Depth of each half-dome niche.'],
+  }),
+  pointedness: num(0, 1, 0.6, {
+    fa: 'تیزی قوس',
+    en: 'Arch pointedness',
+    step: 0.05,
+    tip: ['۰ = قوس نیم‌دایره، ۱ = قوس جناغی تیز.', '0 = round arch, 1 = sharply pointed arch.'],
+  }),
+  tierHeight: num(4, 40, 14, {
+    fa: 'ارتفاع طبقه',
+    en: 'Tier height',
+    unit: 'mm',
+    step: 0.5,
+    tip: ['ارتفاع هر طبقهٔ طاقچه‌ها.', 'Height of each tier of niches.'],
+  }),
+  corbel: num(0, 6, 2, {
+    fa: 'پیش‌آمدگی طبقه',
+    en: 'Corbel per tier',
+    unit: 'mm',
+    step: 0.1,
+    tip: [
+      'هر طبقه چقدر بیرون‌تر از طبقهٔ زیرین است؛ شیب آن هرگز از زاویهٔ آویز مجاز تندتر نمی‌شود.',
+      'How far each tier steps out over the one below; its slope never exceeds the max overhang.',
+    ],
+  }),
+});
+
 export const EffectSchema = z.discriminatedUnion('type', [
   RibsSchema,
   WavesSchema,
@@ -993,6 +1049,7 @@ export const EffectSchema = z.discriminatedUnion('type', [
   GlitchSchema,
   DisplacementSchema,
   MotifEffectSchema,
+  MuqarnasSchema,
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = Effect['type'];
@@ -1869,34 +1926,51 @@ export const SleeveSchema = z
 
 export const MOTIF_SOURCES = ['none', 'svg', 'persian', 'text'] as const;
 
-const ShapeBlobSchema = z
+const shapeBlobFields = {
+  name: meta(z.string().max(120).default(''), {
+    fa: 'نام فایل',
+    en: 'File name',
+    phase: 3,
+    tip: ['فایل واردشده.', 'Imported file.'],
+  }),
+  /** lz-string blob of sanitised, flattened polylines (motif/blob.ts); '' = none. Never raw SVG. */
+  data: meta(z.string().max(65536).default(''), {
+    fa: 'داده‌های شکل',
+    en: 'Shape data',
+    phase: 3,
+    tip: ['خطوط فشرده‌شدهٔ شکل (ویرایش نمی‌شود).', 'Compressed shape polylines (not editable).'],
+  }),
+  hash: meta(
+    z
+      .string()
+      .regex(/^[0-9a-f]{0,8}$/)
+      .default(''),
+    { fa: 'شناسهٔ محتوا', en: 'Content hash', phase: 3, tip: ['FNV-1a داده‌ها.', 'FNV-1a of the data.'] },
+  ),
+  points: meta(z.number().int().min(0).max(20000).default(0), {
+    fa: 'تعداد نقاط',
+    en: 'Points',
+    phase: 3,
+    tip: ['تعداد نقاط شکل.', 'Number of shape points.'],
+  }),
+};
+const ShapeBlobSchema = z.object(shapeBlobFields).prefault({});
+
+/** Text motif: the string and its outline blob, shaped in the browser with the bundled Vazirmatn font. */
+const TextSchema = z
   .object({
-    name: meta(z.string().max(120).default(''), {
-      fa: 'نام فایل',
-      en: 'File name',
+    value: meta(z.string().max(200).default(''), {
+      fa: 'متن',
+      en: 'Text',
       phase: 3,
-      tip: ['فایل واردشده.', 'Imported file.'],
+      tip: [
+        'متن فارسی یا لاتین؛ با فونت وزیرمتن و اتصال درست حروف به خط تبدیل می‌شود.',
+        'Persian or Latin text, outlined with the Vazirmatn font with proper letter joining.',
+      ],
     }),
-    /** lz-string blob of sanitised, flattened polylines (motif/blob.ts); '' = none. Never raw SVG. */
-    data: meta(z.string().max(65536).default(''), {
-      fa: 'داده‌های شکل',
-      en: 'Shape data',
-      phase: 3,
-      tip: ['خطوط فشرده‌شدهٔ شکل (ویرایش نمی‌شود).', 'Compressed shape polylines (not editable).'],
-    }),
-    hash: meta(
-      z
-        .string()
-        .regex(/^[0-9a-f]{0,8}$/)
-        .default(''),
-      { fa: 'شناسهٔ محتوا', en: 'Content hash', phase: 3, tip: ['FNV-1a داده‌ها.', 'FNV-1a of the data.'] },
-    ),
-    points: meta(z.number().int().min(0).max(20000).default(0), {
-      fa: 'تعداد نقاط',
-      en: 'Points',
-      phase: 3,
-      tip: ['تعداد نقاط شکل.', 'Number of shape points.'],
-    }),
+    data: shapeBlobFields.data,
+    hash: shapeBlobFields.hash,
+    points: shapeBlobFields.points,
   })
   .prefault({});
 
@@ -2046,6 +2120,7 @@ export const MotifSchema = z
     }),
     svg: ShapeBlobSchema,
     persian: PersianSchema,
+    text: TextSchema,
     placement: enm(['repeat', 'single'] as const, 'repeat', {
       fa: 'چیدمان',
       en: 'Placement',

@@ -16,6 +16,7 @@ const ADDABLE: Effect['type'][] = [
   'steps',
   'glitch',
   'motif',
+  'muqarnas',
 ];
 const WINDOW = ['start', 'end', 'fade'];
 const HIDDEN = ['id', 'type', 'enabled', ...WINDOW];

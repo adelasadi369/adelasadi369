@@ -193,5 +193,12 @@
   "motif.relief": "Relief",
   "motif.holes": "Openings",
   "motif.useHint": "Relief adds a Motif effect (edit depth and edges in Surface). Openings cut the motif through the sleeve with bridges, teardrop tops and the islands check.",
-  "share.svgTooBig": "The imported shape is too large for a link and was left out; save the design to keep it."
+  "share.svgTooBig": "The imported shape is too large for a link and was left out; save the design to keep it.",
+  "group.text": "Persian text",
+  "text.placeholder": "e.g. گلاب",
+  "text.hint": "Outlined with Vazirmatn (OFL) with joined letters (contextual forms and lam-alef). For Nastaliq calligraphy, import a designer's SVG instead.",
+  "text.fontError": "The font could not be loaded.",
+  "effect.muqarnas": "Muqarnas collar",
+  "forms.persian": "Persian forms",
+  "forms.pick": "Inspired by…"
 }
