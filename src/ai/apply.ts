@@ -8,6 +8,13 @@ import type { DesignProposal, ImageAnalysis, RefinePatch } from './schema';
 
 const KNOWN = new Set([...PARAMS.map((p) => p.path), 'effects', 'name']);
 
+/**
+ * Paths the AI may never write: imported shape / text blobs (it may place, scale and repeat them, never edit them),
+ * the real tube (insert.*) and the calibrated hole compensation. Dot paths and JSON pointers both match.
+ */
+const FORBIDDEN = /^\/?(motif[./](svg|text)([./]|$)|insert([./]|$)|print[./]printer[./]holeCompensation$)/;
+export const aiMayWrite = (path: string) => !FORBIDDEN.test(path);
+
 function parseJson(s: string | null): unknown {
   if (s === null) return undefined;
   try {
@@ -29,7 +36,7 @@ export function applyProposal(p: DesignProposal, presets: Preset[]): Applied {
   let out: unknown = structuredClone(base);
   const rejected: string[] = [];
   for (const c of p.changes) {
-    if (!KNOWN.has(c.path)) {
+    if (!KNOWN.has(c.path) || !aiMayWrite(c.path)) {
       rejected.push(c.path);
       continue;
     }
@@ -40,6 +47,14 @@ export function applyProposal(p: DesignProposal, presets: Preset[]): Applied {
 
 /** Apply the model's JSON Patch atomically; on any failure keep the current params. */
 export function applyRefine(current: VaseParams, patch: RefinePatch): Applied {
+  const rejected = patch.ops.filter((o) => !aiMayWrite(o.path) || (o.from !== null && !aiMayWrite(o.from)));
+  // whole-object writes that would replace a protected block wholesale are rejected too
+  const wholesale = patch.ops.filter(
+    (o) => o.path === '' || o.path === '/' || o.path === '/motif' || o.path === '/print' || o.path === '/print/printer',
+  );
+  if (rejected.length || wholesale.length) {
+    return { params: current, rejected: [...rejected, ...wholesale].map((o) => `${o.op} ${o.path}`) };
+  }
   const ops: PatchOp[] = patch.ops.map((o) =>
     o.op === 'move' || o.op === 'copy'
       ? { op: o.op, from: o.from ?? '', path: o.path }

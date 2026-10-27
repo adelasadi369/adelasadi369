@@ -5,6 +5,7 @@ import type { SleeveBuild } from '../sleeve';
 import { boreIssues, type BoreMeasure } from './bore';
 import { boundsIssues, overhangIssues } from './checks';
 import { bbox } from './geometryStats';
+import { motifIssues } from './motif';
 import { analyzeOverhang } from './overhang';
 import { scoreOf } from './score';
 import type { FixAction, Issue, ParamChange, Report, Stats } from './types';
@@ -301,6 +302,7 @@ export function analyzeSleeve(b: SleeveBuild, p: VaseParams): Report {
     });
   }
 
+  issues.push(...motifIssues(p, b.sdf.H));
   const bounds = boundsIssues({ mesh } as never, p);
   issues.push(...bounds.issues);
   issues.push(...boreIssues(b, p, () => measureSleeveBore(b)));

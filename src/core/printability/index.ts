@@ -12,6 +12,7 @@ import {
   wallIssues,
 } from './checks';
 import { boreIssues } from './bore';
+import { motifIssues } from './motif';
 import { analyzeOverhang } from './overhang';
 import { scoreOf } from './score';
 import { analyzeSleeve } from './sleeve';
@@ -40,6 +41,7 @@ export function analyze(b: BuildResult | SleeveBuild, p: VaseParams, opts: { man
     ...modeIssues(p),
     ...stabilityIssues(b, p),
     ...boreIssues(b, p),
+    ...motifIssues(p, p.dimensions.height),
     ...sanity.issues,
     ...adviceForUseCase(p),
   ].sort((a, c) => ORDER[a.severity] - ORDER[c.severity]);

@@ -83,7 +83,13 @@ export function compileField(params: VaseParams): Field {
   };
   const lobes = buildLobes(params.twist.lobes);
   const twistFn = buildTwist(params.twist);
-  const ctx = { height: H, refRadius: params.dimensions.maxDiameter / 2, maxOverhang: params.print.maxOverhang };
+  const ctx = {
+    height: H,
+    refRadius: params.dimensions.maxDiameter / 2,
+    maxOverhang: params.print.maxOverhang,
+    params,
+    radiusAt: (z: number) => profile.R(Math.min(1, Math.max(0, z / H))),
+  };
   const effects: CompiledEffect[] = [];
   const active: CompiledEffect[] = [];
 

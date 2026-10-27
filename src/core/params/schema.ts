@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 
-export const SCHEMA_VERSION = 6 as const;
+export const SCHEMA_VERSION = 7 as const;
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -949,6 +949,95 @@ export const DisplacementSchema = z.object({
   }),
 });
 
+export const MotifEffectSchema = z.object({
+  type: z.literal('motif'),
+  ...windowFields,
+  relief: enm(['raised', 'engraved', 'both'] as const, 'raised', {
+    fa: 'برجسته / حکاکی',
+    en: 'Relief',
+    basic: true,
+    tip: [
+      'نقش بخش «موتیف» برجسته، حکاکی، یا هر دو (نقش بالا، زمینه پایین؛ در نقش‌های ایرانی: نوارها برجسته و خانه‌ها گود).',
+      'The Motif block raised, engraved, or both (motif up and background down; Persian patterns: straps up, cells recessed).',
+    ],
+    options: { raised: t('برجسته', 'Raised'), engraved: t('حکاکی', 'Engraved'), both: t('هر دو', 'Both') },
+  }),
+  depth: num(0.2, 6, 1.2, {
+    fa: 'عمق نقش',
+    en: 'Relief depth',
+    unit: 'mm',
+    step: 0.1,
+    basic: true,
+    tip: [
+      'ارتفاع برجستگی یا عمق حکاکی. در حالت پوسته نباید از ضخامت دیواره بیشتر شود.',
+      'Height of the relief or depth of the engraving. In shell modes it must stay below the wall thickness.',
+    ],
+  }),
+  softness: num(0, 3, 0.4, {
+    fa: 'نرمی لبهٔ نقش',
+    en: 'Edge softness',
+    unit: 'mm',
+    step: 0.1,
+    tip: ['پهنای شیب لبهٔ نقش. ۰ = لبهٔ تیز.', 'Width of the relief edge ramp. 0 = crisp edge.'],
+  }),
+});
+
+export const MuqarnasSchema = z.object({
+  type: z.literal('muqarnas'),
+  ...windowFields,
+  position: enm(['rim', 'base'] as const, 'rim', {
+    fa: 'جای مقرنس',
+    en: 'Position',
+    basic: true,
+    tip: ['نوار مقرنس زیر لبهٔ بالا یا روی کف.', 'The muqarnas band under the rim or at the base.'],
+    options: { rim: t('لبهٔ بالا', 'Rim'), base: t('کف', 'Base') },
+  }),
+  tiers: int(1, 6, 3, {
+    fa: 'تعداد طبقه',
+    en: 'Tiers',
+    basic: true,
+    step: 1,
+    tip: ['طبقه‌های طاقچه؛ هر طبقه نیم خانه جابه‌جا می‌شود.', 'Tiers of niches; each tier is shifted by half a cell.'],
+  }),
+  cells: int(4, 48, 16, {
+    fa: 'طاقچه در هر طبقه',
+    en: 'Cells per tier',
+    basic: true,
+    step: 1,
+    tip: ['تعداد طاقچه‌ها دور بدنه در هر طبقه.', 'Niches around the body in each tier.'],
+  }),
+  nicheDepth: num(0.5, 10, 3, {
+    fa: 'عمق طاقچه',
+    en: 'Niche depth',
+    unit: 'mm',
+    step: 0.1,
+    tip: ['عمق نیم‌گنبد هر طاقچه.', 'Depth of each half-dome niche.'],
+  }),
+  pointedness: num(0, 1, 0.6, {
+    fa: 'تیزی قوس',
+    en: 'Arch pointedness',
+    step: 0.05,
+    tip: ['۰ = قوس نیم‌دایره، ۱ = قوس جناغی تیز.', '0 = round arch, 1 = sharply pointed arch.'],
+  }),
+  tierHeight: num(4, 40, 14, {
+    fa: 'ارتفاع طبقه',
+    en: 'Tier height',
+    unit: 'mm',
+    step: 0.5,
+    tip: ['ارتفاع هر طبقهٔ طاقچه‌ها.', 'Height of each tier of niches.'],
+  }),
+  corbel: num(0, 6, 2, {
+    fa: 'پیش‌آمدگی طبقه',
+    en: 'Corbel per tier',
+    unit: 'mm',
+    step: 0.1,
+    tip: [
+      'هر طبقه چقدر بیرون‌تر از طبقهٔ زیرین است؛ شیب آن هرگز از زاویهٔ آویز مجاز تندتر نمی‌شود.',
+      'How far each tier steps out over the one below; its slope never exceeds the max overhang.',
+    ],
+  }),
+});
+
 export const EffectSchema = z.discriminatedUnion('type', [
   RibsSchema,
   WavesSchema,
@@ -959,6 +1048,8 @@ export const EffectSchema = z.discriminatedUnion('type', [
   StepsSchema,
   GlitchSchema,
   DisplacementSchema,
+  MotifEffectSchema,
+  MuqarnasSchema,
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 export type EffectType = Effect['type'];
@@ -1372,7 +1463,7 @@ export const InsertSchema = z
 export const SKIN_THICKNESS_MIN = 1.6;
 export const SKIN_THICKNESS_MAX = 6;
 
-export const HOLE_MODES = ['none', 'organicNoise', 'ellipses', 'voronoi', 'foldGaps'] as const;
+export const HOLE_MODES = ['none', 'organicNoise', 'ellipses', 'voronoi', 'foldGaps', 'pattern'] as const;
 
 const SleeveHolesSchema = z
   .object({
@@ -1382,8 +1473,8 @@ const SleeveHolesSchema = z
       basic: true,
       phase: 2,
       tip: [
-        'سوراخ‌هایی در غلاف که لولهٔ داخل را نشان می‌دهند. «نویز ارگانیک» = لکه‌های نرم؛ «بیضی‌ها» = بیضی‌های پراکنده با فاصلهٔ یکنواخت؛ «مرجانی» = سلول‌های کوچک‌شدهٔ ورونوی؛ «شکاف بین چین‌ها» = بازشو در دره‌های پوسته.',
-        'Openings in the sleeve that show the tube inside. Organic noise = soft blobs; Ellipses = evenly spaced ovals; Voronoi coral = shrunken cells; Fold gaps = openings in the skin valleys.',
+        'سوراخ‌هایی در غلاف که لولهٔ داخل را نشان می‌دهند. «نویز ارگانیک» = لکه‌های نرم؛ «بیضی‌ها» = بیضی‌های پراکنده با فاصلهٔ یکنواخت؛ «مرجانی» = سلول‌های کوچک‌شدهٔ ورونوی؛ «شکاف بین چین‌ها» = بازشو در دره‌های پوسته؛ «نقش» = بخش موتیف (شکل‌های SVG بریده می‌شوند، در نقش‌های ایرانی خانه‌ها باز و نوارها پل‌اند؛ سهم سوراخ نادیده گرفته می‌شود).',
+        'Openings in the sleeve that show the tube inside. Organic noise = soft blobs; Ellipses = evenly spaced ovals; Voronoi coral = shrunken cells; Fold gaps = openings in the skin valleys; Motif pattern = the Motif block (SVG shapes cut through, Persian pattern cells open with the straps as bridges; coverage is ignored).',
       ],
       options: {
         none: t('بدون سوراخ', 'None'),
@@ -1391,6 +1482,7 @@ const SleeveHolesSchema = z
         ellipses: t('بیضی‌ها', 'Ellipses'),
         voronoi: t('مرجانی (ورونوی)', 'Voronoi coral'),
         foldGaps: t('شکاف بین چین‌ها', 'Fold gaps'),
+        pattern: t('نقش (موتیف)', 'Motif pattern'),
       },
     }),
     coverage: num(0, 50, 15, {
@@ -1828,6 +1920,301 @@ export const SleeveSchema = z
   .prefault({});
 
 // ---------------------------------------------------------------------------
+// G4) Motif (SVG shapes, Persian patterns, text): one 2D source + placement, used by the 'motif' relief effect and by
+//     the sleeve hole mode 'pattern'. The core only ever sees polylines (src/core/motif/blob.ts), never SVG text.
+// ---------------------------------------------------------------------------
+
+export const MOTIF_SOURCES = ['none', 'svg', 'persian', 'text'] as const;
+
+const shapeBlobFields = {
+  name: meta(z.string().max(120).default(''), {
+    fa: 'نام فایل',
+    en: 'File name',
+    phase: 3,
+    tip: ['فایل واردشده.', 'Imported file.'],
+  }),
+  /** lz-string blob of sanitised, flattened polylines (motif/blob.ts); '' = none. Never raw SVG. */
+  data: meta(z.string().max(65536).default(''), {
+    fa: 'داده‌های شکل',
+    en: 'Shape data',
+    phase: 3,
+    tip: ['خطوط فشرده‌شدهٔ شکل (ویرایش نمی‌شود).', 'Compressed shape polylines (not editable).'],
+  }),
+  hash: meta(
+    z
+      .string()
+      .regex(/^[0-9a-f]{0,8}$/)
+      .default(''),
+    { fa: 'شناسهٔ محتوا', en: 'Content hash', phase: 3, tip: ['FNV-1a داده‌ها.', 'FNV-1a of the data.'] },
+  ),
+  points: meta(z.number().int().min(0).max(20000).default(0), {
+    fa: 'تعداد نقاط',
+    en: 'Points',
+    phase: 3,
+    tip: ['تعداد نقاط شکل.', 'Number of shape points.'],
+  }),
+};
+const ShapeBlobSchema = z.object(shapeBlobFields).prefault({});
+
+/** Text motif: the string and its outline blob, shaped in the browser with the bundled Vazirmatn font. */
+const TextSchema = z
+  .object({
+    value: meta(z.string().max(200).default(''), {
+      fa: 'متن',
+      en: 'Text',
+      phase: 3,
+      tip: [
+        'متن فارسی یا لاتین؛ با فونت وزیرمتن و اتصال درست حروف به خط تبدیل می‌شود.',
+        'Persian or Latin text, outlined with the Vazirmatn font with proper letter joining.',
+      ],
+    }),
+    data: shapeBlobFields.data,
+    hash: shapeBlobFields.hash,
+    points: shapeBlobFields.points,
+  })
+  .prefault({});
+
+export const PERSIAN_PRESETS = ['custom', 'khatam', 'shamseh8', 'shamseh10', 'girih10', 'star12'] as const;
+export const PERSIAN_TILINGS = [
+  '4.4.4.4',
+  '6.6.6',
+  '4.8.8',
+  '3.12.12',
+  '4.6.12',
+  'girih-decagons',
+  'girih-hexagons',
+  'girih-rhombi',
+] as const;
+
+const PersianSchema = z
+  .object({
+    preset: enm(PERSIAN_PRESETS, 'khatam', {
+      fa: 'نقش ایرانی',
+      en: 'Persian pattern',
+      basic: true,
+      phase: 2,
+      tip: [
+        'خاتم (ستارهٔ هشت‌پر)، شمسهٔ هشت و ده‌پر، گره ده‌تایی، ستارهٔ دوازده‌پر؛ یا «سفارشی» برای انتخاب کاشی‌بندی و زاویه.',
+        'Khatam (8-point star), 8- and 10-fold shamseh rosettes, 10-fold girih, 12-fold star; or Custom to pick the tiling and angle.',
+      ],
+      options: {
+        custom: t('سفارشی', 'Custom'),
+        khatam: t('خاتم (ستارهٔ هشت‌پر)', 'Khatam (8-point star)'),
+        shamseh8: t('شمسهٔ هشت‌پر', 'Shamseh, 8-fold'),
+        shamseh10: t('شمسهٔ ده‌پر', 'Shamseh, 10-fold'),
+        girih10: t('گره ده‌تایی', 'Girih, 10-fold'),
+        star12: t('ستارهٔ دوازده‌پر', '12-fold star'),
+      },
+    }),
+    tiling: enm(PERSIAN_TILINGS, '4.8.8', {
+      fa: 'کاشی‌بندی',
+      en: 'Tiling',
+      phase: 2,
+      tip: [
+        'شبکهٔ چندضلعی‌هایی که نقش از آن ساخته می‌شود (روش «چندضلعی‌های در تماس» هنکین)، یا کاشی‌های گره.',
+        "The polygon tiling the pattern grows from (Hankin's polygons-in-contact method), or girih tiles.",
+      ],
+      options: {
+        '4.4.4.4': t('مربع ۴.۴.۴.۴', 'Squares 4.4.4.4'),
+        '6.6.6': t('شش‌ضلعی ۶.۶.۶', 'Hexagons 6.6.6'),
+        '4.8.8': t('هشت‌ضلعی و مربع ۴.۸.۸', 'Octagons + squares 4.8.8'),
+        '3.12.12': t('دوازده‌ضلعی و مثلث ۳.۱۲.۱۲', 'Dodecagons + triangles 3.12.12'),
+        '4.6.12': t('دوازده، شش و چهارضلعی ۴.۶.۱۲', 'Dodecagons, hexagons, squares 4.6.12'),
+        'girih-decagons': t('گره: ده‌ضلعی‌ها', 'Girih: decagons'),
+        'girih-hexagons': t('گره: شش‌ضلعی کشیده', 'Girih: elongated hexagons'),
+        'girih-rhombi': t('گره: لوزی', 'Girih: rhombi'),
+      },
+    }),
+    contactAngle: num(20, 85, 67.5, {
+      fa: 'زاویهٔ تماس',
+      en: 'Contact angle',
+      phase: 2,
+      unit: 'deg',
+      step: 0.5,
+      tip: [
+        'زاویهٔ خطوط با ضلع کاشی در وسط آن. کمتر = ستاره‌های تیزتر، بیشتر = گل‌های بازتر.',
+        'Angle of the lines to each tile edge at its midpoint. Lower = sharper stars, higher = more open rosettes.',
+      ],
+    }),
+    offset: num(0, 0.3, 0, {
+      fa: 'فاصلهٔ دو خط',
+      en: 'Line offset',
+      phase: 2,
+      step: 0.01,
+      tip: [
+        '۰ = یک خط از وسط ضلع؛ بیشتر = دو خط موازی (حالت شمسه).',
+        '0 = one line through each edge midpoint; above = two parallel lines (rosette style).',
+      ],
+    }),
+    strapWidth: num(0.8, 12, 3, {
+      fa: 'پهنای نوار',
+      en: 'Strap width',
+      basic: true,
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: [
+        'پهنای نوارهای نقش. هرگز کمتر از دو خط چاپ و (برای بازشوهای غلاف) کمتر از کمینهٔ پل نمی‌شود.',
+        'Width of the pattern straps. Never below two print lines, nor (for sleeve openings) the minimum bridge width.',
+      ],
+    }),
+    interlace: bool(false, {
+      fa: 'گره‌خوردگی رو و زیر',
+      en: 'Interlace',
+      phase: 2,
+      tip: [
+        'در تقاطع‌ها یک نوار پله‌وار زیر دیگری می‌رود (فقط برجسته).',
+        'At crossings one strap steps down under the other (relief only).',
+      ],
+    }),
+    sizing: enm(['repeatCount', 'cellSize'] as const, 'repeatCount', {
+      fa: 'اندازه با تغییر شعاع',
+      en: 'Sizing',
+      phase: 2,
+      tip: [
+        'تعداد تکرار ثابت (خانه‌ها با شعاع کوچک و بزرگ می‌شوند)، یا اندازهٔ خانهٔ ثابت (تعداد تکرار با شعاع عوض می‌شود، با نوار گذار نرم).',
+        'Constant repeat count (cells shrink and grow with the radius), or constant cell size (the repeat count changes with the radius, with smooth transition bands).',
+      ],
+      options: { repeatCount: t('تکرار ثابت', 'Constant repeats'), cellSize: t('خانهٔ ثابت', 'Constant cell size') },
+    }),
+    cellSize: num(10, 150, 36, {
+      fa: 'اندازهٔ خانه',
+      en: 'Cell size',
+      phase: 2,
+      unit: 'mm',
+      step: 1,
+      tip: [
+        'طول یک دورهٔ نقش روی سطح (حالت خانهٔ ثابت).',
+        'Length of one pattern period on the surface (constant cell size).',
+      ],
+    }),
+    autoRotate: bool(false, {
+      fa: 'چرخش خودکار',
+      en: 'Auto-rotate',
+      phase: 2,
+      tip: [
+        'جهتی از شبکه را برمی‌گزیند که کمترین لبهٔ افقی را دارد (سقف خانه‌ها بدون ساپورت چاپ شوند).',
+        'Picks the lattice direction with the fewest horizontal edges, so cell tops print without supports.',
+      ],
+    }),
+  })
+  .prefault({});
+
+export const MotifSchema = z
+  .object({
+    source: enm(MOTIF_SOURCES, 'none', {
+      fa: 'منبع نقش',
+      en: 'Motif source',
+      basic: true,
+      phase: 2,
+      tip: [
+        'شکل نقش: فایل SVG، نقش هندسی ایرانی (گره، شمسه، خاتم) یا متن فارسی. با افکت «نقش» برجسته/حکاکی می‌شود و در غلاف با «سوراخ: نقش» بریده می‌شود.',
+        'The motif: an SVG file, a Persian geometric pattern (girih, shamseh, khatam) or Persian text. Shown as relief by the "Motif" effect and, on sleeves, cut by hole pattern "Motif pattern".',
+      ],
+      options: {
+        none: t('هیچ', 'None'),
+        svg: t('فایل SVG', 'SVG file'),
+        persian: t('نقش ایرانی', 'Persian pattern'),
+        text: t('متن', 'Text'),
+      },
+    }),
+    svg: ShapeBlobSchema,
+    persian: PersianSchema,
+    text: TextSchema,
+    placement: enm(['repeat', 'single'] as const, 'repeat', {
+      fa: 'چیدمان',
+      en: 'Placement',
+      basic: true,
+      phase: 2,
+      tip: [
+        'تکرار دور بدنه (بی‌درز) یا یک نقش تکی (مثلاً خوشنویسی یا ترنج) در زاویه و ارتفاع دلخواه.',
+        'Repeat around the body (seamless), or one single motif (e.g. calligraphy or a medallion) at an angle and height.',
+      ],
+      options: { repeat: t('تکرار', 'Repeat'), single: t('تکی', 'Single') },
+    }),
+    repeatsAround: int(1, 48, 8, {
+      fa: 'تکرار دور بدنه',
+      en: 'Repeats around',
+      basic: true,
+      phase: 2,
+      step: 1,
+      tip: ['تعداد تکرار در یک دور (عدد صحیح، پس درز ندارد).', 'Repeats per turn (an integer, so there is no seam).'],
+    }),
+    repeatsUp: num(0.25, 24, 1, {
+      fa: 'تکرار در ارتفاع',
+      en: 'Repeats up',
+      phase: 2,
+      step: 0.25,
+      tip: ['تعداد ردیف‌ها در نوار نقش (شکل SVG و متن).', 'Rows inside the motif band (SVG and text).'],
+    }),
+    bandStart: pct(0, {
+      fa: 'شروع نوار نقش',
+      en: 'Band start',
+      phase: 2,
+      tip: ['پایین نوار تکرار، درصد ارتفاع.', 'Bottom of the repeat band, % of height.'],
+    }),
+    bandEnd: pct(100, {
+      fa: 'پایان نوار نقش',
+      en: 'Band end',
+      phase: 2,
+      tip: ['بالای نوار تکرار، درصد ارتفاع.', 'Top of the repeat band, % of height.'],
+    }),
+    fill: num(10, 100, 85, {
+      fa: 'اندازه در خانه',
+      en: 'Size in cell',
+      phase: 2,
+      unit: '%',
+      step: 1,
+      tip: ['اندازهٔ هر نقش نسبت به خانهٔ تکرارش.', 'Size of each motif relative to its repeat cell.'],
+    }),
+    angle: num(-180, 180, 0, {
+      fa: 'زاویهٔ نقش',
+      en: 'Angle',
+      phase: 2,
+      unit: 'deg',
+      step: 1,
+      tip: [
+        'جای نقش تکی دور بدنه (یا جابه‌جایی فاز تکرار).',
+        'Where the single motif sits around the body (or the repeat phase).',
+      ],
+    }),
+    height: pct(50, {
+      fa: 'ارتفاع نقش تکی',
+      en: 'Single height',
+      phase: 2,
+      tip: ['مرکز نقش تکی، درصد ارتفاع.', 'Centre of the single motif, % of height.'],
+    }),
+    size: num(5, 250, 40, {
+      fa: 'اندازهٔ نقش تکی',
+      en: 'Single size',
+      phase: 2,
+      unit: 'mm',
+      step: 1,
+      tip: ['بلندترین ضلع نقش تکی روی سطح.', 'Longest side of the single motif on the surface.'],
+    }),
+    rotation: num(-180, 180, 0, {
+      fa: 'چرخش نقش',
+      en: 'Rotation',
+      phase: 2,
+      unit: 'deg',
+      step: 1,
+      tip: ['چرخش نقش روی سطح.', 'Rotation of the motif on the surface.'],
+    }),
+    strokeWidth: num(0.4, 10, 1.6, {
+      fa: 'پهنای خطوط باز',
+      en: 'Open-line width',
+      phase: 2,
+      unit: 'mm',
+      step: 0.1,
+      tip: [
+        'پهنای خطوط باز SVG (مسیرهای بسته پر می‌شوند). هرگز کمتر از دو خط چاپ نمی‌شود.',
+        'Width given to open SVG lines (closed paths are filled). Never below two print lines.',
+      ],
+    }),
+  })
+  .prefault({});
+
+// ---------------------------------------------------------------------------
 // H) Output & print
 // ---------------------------------------------------------------------------
 
@@ -2132,6 +2519,7 @@ export const VaseParamsSchema = z
     base: BaseSchema,
     insert: InsertSchema,
     sleeve: SleeveSchema,
+    motif: MotifSchema,
     print: PrintSchema,
     random: RandomSchema,
     render: RenderSchema,

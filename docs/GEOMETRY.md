@@ -667,3 +667,54 @@ quadric error cap of 0.1 mm. A collapse needs the link condition (exactly two co
 > a free vertex may collapse onto one; a snapped vertex may only merge into a neighbour of its own kind from the
 > interior of that surface, and on the bore / opening every new all-snapped facet stays within 0.03 mm sag of its
 > vertices' radius, so the bore stays within ±0.05 mm and the base flat. The result is checked again (manifold).
+
+## 14. Motifs: SVG shapes and text (persian/svg, `src/core/motif/`, docs/persian-patterns.md)
+
+A source gives a signed distance s(u, v) in its units (< 0 inside): closed polylines filled even-odd (inside by a +u
+ray), open polylines stroked (distance − half width). Placement maps (φ, z) to source coordinates with x = φ·r_ref:
+
+```
+repeat   cell w = 2π r_ref / N, h = (z_band1 − z_band0) / M;  sc = fill · min(w / W, h / H_src)   (mm per unit)
+         (lx, ly) = (x − (i + ½)w, z − z_band0 − (j + ½)h) rotated by −rotation; u = lx / sc + W/2, v = ly / sc + H_src/2
+single   sc = size / max(W, H_src); lx = wrap(φ − angle)·r_ref, ly = z − height·H
+d(φ, z)  = sc · s(u, v), clamped to ±cap; columns per copy are whole (exactly periodic)
+```
+
+Relief (effect `motif`), with S = smoothstep(clamp(½ − d / softness, 0, 1)) and interlace level ℓ (§15):
+raised `+depth·S·ℓ`, engraved `−depth·S`, both `depth·(S·ℓ − ½)`. Openings (sleeve hole mode `pattern`): the hole
+field is ±d (+ for shapes, − for Persian cells), thresholded at 0 without the coverage search; the rest of §13b runs
+unchanged. Cross-section from SVG: polar rays from the centroid or a picked centre, outer envelope when a ray crosses
+the outline more than once. Silhouette: r(z) from 96 horizontal cuts (closed: about the centre line; open: axis at the
+leftmost point), resampled to 12 control points.
+
+## 15. Persian star patterns (`src/core/persian/`)
+
+For a CCW polygon edge with unit direction e, inward normal n, midpoint M and length L, contact angle θ, offset δ:
+
+```
+ray A: from M − δL·e along  cos θ·e + sin θ·n        ray B: from M + δL·e along −cos θ·e + sin θ·n
+```
+
+(the neighbour across the edge starts its rays at the same points in the opposite directions, so strands are
+straight). All ray pairs from different edges that meet inside the polygon (t, u > 0) are candidates with cost t + u;
+collinear facing pairs join directly; pairs are taken greedily by cost. The strip's x axis is a lattice vector
+w = m·a + n·b (period P = |w|); N periods around give x_strip = φ·N·P / 2π and y_strip = z / sc, sc = 2π r_ref / (N·P).
+Constant cell size: ν(z) = 2π r(z) / cell, strips for ⌊ν⌋ and ⌊ν⌋ + 1 cross-faded with smoothstep((frac ν − 0.35) / 0.3),
+sc = cell / P. Strap half width = max(strapWidth, 2·lineWidth, minBridgeWidth for openings) / 2, widened by
+r_ref / R in the hole map so bridges hold at the bore radius. Interlace: at each crossing the strand with the smaller
+direction angle mod 180° is over; points within 2.5 half widths of the crossing that lie off the over strand get ℓ = ½.
+
+## 16. Muqarnas collar (effect `muqarnas`)
+
+Band of `tiers` × tierHeight t_h at the rim (z₀ = H − tiers·t_h) or the base (z₀ = 0); corbel c = min(corbel,
+t_h·tan(α − 5°)); ramp = c·(z − z₀)/t_h (rim) or c·(tiers − (z − z₀)/t_h) (base). In tier k, v = local height / t_h,
+cell coordinate x = |2·frac(φ·cells/2π + k/2) − 1|; inside |x| < 0.8, v > 0.08, v < v_top(x):
+
+```
+v_top(x) = 0.45 + 0.47·((1 − p)·√(1 − s²) + p·(1 − s)),  s = x / 0.8
+depth    = min(D·√(1 − s²), (v_top − v)·t_h·tan(α − 3°), (v − 0.08)·t_h·tan(α − 3°))
+offset   = ramp − depth
+```
+
+The effect window does not fade the collar (mask 1); every slope stays within the overhang limit (vase modes count
+inward leans too).

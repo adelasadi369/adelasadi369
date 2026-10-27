@@ -23,6 +23,10 @@ describe('presets', () => {
       'sleeve-fingers',
       'sleeve-coral',
       'sleeve-drip',
+      // the Persian collection (collection: 'persian')
+      'sleeve-girih',
+      'sleeve-khatam',
+      'sleeve-kashi',
     ]);
     for (const p of PRESETS) {
       const src = PRESET_SOURCES.find((s) => s.id === p.id)!;

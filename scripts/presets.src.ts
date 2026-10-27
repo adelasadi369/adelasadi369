@@ -1,7 +1,26 @@
 import type { VaseParamsInput } from '../src/core/params/schema';
 
 /** Source definitions for the trend presets. `npm run presets` expands them into full JSON in src/presets/. */
-export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; params: VaseParamsInput }[] = [
+import { PERSIAN_FORMS } from '../src/core/persian/silhouettes';
+
+const form = (id: string) => {
+  const f = PERSIAN_FORMS.find((x) => x.id === id)!;
+  return {
+    dimensions: { height: f.height, maxDiameter: f.maxDiameter },
+    profile: { preset: 'custom' as const, controlPoints: f.points.map((q) => ({ ...q, sharp: false })) },
+  };
+};
+
+/**
+ * Source definitions for the trend presets. `npm run presets` expands them into full JSON in src/presets/.
+ * `collection: 'persian'` marks the Persian collection: kept out of VASE_PRESETS so the golden vase test stays fixed.
+ */
+export const PRESET_SOURCES: {
+  id: string;
+  name: { fa: string; en: string };
+  collection?: 'persian';
+  params: VaseParamsInput;
+}[] = [
   {
     id: 'japandi-ribbed',
     name: { fa: 'جاپاندی شیاردار', en: 'Japandi Ribbed' },
@@ -523,6 +542,82 @@ export const PRESET_SOURCES: { id: string; name: { fa: string; en: string }; par
       print: { outputMode: 'sleeve', material: 'silkPLA' },
       render: { color: '#c9a227', viewMaterial: 'silk' },
       random: { seed: 61 },
+    },
+  },
+  // ---- Persian collection (persian/svg): every pattern is generated (core/persian), never a stored image
+  {
+    id: 'sleeve-girih',
+    name: { fa: 'غلاف گره', en: 'Sleeve Girih' },
+    collection: 'persian',
+    params: {
+      dimensions: { height: 160, baseDiameter: 86, maxDiameter: 88, topDiameter: 86, bellyPosition: 40 },
+      profile: { preset: 'straight' },
+      insert: { type: 'glass', od: 50, fit: 'slip' },
+      motif: { source: 'persian', repeatsAround: 3, persian: { preset: 'girih10', strapWidth: 5, autoRotate: true } },
+      sleeve: {
+        skinThickness: 2.4,
+        holes: { mode: 'pattern', teardropTops: true, keepOutBottom: 12, keepOutTop: 8 },
+      },
+      print: { outputMode: 'sleeve', material: 'PLA' },
+      render: { color: '#1e6b8f', viewMaterial: 'silk' },
+    },
+  },
+  {
+    id: 'sleeve-khatam',
+    name: { fa: 'غلاف خاتم', en: 'Sleeve Khatam' },
+    collection: 'persian',
+    params: {
+      dimensions: { height: 150, baseDiameter: 88, maxDiameter: 90, topDiameter: 88, bellyPosition: 40 },
+      profile: { preset: 'straight' },
+      twist: { total: 0 },
+      insert: { type: 'glass', od: 50, fit: 'slip' },
+      // 3 periods: open 8-point stars (≈ 22 % open, every strap ≥ the bridge width); 4 left only pin-holes
+      motif: { source: 'persian', repeatsAround: 3, persian: { preset: 'khatam', strapWidth: 5, autoRotate: true } },
+      sleeve: {
+        skinThickness: 2.4,
+        holes: { mode: 'pattern', teardropTops: true, keepOutBottom: 12, keepOutTop: 8 },
+      },
+      print: { outputMode: 'sleeve', material: 'PLA' },
+      render: { color: '#1d3557', viewMaterial: 'gold', goldMask: 'edges' },
+    },
+  },
+  {
+    id: 'vase-golabpash',
+    name: { fa: 'گلاب‌پاش با شمسه', en: 'Golabpash Shamseh' },
+    collection: 'persian',
+    params: {
+      ...form('golabpash'),
+      effects: [{ type: 'motif', relief: 'raised', depth: 1, softness: 1.2, start: 10, end: 42, fade: 4 }],
+      motif: { source: 'persian', repeatsAround: 6, persian: { preset: 'shamseh8', strapWidth: 2.6 } },
+      print: { outputMode: 'solidVase', material: 'PLA' },
+      render: { color: '#3c6e71', viewMaterial: 'silk' },
+    },
+  },
+  {
+    id: 'vase-muqarnas',
+    name: { fa: 'گلدان مقرنس', en: 'Muqarnas Vase' },
+    collection: 'persian',
+    params: {
+      dimensions: { height: 180, baseDiameter: 110, maxDiameter: 110, topDiameter: 110, bellyPosition: 40 },
+      profile: { preset: 'straight' },
+      effects: [{ type: 'muqarnas', position: 'rim', tiers: 3, cells: 16, nicheDepth: 3, tierHeight: 14, corbel: 2 }],
+      print: { outputMode: 'solidVase', material: 'PLA' },
+      render: { color: '#d8c3a5', viewMaterial: 'matte' },
+    },
+  },
+  {
+    id: 'sleeve-kashi',
+    name: { fa: 'غلاف کاشی', en: 'Sleeve Kashi' },
+    collection: 'persian',
+    params: {
+      dimensions: { height: 150, baseDiameter: 90, maxDiameter: 92, topDiameter: 90, bellyPosition: 40 },
+      profile: { preset: 'straight' },
+      insert: { type: 'glass', od: 50, fit: 'slip' },
+      effects: [{ type: 'motif', relief: 'both', depth: 1.2, softness: 1.2 }],
+      motif: { source: 'persian', repeatsAround: 4, persian: { preset: 'star12', strapWidth: 2.4, interlace: true } },
+      sleeve: { skinThickness: 2.4 },
+      print: { outputMode: 'sleeve', material: 'PLA' },
+      render: { color: '#2b6cb0', viewMaterial: 'gloss' },
     },
   },
 ];

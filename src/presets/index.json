@@ -145,5 +145,45 @@
       "fa": "غلاف چکه",
       "en": "Sleeve Drip"
     }
+  },
+  {
+    "id": "sleeve-girih",
+    "name": {
+      "fa": "غلاف گره",
+      "en": "Sleeve Girih"
+    },
+    "collection": "persian"
+  },
+  {
+    "id": "sleeve-khatam",
+    "name": {
+      "fa": "غلاف خاتم",
+      "en": "Sleeve Khatam"
+    },
+    "collection": "persian"
+  },
+  {
+    "id": "vase-golabpash",
+    "name": {
+      "fa": "گلاب‌پاش با شمسه",
+      "en": "Golabpash Shamseh"
+    },
+    "collection": "persian"
+  },
+  {
+    "id": "vase-muqarnas",
+    "name": {
+      "fa": "گلدان مقرنس",
+      "en": "Muqarnas Vase"
+    },
+    "collection": "persian"
+  },
+  {
+    "id": "sleeve-kashi",
+    "name": {
+      "fa": "غلاف کاشی",
+      "en": "Sleeve Kashi"
+    },
+    "collection": "persian"
   }
 ]

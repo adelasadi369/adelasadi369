@@ -12,6 +12,7 @@ const ICONS: Record<TabId, string> = {
   section: '⬡',
   twist: '↻',
   surface: '≋',
+  motif: '✿',
   rimBase: '◫',
   print: '⎙',
   ai: '✦',

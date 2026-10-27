@@ -41,6 +41,8 @@ src/core/          pure TS — no DOM, no three, no react/zustand (enforced by e
   insert/          computeBore, boreProfile (chamfers, grooves, ribs), boreRay, calibrateHoleCompensation
   sdf/             smin / smax / cylinder
   sleeve/          skin map (cached), top edge, hole map + hole fields (cached), strands (fingers/drips), SDF, build
+  motif/           shape blob (lz-string polylines), sources, periodic (φ, z) distance map for relief / openings
+  persian/         tilings, Hankin star patterns, girih, presets, vessel forms
   mc/              generated MC table, slab extractor with 2-level narrow band, Taubin, islands, O(T) validity, decimate
   geometry/        profile · sections · twist · effects/* · field (compileField) · grid · mesh (buildMesh)
   printability/    checks, bore, sleeve, sleeveFix, overhang, sanity, stats, score, autofix, index (analyze/buildDesign)
@@ -52,7 +54,8 @@ src/state/         zustand store (params, locks, history/undo, result, ui prefs)
 src/ui/            panels, editors, viewer (heatmap, clipping, dimensions), TopBar, PrintCheck, AiPanel
 src/persist/       IndexedDB designs + calibrated printer profiles; share links are lz-string diffs vs DEFAULT_PARAMS
 src/ai/            prompts (system prompt generated from paramMeta), schema, client, apply
-src/presets/       21 generated preset JSON files (14 vase + 7 sleeve) + index (scripts/build-presets.ts)
+src/svg/, src/text/ SVG parser (data only) and shaped text outlines (main thread; results go into params)
+src/presets/       26 generated preset JSON files (14 vase + 7 sleeve + 5 Persian collection) + index
 server/            AI proxy: /api/ai/params | refine | image | health
 tests/             vitest, core only
 ```
@@ -97,6 +100,13 @@ Phases (one branch `sleeve/sN` and one PR each):
 | S4    | Viewer insert/material previews, AI sleeve rules, multi-bore batch export, perf, docs update.                                       |
 
 Do only the phase you were asked for.
+
+**Persian / SVG (branch `persian/svg`):** SVG import (cross-section, silhouette, pattern), a motif pipeline (relief
+effect `motif`, sleeve hole mode `pattern`), the Persian star-pattern / girih engine (`src/core/persian/`), the
+`muqarnas` effect, Persian vessel forms, Persian text (opentype.js + Vazirmatn) and the five-preset Persian collection.
+Read `docs/persian-patterns.md`. The core never sees SVG text: `src/svg/parse.ts` (DOM-free, data only) and
+`src/text/outline.ts` run on the main thread and store compressed polylines in params (`core/motif/blob.ts`).
+Persian presets carry `collection: 'persian'` and stay out of `VASE_PRESETS` (golden test).
 
 **Status:** S0–S4 are done (S4: thin draped shells, ribbon fingers, export decimation, batch export, viewer tube and
 material previews, perf). Still open: the hard AI `insert.*` filter, insert mass in stability, a cheaper hole map

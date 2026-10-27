@@ -4,7 +4,12 @@ import type { I18nText } from '../params/schema';
 export type Pt = [number, number];
 
 export type PolarResult =
-  | { ok: true; samples: number[]; centroid: Pt }
+  | {
+      ok: true;
+      samples: number[];
+      centroid: Pt;
+      /** Set when the outline was not star-shaped (outer envelope used). */ warning?: I18nText;
+    }
   | { ok: false; reason: 'empty' | 'notStarShaped' | 'tooThin'; message: I18nText };
 
 function areaCentroid(poly: Pt[]): { area: number; cx: number; cy: number } {
@@ -24,11 +29,12 @@ function areaCentroid(poly: Pt[]): { area: number; cx: number; cy: number } {
 }
 
 /**
- * Convert a closed outline into a normalised polar table by ray casting from its area centroid.
- * The largest polyline is used (SVG y is flipped so the shape reads the same from above).
- * Rejects outlines that are not star-shaped around the centroid (any ray crossing more than once).
+ * Convert a closed outline into a normalised polar table by ray casting from its area centroid, or from `centre`
+ * (in the input's coordinates). The largest polyline is used (SVG y is flipped so the shape reads the same from
+ * above). An outline that is not star-shaped about the centre (some ray crosses it more than once) falls back to its
+ * outer envelope (the farthest crossing per ray) and carries a warning.
  */
-export function polylinesToPolar(polylines: Pt[][], n = 720): PolarResult {
+export function polylinesToPolar(polylines: Pt[][], n = 720, centre?: Pt): PolarResult {
   const polys = polylines.filter((p) => p.length >= 3).map((p) => p.map(([x, y]) => [x, -y] as Pt));
   if (!polys.length) {
     return {
@@ -46,7 +52,8 @@ export function polylinesToPolar(polylines: Pt[][], n = 720): PolarResult {
       bestA = a;
     }
   }
-  const { cx, cy } = bestA;
+  const cx = centre ? centre[0] : bestA.cx;
+  const cy = centre ? -centre[1] : bestA.cy;
   let scale = 0;
   for (const [x, y] of best) scale = Math.max(scale, Math.hypot(x - cx, y - cy));
   const eps = scale * 1e-7;
@@ -75,16 +82,23 @@ export function polylinesToPolar(polylines: Pt[][], n = 720): PolarResult {
     if (uniq.length !== 1) bad++;
     samples.push(uniq.length ? uniq[uniq.length - 1] : 0);
   }
-  if (bad > 0) {
+  if (samples.some((r) => r <= 0)) {
     return {
       ok: false,
       reason: 'notStarShaped',
       message: {
-        fa: 'این شکل از مرکزش «ستاره‌ای» نیست (بعضی پرتوها چند بار لبه را قطع می‌کنند)؛ برای چاپ در حالت گلدان شکل ساده‌تری لازم است.',
-        en: 'This outline is not star-shaped around its centre (some rays cross the edge more than once). Use a simpler outline for vase mode.',
+        fa: 'مرکز بیرون از شکل است؛ مرکز دیگری انتخاب کنید.',
+        en: 'The centre lies outside the outline; pick another centre.',
       },
     };
   }
+  const warning: I18nText | undefined =
+    bad > 0
+      ? {
+          fa: 'این شکل از مرکزش «ستاره‌ای» نیست (بعضی پرتوها چند بار لبه را قطع می‌کنند)؛ پوستهٔ بیرونی آن به کار رفت و فرورفتگی‌های پنهان حذف شدند.',
+          en: 'This outline is not star-shaped around its centre (some rays cross the edge more than once); its outer envelope is used and hidden recesses are dropped.',
+        }
+      : undefined;
   const mx = Math.max(...samples);
   const out = samples.map((r) => Math.round((r / mx) * 10000) / 10000);
   if (Math.min(...out) < 0.05) {
@@ -94,5 +108,5 @@ export function polylinesToPolar(polylines: Pt[][], n = 720): PolarResult {
       message: { fa: 'شکل در بخشی خیلی باریک است.', en: 'The outline is too thin somewhere.' },
     };
   }
-  return { ok: true, samples: out, centroid: [cx, cy] };
+  return { ok: true, samples: out, centroid: [cx, -cy], ...(warning && { warning }) };
 }
