@@ -5,12 +5,12 @@ import { normalizeParams } from '../src/core/params/normalize';
 import { PRESET_SOURCES } from './presets.src';
 
 const dir = join(import.meta.dirname, '..', 'src', 'presets');
-const index: { id: string; name: { fa: string; en: string } }[] = [];
+const index: { id: string; name: { fa: string; en: string }; collection?: string }[] = [];
 for (const s of PRESET_SOURCES) {
   const p = normalizeParams({ ...s.params, name: s.name.en });
   p.effects.forEach((e, i) => (e.id = `${s.id}-${i}`));
   writeFileSync(join(dir, `${s.id}.json`), JSON.stringify(p, null, 2) + '\n');
-  index.push({ id: s.id, name: s.name });
+  index.push({ id: s.id, name: s.name, ...(s.collection && { collection: s.collection }) });
 }
 writeFileSync(join(dir, 'index.json'), JSON.stringify(index, null, 2) + '\n');
 // static imports (no import.meta.glob, so bundlers/test caches always see the full list)

@@ -12,7 +12,8 @@ const D2R = Math.PI / 180;
  *            tan(maxOverhang − 5°) (at the base it narrows going up, which never overhangs);
  *   niche    outline |x| ≤ 0.8 of the cell, from v = 0.08 up to the arch v_top(x) = v_s + (0.92 − v_s)·arch(|x|/0.8),
  *            arch(s) = (1 − p)·√(1 − s²) + p·(1 − s) (p = pointedness); depth = D·√(1 − (x/0.8)²) (half dome), capped
- *            under the arch by (v_top − v)·tierHeight·tan(maxOverhang − 3°), so the niche roof rises like a teardrop.
+ *            under the arch by (v_top − v)·tierHeight·tan(maxOverhang − 3°), so the niche roof rises like a teardrop,
+ *            and above the sill by (v − 0.08)·tierHeight·tan(maxOverhang − 3°) (inward leans count in vase modes).
  */
 export function muqarnasOffset(e: Muqarnas, ctx: EffectCtx): OffsetFn {
   const H = ctx.height;
@@ -40,7 +41,8 @@ export function muqarnasOffset(e: Muqarnas, ctx: EffectCtx): OffsetFn {
     const top = vs + (0.92 - vs) * ((1 - p) * Math.sqrt(1 - s * s) + p * (1 - s));
     if (v >= top) return ramp;
     const dome = e.nicheDepth * Math.sqrt(1 - s * s);
-    const depth = Math.min(dome, (top - v) * th * roof, (v - 0.08) * th * 4);
+    // the floor ramps in at the same slope: in vase modes an inward lean counts as overhang too
+    const depth = Math.min(dome, (top - v) * th * roof, (v - 0.08) * th * roof);
     return ramp - depth;
   };
 }

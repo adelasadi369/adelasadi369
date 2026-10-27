@@ -209,6 +209,20 @@ the UI (labels, tooltips, units, steps, Basic/Advanced, phase gating) and
 - Worker: a sleeve preview is cached by (mesh voxel, params); thin shells mesh drag and release at the same voxel,
   so the release reuses the drag's mesh and report (copies are transferred).
 
+## 8c. Motifs and the Persian engine (persian/svg)
+
+- `src/svg/parse.ts` (outside core, DOM-free) turns an SVG file into polylines as data only; `src/text/outline.ts`
+  outlines shaped text with opentype.js and the bundled Vazirmatn font. Both run on the main thread; only the result
+  reaches params, as a compressed polyline blob (`core/motif/blob.ts`). `src/core` never sees SVG text.
+- `core/motif/` places a source on the body as a cached periodic distance map; the `motif` effect reads it for relief,
+  the sleeve hole field reads it for openings (hole mode `pattern`). `core/persian/` generates star-pattern and girih
+  strap networks as one more source; muqarnas is an ordinary effect.
+- The Motif tab hosts SVG import (drag and drop, thumbnail, centre pick, cross-section / silhouette / pattern), Persian
+  pattern and text controls; _Persian forms_ in the Shape tab set an editable custom profile.
+- Presets with `collection: 'persian'` form `PERSIAN_PRESETS` and stay out of `VASE_PRESETS` (golden test).
+- The AI may set motif placement and Persian pattern params, never `motif.svg.*`, `motif.text.*`, `insert.*` or
+  `print.printer.holeCompensation` (`ai/apply.ts` `aiMayWrite`, applied to proposals and to refine patches).
+
 ## 9. AI module (Phase 2, implemented)
 
 - **Proxy:** `server/index.ts` (Node `http`) wraps the pure `server/ai.ts`

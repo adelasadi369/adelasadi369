@@ -20,6 +20,11 @@ import sleeveWindswept from './sleeve-windswept.json';
 import sleeveFingers from './sleeve-fingers.json';
 import sleeveCoral from './sleeve-coral.json';
 import sleeveDrip from './sleeve-drip.json';
+import sleeveGirih from './sleeve-girih.json';
+import sleeveKhatam from './sleeve-khatam.json';
+import vaseGolabpash from './vase-golabpash.json';
+import vaseMuqarnas from './vase-muqarnas.json';
+import sleeveKashi from './sleeve-kashi.json';
 
 export const PRESET_FILES: Record<string, unknown> = {
   'japandi-ribbed': japandiRibbed,
@@ -43,4 +48,9 @@ export const PRESET_FILES: Record<string, unknown> = {
   'sleeve-fingers': sleeveFingers,
   'sleeve-coral': sleeveCoral,
   'sleeve-drip': sleeveDrip,
+  'sleeve-girih': sleeveGirih,
+  'sleeve-khatam': sleeveKhatam,
+  'vase-golabpash': vaseGolabpash,
+  'vase-muqarnas': vaseMuqarnas,
+  'sleeve-kashi': sleeveKashi,
 };

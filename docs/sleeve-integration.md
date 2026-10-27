@@ -206,6 +206,13 @@ New blocks, each with ranges in zod and labels/tooltips (fa/en), units, steps an
   - Perf: strand bounding volumes and search cap, shared drag / release skin map, quantised hole-map key, worker
     reuse of the drag preview. Not done: MC split across workers, a cheaper hole map (still 0.5–1.5 s cold on molten,
     windswept and coral), the hard AI `insert.*` filter and the insert mass in stability.
+- **As implemented on `persian/svg`** (`SCHEMA_VERSION` 7, nothing to migrate: every new block is off by default):
+  - **New** `motif` block: `source` none|svg|persian|text, shape blobs `motif.svg` / `motif.text` (AI-protected),
+    placement (`placement`, `repeatsAround`, `repeatsUp`, `bandStart`, `bandEnd`, `fill`, `angle`, `height`, `size`,
+    `rotation`, `strokeWidth`) and `motif.persian` (`preset`, `tiling`, `contactAngle`, `offset`, `strapWidth`,
+    `interlace`, `sizing`, `cellSize`, `autoRotate`). New effects `motif` and `muqarnas`; hole mode `pattern`.
+  - Sleeve openings from a motif reuse the hole-map pipeline at a fixed threshold (no coverage search); Persian straps
+    are bridges at least `minBridgeWidth` wide at the bore radius. docs/persian-patterns.md, GEOMETRY.md §14–§16.
 - **Visibility:**
   - Vase-only controls are hidden in sleeve mode via `visibility.ts`: rim lip/round rim, ruffle/slant, concave base, drainage, double wall, saucer, spiral G-code.
   - Sleeve controls are hidden in vase modes, except `insert` when the shell liner is `bore` (§6).

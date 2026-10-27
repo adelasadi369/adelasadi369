@@ -293,6 +293,12 @@
       "cellSize": 36,
       "autoRotate": false
     },
+    "text": {
+      "value": "",
+      "data": "",
+      "hash": "",
+      "points": 0
+    },
     "placement": "repeat",
     "repeatsAround": 8,
     "repeatsUp": 1,

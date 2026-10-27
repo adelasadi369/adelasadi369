@@ -29,10 +29,11 @@ export const PERSIAN_FORMS: PersianForm[] = [
       fa: 'گلاب‌پاش: پایهٔ کوچک، بدنهٔ گرد و گردنی بلند و باریک که دهانه‌اش کمی باز می‌شود.',
       en: 'Rosewater sprinkler: small foot, round bulb, long slender neck opening slightly at the mouth.',
     },
-    height: 260,
-    maxDiameter: 120,
+    height: 220,
+    maxDiameter: 130,
+    // the foot stays ≥ 0.35 × height wide (stability); the shoulder closes at ≤ 45° (vase-mode overhang)
     points: P([
-      0, 0.42, 5, 0.4, 12, 0.6, 24, 0.94, 32, 1, 42, 0.84, 52, 0.42, 60, 0.2, 75, 0.15, 88, 0.15, 96, 0.18, 100, 0.22,
+      0, 0.6, 5, 0.58, 13, 0.74, 24, 0.96, 32, 1, 40, 0.9, 50, 0.62, 60, 0.38, 68, 0.24, 78, 0.17, 92, 0.18, 100, 0.24,
     ]),
   },
   {
@@ -55,7 +56,7 @@ export const PERSIAN_FORMS: PersianForm[] = [
     },
     height: 120,
     maxDiameter: 220,
-    points: P([0, 0.3, 4, 0.3, 9, 0.4, 40, 0.68, 75, 0.9, 100, 1]),
+    points: P([0, 0.3, 4, 0.31, 16, 0.42, 42, 0.68, 75, 0.9, 100, 1]),
   },
   {
     id: 'safavidEwer',

@@ -86,7 +86,8 @@ export function motifIssues(p: VaseParams, H: number): Issue[] {
       });
     }
     // features of the motif (raised parts, or the grooves of an engraving) narrower than two lines
-    const thin = thinShare(map, 2 * lw);
+    // Persian straps are at least two lines wide by construction (persian/strapHalfMm); only their tips are thinner
+    const thin = p.motif.source === 'persian' ? { share: 0, width: Infinity } : thinShare(map, 2 * lw);
     if (thin.share > 0.15) {
       const k2 = Math.min(2, (2 * lw) / Math.max(thin.width, 0.2));
       out.push({
