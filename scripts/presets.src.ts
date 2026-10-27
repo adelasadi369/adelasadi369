@@ -571,7 +571,8 @@ export const PRESET_SOURCES: {
       profile: { preset: 'straight' },
       twist: { total: 0 },
       insert: { type: 'glass', od: 50, fit: 'slip' },
-      motif: { source: 'persian', repeatsAround: 4, persian: { preset: 'khatam', strapWidth: 5, autoRotate: true } },
+      // 3 periods: open 8-point stars (≈ 22 % open, every strap ≥ the bridge width); 4 left only pin-holes
+      motif: { source: 'persian', repeatsAround: 3, persian: { preset: 'khatam', strapWidth: 5, autoRotate: true } },
       sleeve: {
         skinThickness: 2.4,
         holes: { mode: 'pattern', teardropTops: true, keepOutBottom: 12, keepOutTop: 8 },

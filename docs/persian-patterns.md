@@ -102,7 +102,23 @@ Text is outlined in the browser with **opentype.js 1.3.4** and **Vazirmatn Regul
 joined (tests check سلام → seen initial, lam-alef final, meem isolated). The outline goes through the same data-only
 path parser and blob as SVG, then any placement: usually _single_, raised or engraved, or cut through on sleeves.
 
-## 7. Cultural notes
+## 7. The Persian collection
+
+![Persian collection](images/persian-presets.png)
+
+| Preset         | Idea                                                             | Release preview (cold / warm) | Export (0.5 mm voxel + decimation, or high grid) |
+| -------------- | ---------------------------------------------------------------- | ----------------------------- | ------------------------------------------------ |
+| sleeve-girih   | glass Ø50, 10-fold girih openings, teardrop tops (printable)     | 1.3 s / 0.4 s                 | 8.1 s                                            |
+| sleeve-khatam  | 8-point star openings, no twist, gold-edge preview               | 1.3 s / 0.3 s                 | 11.6 s                                           |
+| vase-golabpash | golabpash form + shamseh relief band on the bulb                 | 0.6 s / 0.1 s                 | 0.1 s                                            |
+| vase-muqarnas  | straight body + 3-tier muqarnas collar at the rim                | 0.06 s / 0.02 s               | 0.07 s                                           |
+| sleeve-kashi   | 12-fold star relief with interlace on a closed thin-shell sleeve | 0.9 s / 0.3 s                 | 15.8 s                                           |
+
+Node, warm process; "cold" includes the motif map and the hole map. Every preset is manifold, scores ≥ 96 and the
+sleeves pass the bore check (`tests/persianCollection.test.ts`). The vase forms are not meant as sleeves: a thin shell
+that closes onto the core above the floor ring seals a pocket, which island removal fills (reported as removed volume).
+
+## 8. Cultural notes
 
 Girih, khatam and shamseh are living Persian crafts — tile work, inlaid wood (khatam-kari), stucco and book
 illumination — with workshop rules far richer than one construction. The generator reproduces the geometric skeleton
@@ -110,7 +126,7 @@ illumination — with workshop rules far richer than one construction. The gener
 monument or object. Calligraphy in particular (Nastaliq, Thuluth) is an art of its own: use a calligrapher's SVG for
 it, and credit the calligrapher.
 
-## 8. Known limitations
+## 9. Known limitations
 
 - Interlace is a local rule (lower direction angle on top), not a strict over-under alternation along each strand;
   it is periodic and reads as woven, but a careful eye finds places where a strand goes over twice in a row.

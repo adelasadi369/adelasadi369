@@ -289,7 +289,7 @@
       "points": 0
     },
     "placement": "repeat",
-    "repeatsAround": 4,
+    "repeatsAround": 3,
     "repeatsUp": 1,
     "bandStart": 0,
     "bandEnd": 100,
